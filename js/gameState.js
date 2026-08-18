@@ -40,9 +40,11 @@ function createInitialGameState(config) {
       totalInCirculation: 0
     },
 
-    revivalTanks: {
-      // per faction: { forces: number, leaders: [leaderId, ...] }
-    },
+    // NOTE: an earlier draft of this file had a top-level revivalTanks
+    // object here. Every engine actually built since (battle, spice,
+    // revival) uses faction.revivalTanks as a plain number instead, that's
+    // the real shape in use, this comment replaces the stale unused one
+    // rather than leaving two conflicting ideas of where tanked forces live.
 
     battles: {
       pending: [],
@@ -74,12 +76,26 @@ function buildFactionStates(factionIds) {
     factions[id] = {
       id,
       spice: null,               // set from factions.json at game start
-      forces: { reserve: null, onBoard: {} }, // onBoard keyed by territoryId
+      revivalTanks: 0,             // tanked ordinary forces, plain number, used by battle/spice/revival engines
+      starredRevivalTanks: 0,      // tanked starred forces (Sardaukar/Fedaykin), 0 for other factions
+      forces: {
+        reserve: null,
+        starredReserve: 0,          // Sardaukar (emperor) / Fedaykin (fremen) only, 0 for other factions
+        onBoard: {},                 // total forces per territory, unchanged shape, existing consumers keep working
+        starredOnBoard: {}           // subset of onBoard that are starred, per territory. Only ever non-zero for emperor/fremen
+      },
       leaders: { available: [], killed: [] },
       treacheryHand: [],
       traitorHand: [],
       alliance: null,
-      specialFactionState: {},   // faction-specific flags, e.g. gesserit.predictedFaction
+      specialFactionState: {
+        // Atreides only: Kwisatz Haderach tracking. Losses are meant to be
+        // tracked "secretly" per the rulebook, that's a UI-visibility
+        // concern, not a data-modeling one, so it's just a plain field here.
+        cumulativeForcesLostInBattle: 0,
+        kwisatzHaderachActive: false,
+        kwisatzHaderachUsedInTerritoryThisPhase: null // territoryId or null, resets each Battle phase
+      },
       aiState: {
         personality: id,          // maps to weighting profile in factions.json
         threatAssessment: {},
