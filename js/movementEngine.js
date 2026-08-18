@@ -158,8 +158,17 @@ function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount) {
     return { ok: false, reason: `${toTerritoryId} is not reachable within this faction's movement range.` };
   }
 
-  // TODO: block if toTerritoryId is occupied by an allied faction's forces
-  // and toTerritoryId isn't the Polar Sink, once alliance state is wired.
+  // Allies may not enter any territory (except the Polar Sink) in which
+  // their ally already has a force, per the rulebook's alliance constraint.
+  if (toTerritoryId !== 'polarSink') {
+    const alliance = (state.alliances ?? []).find(a => a.factions.includes(factionId));
+    if (alliance) {
+      const allyId = alliance.factions.find(id => id !== factionId);
+      if ((state.factions[allyId]?.forces.onBoard[toTerritoryId] ?? 0) > 0) {
+        return { ok: false, reason: `Cannot move into ${toTerritoryId}, ally ${allyId} already has forces there.` };
+      }
+    }
+  }
 
   return { ok: true };
 }
