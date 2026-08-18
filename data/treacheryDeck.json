@@ -1,0 +1,41 @@
+{
+  "_notes": {
+    "source": "Card list cross-verified against a CC-BY 3.0 fan compilation of the original Avalon Hill component list. Count (33 cards) matches the GF9 rulebook's own stated Treachery Deck size, and card names/types are foundational to the game's identity (unlikely to have changed in the 2019 edition, same caveat as leaders.json).",
+    "pending": "Card effect text (exact wording, e.g. what a Karama Card does mechanically) should be pulled from the base rulebook and expansion rulebooks directly rather than this source, since GF9 did update some card mechanics (Karama in particular gained faction-specific powers in the advanced game per the base rulebook). This file covers composition and category only."
+  },
+  "cards": [
+    { "id": "chaumas", "name": "Chaumas", "category": "poisonWeapon" },
+    { "id": "chaumurky", "name": "Chaumurky", "category": "poisonWeapon" },
+    { "id": "ellacaDrug", "name": "Ellaca Drug", "category": "poisonWeapon" },
+    { "id": "gomJabbar", "name": "Gom Jabbar", "category": "poisonWeapon" },
+    { "id": "snooper1", "name": "Snooper", "category": "poisonDefense" },
+    { "id": "snooper2", "name": "Snooper", "category": "poisonDefense" },
+    { "id": "snooper3", "name": "Snooper", "category": "poisonDefense" },
+    { "id": "snooper4", "name": "Snooper", "category": "poisonDefense" },
+    { "id": "crysknife", "name": "Crysknife", "category": "projectileWeapon" },
+    { "id": "slipTip", "name": "Slip-Tip", "category": "projectileWeapon" },
+    { "id": "stunner", "name": "Stunner", "category": "projectileWeapon" },
+    { "id": "maulaPistol", "name": "Maula Pistol", "category": "projectileWeapon" },
+    { "id": "shield1", "name": "Shield", "category": "projectileDefense" },
+    { "id": "shield2", "name": "Shield", "category": "projectileDefense" },
+    { "id": "shield3", "name": "Shield", "category": "projectileDefense" },
+    { "id": "shield4", "name": "Shield", "category": "projectileDefense" },
+    { "id": "cheapHero1", "name": "Cheap Hero", "category": "specialLeaderSubstitute" },
+    { "id": "cheapHero2", "name": "Cheap Hero", "category": "specialLeaderSubstitute" },
+    { "id": "cheapHeroine", "name": "Cheap Heroine", "category": "specialLeaderSubstitute" },
+    { "id": "lasgun", "name": "Lasgun", "category": "specialWeapon", "notes": "No defense stops it. If a shield is played by either side in the same battle, triggers a lasgun/shield explosion, losing all forces, leaders, and spice in the territory to everyone present, not just the battling factions." },
+    { "id": "hajr", "name": "Hajr", "category": "special" },
+    { "id": "ghola", "name": "Ghola", "category": "special" },
+    { "id": "weatherControl", "name": "Weather Control", "category": "special" },
+    { "id": "familyAtomics", "name": "Family Atomics", "category": "special" },
+    { "id": "truthtrance1", "name": "Truthtrance", "category": "special" },
+    { "id": "truthtrance2", "name": "Truthtrance", "category": "special" },
+    { "id": "karama1", "name": "Karama", "category": "special", "notes": "Base game: cancels one opponent faction advantage. Advanced game: also grants a faction-specific one-time power per the base rulebook's Advanced Karama Cards section." },
+    { "id": "karama2", "name": "Karama", "category": "special", "notes": "Base game: cancels one opponent faction advantage. Advanced game: also grants a faction-specific one-time power per the base rulebook's Advanced Karama Cards section." },
+    { "id": "tripToGamont", "name": "Trip to Gamont", "category": "worthless" },
+    { "id": "laLaLa", "name": "La La La", "category": "worthless" },
+    { "id": "kulon", "name": "Kulon", "category": "worthless" },
+    { "id": "jubbaCloak", "name": "Jubba Cloak", "category": "worthless" },
+    { "id": "baliset", "name": "Baliset", "category": "worthless" }
+  ]
+}
