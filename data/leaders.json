@@ -1,0 +1,19 @@
+{
+  "_schema": {
+    "notes": "Leader roster (names, fighting values, traitor eligibility) is deliberately left empty here rather than reconstructed from memory. Leader identity and fighting value are core to combat resolution and traitor probability, so these need pulling directly from the GF9 rulebook / official card list before the engine can trust them. Populate per faction using the shape below.",
+    "leaderShape": {
+      "id": "string, unique",
+      "name": "string",
+      "faction": "string, matches factions.json id",
+      "fightingValue": "number, combat strength",
+      "isSpecial": "boolean, true for unique leaders like Kwisatz Haderach",
+      "traitorPoolEligible": "boolean"
+    }
+  },
+  "atreides": [],
+  "harkonnen": [],
+  "emperor": [],
+  "fremen": [],
+  "guild": [],
+  "gesserit": []
+}
