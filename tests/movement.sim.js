@@ -83,4 +83,19 @@ executeMove(state, 'atreides', 'arrakeen', 'oldGap', 2);
 const secondMove = canMove(state, 'atreides', 'oldGap', 'basin', 1);
 assert(secondMove.ok === false, 'a second move in the same turn is correctly rejected');
 
+console.log('\nTest 8: cannot move into a territory where an ally already has forces');
+state = makeMinimalState();
+state.alliances = [{ factions: ['atreides', 'fremen'], formedTurn: 1 }];
+state.factions.fremen.forces.onBoard.oldGap = 2;
+const allyBlockCheck = canMove(state, 'atreides', 'arrakeen', 'oldGap', 2);
+assert(allyBlockCheck.ok === false, 'cannot move into a territory already occupied by an ally');
+
+console.log('\nTest 9: Polar Sink is exempt, allies can share it freely');
+state = makeMinimalState();
+state.alliances = [{ factions: ['atreides', 'fremen'], formedTurn: 1 }];
+state.factions.fremen.forces.onBoard.polarSink = 2;
+state.factions.atreides.forces.onBoard.windPass = 2;
+const polarSinkCheck = canMove(state, 'atreides', 'windPass', 'polarSink', 2);
+assert(polarSinkCheck.ok === true, 'moving into the polar sink alongside an ally is always fine');
+
 console.log('\nAll movement engine sanity checks passed.');
