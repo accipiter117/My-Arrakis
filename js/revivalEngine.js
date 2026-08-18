@@ -24,6 +24,7 @@ const FREE_FORCE_REVIVAL = {
 
 const FORCE_REVIVAL_CAP_PER_TURN = 3;
 const FORCE_REVIVAL_SPICE_COST = 2;
+const STARRED_REVIVAL_CAP_PER_TURN = 1; // "Only one Sardaukar/Fedaykin force can be revived per turn"
 
 // --- Force revival ---------------------------------------------------
 
@@ -31,17 +32,26 @@ function freeRevivalAllowance(factionId) {
   return FREE_FORCE_REVIVAL[factionId] ?? 0;
 }
 
-function canReviveForces(state, factionId, amount) {
+function canReviveForces(state, factionId, amount, starredAmount = 0) {
   const faction = state.factions[factionId];
   const tankedForces = faction.revivalTanks ?? 0;
+  const tankedStarred = faction.starredRevivalTanks ?? 0;
 
   if (amount <= 0) return { ok: false, reason: 'Revival amount must be positive.' };
+  if (starredAmount > amount) return { ok: false, reason: 'Starred forces revived cannot exceed total forces revived.' };
   if (amount > tankedForces) return { ok: false, reason: 'Not enough forces in the Tleilaxu Tanks.' };
+  if (starredAmount > tankedStarred) return { ok: false, reason: 'Not enough starred forces in the Tleilaxu Tanks.' };
   if (amount > FORCE_REVIVAL_CAP_PER_TURN) {
     return { ok: false, reason: `Cannot revive more than ${FORCE_REVIVAL_CAP_PER_TURN} forces per turn, regardless of spice.` };
   }
   if ((faction.forcesRevivedThisTurn ?? 0) + amount > FORCE_REVIVAL_CAP_PER_TURN) {
     return { ok: false, reason: 'Would exceed the per-turn revival cap when combined with forces already revived this turn.' };
+  }
+  if (starredAmount > STARRED_REVIVAL_CAP_PER_TURN) {
+    return { ok: false, reason: `Cannot revive more than ${STARRED_REVIVAL_CAP_PER_TURN} starred force per turn, regardless of the overall cap.` };
+  }
+  if ((faction.starredForcesRevivedThisTurn ?? 0) + starredAmount > STARRED_REVIVAL_CAP_PER_TURN) {
+    return { ok: false, reason: 'Would exceed the per-turn starred-force revival cap.' };
   }
 
   const freeAllowance = freeRevivalAllowance(factionId);
@@ -57,8 +67,8 @@ function canReviveForces(state, factionId, amount) {
   return { ok: true, cost, freeUsed: amount - paidPortion, paidUsed: paidPortion };
 }
 
-function reviveForces(state, factionId, amount) {
-  const check = canReviveForces(state, factionId, amount);
+function reviveForces(state, factionId, amount, starredAmount = 0) {
+  const check = canReviveForces(state, factionId, amount, starredAmount);
   if (!check.ok) throw new Error(check.reason);
 
   const faction = state.factions[factionId];
@@ -68,7 +78,13 @@ function reviveForces(state, factionId, amount) {
   faction.spice -= check.cost;
   state.spiceBank.totalInCirculation += check.cost;
 
-  return { factionId, amount, cost: check.cost };
+  if (starredAmount > 0) {
+    faction.starredRevivalTanks -= starredAmount;
+    faction.forces.starredReserve = (faction.forces.starredReserve ?? 0) + starredAmount;
+    faction.starredForcesRevivedThisTurn = (faction.starredForcesRevivedThisTurn ?? 0) + starredAmount;
+  }
+
+  return { factionId, amount, starredAmount, cost: check.cost };
 }
 
 // --- Leader revival --------------------------------------------------
@@ -119,6 +135,7 @@ function reviveLeader(state, factionId, leaderId, leaderFightingValue) {
 function resetRevivalTurnFlags(state) {
   for (const factionId of Object.keys(state.factions)) {
     state.factions[factionId].forcesRevivedThisTurn = 0;
+    state.factions[factionId].starredForcesRevivedThisTurn = 0;
     state.factions[factionId].leaderRevivedThisTurn = false;
   }
   return state;
