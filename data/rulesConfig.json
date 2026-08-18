@@ -1,0 +1,40 @@
+{
+  "ruleset": "standard_advanced_v1",
+  "official": {
+    "description": "Core rules as printed in the base GF9 rulebook. Always active.",
+    "shippingCostFullRate": true,
+    "guildShippingDiscount": true,
+    "prescienceOneFieldOnly": true
+  },
+  "officialAdvanced": {
+    "description": "Advanced-game rules toggled on for the Phase 1 target (6-player advanced).",
+    "advancedBattlePlans": true,
+    "advancedBidding": true,
+    "notes": "Confirm the exact list of what 'advanced' changes versus base rules against the GF9 PDF before locking these flags."
+  },
+  "optional": {
+    "description": "Variant/optional rules, off by default.",
+    "enabled": []
+  },
+  "expansions": {
+    "ixianTleilaxu": { "enabled": false },
+    "choamRichese": { "enabled": false }
+  },
+  "implementationDecisions": {
+    "description": "Rules that exist only because a physical-table interaction needs a digital equivalent. Every entry here must have a one-line justification so it's auditable later.",
+    "entries": [
+      {
+        "id": "hiddenBidOrderDisplay",
+        "justification": "Physical bidding relies on players holding cards face down; digital equivalent is a sequential reveal-and-decide UI rather than simultaneous entry, to preserve bidding psychology per section 16 of the brief."
+      }
+    ]
+  },
+  "gameSize": {
+    "supported": [2, 3, 4, 5, 6],
+    "default": 6
+  },
+  "victoryVariants": {
+    "standardStrongholdCount": null,
+    "notes": "Confirm stronghold count required for standard solo/alliance victory against rulebook before hardcoding."
+  }
+}
