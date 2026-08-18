@@ -23,7 +23,11 @@ function createInitialGameState(config) {
 
     decks: {
       spiceDeck: [],
-      spiceDiscard: [],
+      // Two discard piles, not one: advanced rules (Double Spice Blow) are
+      // always active per project instruction, so this was never actually
+      // optional and the single-pile shape here was already stale.
+      spiceDiscardA: [],
+      spiceDiscardB: [],
       treacheryDeck: [],
       treacheryDiscard: [],
       traitorDeck: []
