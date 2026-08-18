@@ -1,0 +1,58 @@
+{
+  "_notes": {
+    "source": "Extracted directly from a photo of the physical GF9 2019 board, provided by the user.",
+    "confidence": "Territory names, terrain type, and spice blow presence/value are high confidence, read directly off the image.",
+    "pending": [
+      "Sector numbers (1-18, per the rulebook) are not reliably readable from this photo angle/resolution. The small arrow marks around the outer ring likely denote sector boundaries but I'm not confident enough to transcribe them without guessing.",
+      "Territory adjacency (which territories touch which, for movement/storm logic) is not included. Board geography can be misread from a photo, and adjacency errors would silently break movement rules. Best path: a directly-overhead photo of the board, or confirming adjacency territory-by-territory once the physical board is out.",
+      "Territories that span multiple sectors (per the rulebook, several large territories do) aren't marked as such yet, that also needs the sector pass."
+    ]
+  },
+  "territories": {
+    "brokenLand": { "name": "Broken Land", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
+    "oldGap": { "name": "Old Gap", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
+    "tsimpo": { "name": "Tsimpo", "type": "sand", "spiceBlow": { "present": false } },
+    "basin": { "name": "Basin", "type": "sand", "spiceBlow": { "present": false } },
+    "rockOutcroppings": { "name": "Rock Outcroppings", "type": "rock", "spiceBlow": { "present": false } },
+    "plasticBasin": { "name": "Plastic Basin", "type": "rock", "spiceBlow": { "present": false } },
+    "sietchTabr": { "name": "Sietch Tabr", "type": "stronghold", "spiceBlow": { "present": false } },
+    "carthag": { "name": "Carthag", "type": "stronghold", "spiceBlow": { "present": false } },
+    "arrakeen": { "name": "Arrakeen", "type": "stronghold", "spiceBlow": { "present": false } },
+    "rimWallWest": { "name": "Rim Wall West", "type": "rock", "spiceBlow": { "present": false } },
+    "sihayaRidge": { "name": "Sihaya Ridge", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
+    "haggaBasin": { "name": "Hagga Basin", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
+    "imperialBasin": { "name": "Imperial Basin", "type": "sand", "spiceBlow": { "present": false }, "notes": "Per rulebook: the one sand territory storm damage does NOT apply to." },
+    "shieldWall": { "name": "Shield Wall", "type": "rock", "spiceBlow": { "present": false } },
+    "holeInTheRock": { "name": "Hole in the Rock", "type": "rock", "spiceBlow": { "present": false } },
+    "garaKulon": { "name": "Gara Kulon", "type": "rock", "spiceBlow": { "present": false } },
+    "bightOfTheCliff": { "name": "Bight of the Cliff", "type": "rock", "spiceBlow": { "present": false } },
+    "funeralPlain": { "name": "Funeral Plain", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
+    "theGreatFlat": { "name": "The Great Flat", "type": "sand", "spiceBlow": { "present": true, "maxValue": 10 } },
+    "arsunt": { "name": "Arsunt", "type": "sand", "spiceBlow": { "present": false } },
+    "falseWallEast": { "name": "False Wall East", "type": "rock", "spiceBlow": { "present": false } },
+    "theMinorErg": { "name": "The Minor Erg", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
+    "pastyMesa": { "name": "Pasty Mesa", "type": "rock", "spiceBlow": { "present": false } },
+    "redChasm": { "name": "Red Chasm", "type": "rock", "spiceBlow": { "present": true, "maxValue": 8 } },
+    "theGreaterFlat": { "name": "The Greater Flat", "type": "sand", "spiceBlow": { "present": false } },
+    "habbanyaErg": { "name": "Habbanya Erg", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
+    "falseWallWest": { "name": "False Wall West", "type": "rock", "spiceBlow": { "present": false } },
+    "windPass": { "name": "Wind Pass", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
+    "windPassNorth": { "name": "Wind Pass North", "type": "sand", "spiceBlow": { "present": false } },
+    "polarSink": { "name": "Polar Sink", "type": "polarSink", "spiceBlow": { "present": false }, "notes": "Never in storm. No battles occur here. Free haven for all factions." },
+    "hargPass": { "name": "Harg Pass", "type": "rock", "spiceBlow": { "present": false } },
+    "falseWallSouth": { "name": "False Wall South", "type": "rock", "spiceBlow": { "present": false } },
+    "tueksSietch": { "name": "Tuek's Sietch", "type": "stronghold", "spiceBlow": { "present": false } },
+    "southMesa": { "name": "South Mesa", "type": "rock", "spiceBlow": { "present": true, "maxValue": 10 }, "notes": "The '10' spice icon sits near the Tuek's Sietch/South Mesa boundary on the photo, assigned here provisionally, worth confirming which territory it's actually inside." },
+    "habbanyaSietch": { "name": "Habbanya Sietch", "type": "stronghold", "spiceBlow": { "present": false } },
+    "habbanyaRidgeFlat": { "name": "Habbanya Ridge Flat", "type": "sand", "spiceBlow": { "present": true, "maxValue": 10 } },
+    "cielagoWest": { "name": "Cielago West", "type": "sand", "spiceBlow": { "present": false } },
+    "cielagoNorth": { "name": "Cielago North", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
+    "cielagoDepression": { "name": "Cielago Depression", "type": "sand", "spiceBlow": { "present": false } },
+    "cielagoEast": { "name": "Cielago East", "type": "sand", "spiceBlow": { "present": false } },
+    "meridian": { "name": "Meridian", "type": "sand", "spiceBlow": { "present": false } },
+    "cielagoSouth": { "name": "Cielago South", "type": "sand", "spiceBlow": { "present": true, "maxValue": 12 } }
+  },
+  "stormStart": {
+    "notes": "Marked on the board edge near Cielago South/Meridian. This is the sector the storm's random starting position is measured from, per the rulebook's First Storm procedure, not a territory itself."
+  }
+}
