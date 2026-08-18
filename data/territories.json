@@ -1,56 +1,564 @@
 {
   "_notes": {
-    "source": "Extracted directly from a photo of the physical GF9 2019 board, provided by the user.",
-    "confidence": "Territory names, terrain type, and spice blow presence/value are high confidence, read directly off the image.",
+    "source": "Territory names, type, and spice blow data extracted from the official printed board graphic provided by the user. Adjacency drafted by visual tracing of the same graphic, sector numbers pending user verification (counting the 18 dashed radial sectors from Polar Sink outward).",
+    "confidence": "Territory names, terrain type, and spice blow presence/value: high confidence, read directly off the image. Adjacency: draft, based on visually traced shared borders, NOT yet confirmed against the physical board. Sectors: not yet added, pending user's count.",
     "pending": [
-      "Sector numbers (1-18, per the rulebook) are not reliably readable from this photo angle/resolution. The small arrow marks around the outer ring likely denote sector boundaries but I'm not confident enough to transcribe them without guessing.",
-      "Territory adjacency (which territories touch which, for movement/storm logic) is not included. Board geography can be misread from a photo, and adjacency errors would silently break movement rules. Best path: a directly-overhead photo of the board, or confirming adjacency territory-by-territory once the physical board is out.",
-      "Territories that span multiple sectors (per the rulebook, several large territories do) aren't marked as such yet, that also needs the sector pass."
+      "Sector numbers (1-18) and which territories span multiple sectors, user is counting these directly off the board.",
+      "Adjacency below should be spot-checked against the physical board before being trusted for movement logic. A few boundary calls (Tsimpo/Hagga Basin/Carthag cluster, and the Cielago North/Harg Pass/False Wall South cluster) were the least visually clear and are the ones most worth double-checking first."
     ]
   },
   "territories": {
-    "brokenLand": { "name": "Broken Land", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
-    "oldGap": { "name": "Old Gap", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
-    "tsimpo": { "name": "Tsimpo", "type": "sand", "spiceBlow": { "present": false } },
-    "basin": { "name": "Basin", "type": "sand", "spiceBlow": { "present": false } },
-    "rockOutcroppings": { "name": "Rock Outcroppings", "type": "rock", "spiceBlow": { "present": false } },
-    "plasticBasin": { "name": "Plastic Basin", "type": "rock", "spiceBlow": { "present": false } },
-    "sietchTabr": { "name": "Sietch Tabr", "type": "stronghold", "spiceBlow": { "present": false } },
-    "carthag": { "name": "Carthag", "type": "stronghold", "spiceBlow": { "present": false } },
-    "arrakeen": { "name": "Arrakeen", "type": "stronghold", "spiceBlow": { "present": false } },
-    "rimWallWest": { "name": "Rim Wall West", "type": "rock", "spiceBlow": { "present": false } },
-    "sihayaRidge": { "name": "Sihaya Ridge", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
-    "haggaBasin": { "name": "Hagga Basin", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
-    "imperialBasin": { "name": "Imperial Basin", "type": "sand", "spiceBlow": { "present": false }, "notes": "Per rulebook: the one sand territory storm damage does NOT apply to." },
-    "shieldWall": { "name": "Shield Wall", "type": "rock", "spiceBlow": { "present": false } },
-    "holeInTheRock": { "name": "Hole in the Rock", "type": "rock", "spiceBlow": { "present": false } },
-    "garaKulon": { "name": "Gara Kulon", "type": "rock", "spiceBlow": { "present": false } },
-    "bightOfTheCliff": { "name": "Bight of the Cliff", "type": "rock", "spiceBlow": { "present": false } },
-    "funeralPlain": { "name": "Funeral Plain", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
-    "theGreatFlat": { "name": "The Great Flat", "type": "sand", "spiceBlow": { "present": true, "maxValue": 10 } },
-    "arsunt": { "name": "Arsunt", "type": "sand", "spiceBlow": { "present": false } },
-    "falseWallEast": { "name": "False Wall East", "type": "rock", "spiceBlow": { "present": false } },
-    "theMinorErg": { "name": "The Minor Erg", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
-    "pastyMesa": { "name": "Pasty Mesa", "type": "rock", "spiceBlow": { "present": false } },
-    "redChasm": { "name": "Red Chasm", "type": "rock", "spiceBlow": { "present": true, "maxValue": 8 } },
-    "theGreaterFlat": { "name": "The Greater Flat", "type": "sand", "spiceBlow": { "present": false } },
-    "habbanyaErg": { "name": "Habbanya Erg", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
-    "falseWallWest": { "name": "False Wall West", "type": "rock", "spiceBlow": { "present": false } },
-    "windPass": { "name": "Wind Pass", "type": "sand", "spiceBlow": { "present": true, "maxValue": 6 } },
-    "windPassNorth": { "name": "Wind Pass North", "type": "sand", "spiceBlow": { "present": false } },
-    "polarSink": { "name": "Polar Sink", "type": "polarSink", "spiceBlow": { "present": false }, "notes": "Never in storm. No battles occur here. Free haven for all factions." },
-    "hargPass": { "name": "Harg Pass", "type": "rock", "spiceBlow": { "present": false } },
-    "falseWallSouth": { "name": "False Wall South", "type": "rock", "spiceBlow": { "present": false } },
-    "tueksSietch": { "name": "Tuek's Sietch", "type": "stronghold", "spiceBlow": { "present": false } },
-    "southMesa": { "name": "South Mesa", "type": "rock", "spiceBlow": { "present": true, "maxValue": 10 }, "notes": "The '10' spice icon sits near the Tuek's Sietch/South Mesa boundary on the photo, assigned here provisionally, worth confirming which territory it's actually inside." },
-    "habbanyaSietch": { "name": "Habbanya Sietch", "type": "stronghold", "spiceBlow": { "present": false } },
-    "habbanyaRidgeFlat": { "name": "Habbanya Ridge Flat", "type": "sand", "spiceBlow": { "present": true, "maxValue": 10 } },
-    "cielagoWest": { "name": "Cielago West", "type": "sand", "spiceBlow": { "present": false } },
-    "cielagoNorth": { "name": "Cielago North", "type": "sand", "spiceBlow": { "present": true, "maxValue": 8 } },
-    "cielagoDepression": { "name": "Cielago Depression", "type": "sand", "spiceBlow": { "present": false } },
-    "cielagoEast": { "name": "Cielago East", "type": "sand", "spiceBlow": { "present": false } },
-    "meridian": { "name": "Meridian", "type": "sand", "spiceBlow": { "present": false } },
-    "cielagoSouth": { "name": "Cielago South", "type": "sand", "spiceBlow": { "present": true, "maxValue": 12 } }
+    "brokenLand": {
+      "name": "Broken Land",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 8
+      },
+      "adjacentDraft": [
+        "rockOutcroppings",
+        "tsimpo",
+        "oldGap"
+      ]
+    },
+    "oldGap": {
+      "name": "Old Gap",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 6
+      },
+      "adjacentDraft": [
+        "brokenLand",
+        "basin",
+        "arrakeen"
+      ]
+    },
+    "tsimpo": {
+      "name": "Tsimpo",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "brokenLand",
+        "plasticBasin",
+        "carthag",
+        "haggaBasin"
+      ]
+    },
+    "basin": {
+      "name": "Basin",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "oldGap",
+        "sihayaRidge",
+        "arrakeen"
+      ]
+    },
+    "rockOutcroppings": {
+      "name": "Rock Outcroppings",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "brokenLand",
+        "plasticBasin",
+        "bightOfTheCliff"
+      ]
+    },
+    "plasticBasin": {
+      "name": "Plastic Basin",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "rockOutcroppings",
+        "tsimpo",
+        "sietchTabr",
+        "haggaBasin"
+      ]
+    },
+    "sietchTabr": {
+      "name": "Sietch Tabr",
+      "type": "stronghold",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "plasticBasin",
+        "bightOfTheCliff",
+        "funeralPlain"
+      ]
+    },
+    "carthag": {
+      "name": "Carthag",
+      "type": "stronghold",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "tsimpo",
+        "haggaBasin",
+        "imperialBasin",
+        "arrakeen"
+      ]
+    },
+    "arrakeen": {
+      "name": "Arrakeen",
+      "type": "stronghold",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "oldGap",
+        "basin",
+        "carthag",
+        "imperialBasin",
+        "rimWallWest",
+        "sihayaRidge"
+      ]
+    },
+    "rimWallWest": {
+      "name": "Rim Wall West",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "arrakeen",
+        "imperialBasin",
+        "shieldWall",
+        "holeInTheRock"
+      ]
+    },
+    "sihayaRidge": {
+      "name": "Sihaya Ridge",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 6
+      },
+      "adjacentDraft": [
+        "basin",
+        "arrakeen",
+        "garaKulon"
+      ]
+    },
+    "haggaBasin": {
+      "name": "Hagga Basin",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 6
+      },
+      "adjacentDraft": [
+        "tsimpo",
+        "plasticBasin",
+        "carthag",
+        "arsunt"
+      ]
+    },
+    "imperialBasin": {
+      "name": "Imperial Basin",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "notes": "Per rulebook: the one sand territory storm damage does NOT apply to.",
+      "adjacentDraft": [
+        "carthag",
+        "arrakeen",
+        "rimWallWest",
+        "arsunt",
+        "falseWallEast"
+      ]
+    },
+    "shieldWall": {
+      "name": "Shield Wall",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "rimWallWest",
+        "holeInTheRock",
+        "theMinorErg",
+        "falseWallEast"
+      ]
+    },
+    "holeInTheRock": {
+      "name": "Hole in the Rock",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "rimWallWest",
+        "shieldWall",
+        "garaKulon"
+      ]
+    },
+    "garaKulon": {
+      "name": "Gara Kulon",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "sihayaRidge",
+        "holeInTheRock",
+        "pastyMesa"
+      ]
+    },
+    "bightOfTheCliff": {
+      "name": "Bight of the Cliff",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "sietchTabr",
+        "rockOutcroppings",
+        "funeralPlain"
+      ]
+    },
+    "funeralPlain": {
+      "name": "Funeral Plain",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 6
+      },
+      "adjacentDraft": [
+        "bightOfTheCliff",
+        "sietchTabr",
+        "theGreatFlat"
+      ]
+    },
+    "theGreatFlat": {
+      "name": "The Great Flat",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 10
+      },
+      "adjacentDraft": [
+        "funeralPlain",
+        "theGreaterFlat",
+        "windPassNorth"
+      ]
+    },
+    "arsunt": {
+      "name": "Arsunt",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "haggaBasin",
+        "imperialBasin",
+        "windPassNorth",
+        "windPass"
+      ]
+    },
+    "falseWallEast": {
+      "name": "False Wall East",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "imperialBasin",
+        "shieldWall",
+        "theMinorErg",
+        "polarSink",
+        "hargPass"
+      ]
+    },
+    "theMinorErg": {
+      "name": "The Minor Erg",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 8
+      },
+      "adjacentDraft": [
+        "shieldWall",
+        "pastyMesa",
+        "falseWallEast",
+        "hargPass",
+        "falseWallSouth"
+      ]
+    },
+    "pastyMesa": {
+      "name": "Pasty Mesa",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "garaKulon",
+        "theMinorErg",
+        "redChasm"
+      ]
+    },
+    "redChasm": {
+      "name": "Red Chasm",
+      "type": "rock",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 8
+      },
+      "adjacentDraft": [
+        "pastyMesa",
+        "southMesa"
+      ]
+    },
+    "theGreaterFlat": {
+      "name": "The Greater Flat",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "theGreatFlat",
+        "habbanyaErg",
+        "falseWallWest"
+      ]
+    },
+    "habbanyaErg": {
+      "name": "Habbanya Erg",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 8
+      },
+      "adjacentDraft": [
+        "theGreaterFlat",
+        "habbanyaSietch",
+        "falseWallWest"
+      ]
+    },
+    "falseWallWest": {
+      "name": "False Wall West",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "theGreaterFlat",
+        "windPassNorth",
+        "habbanyaErg",
+        "cielagoWest",
+        "windPass"
+      ]
+    },
+    "windPass": {
+      "name": "Wind Pass",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 6
+      },
+      "adjacentDraft": [
+        "arsunt",
+        "windPassNorth",
+        "polarSink",
+        "falseWallWest",
+        "cielagoNorth"
+      ]
+    },
+    "windPassNorth": {
+      "name": "Wind Pass North",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "arsunt",
+        "theGreatFlat",
+        "falseWallWest",
+        "windPass"
+      ]
+    },
+    "polarSink": {
+      "name": "Polar Sink",
+      "type": "polarSink",
+      "spiceBlow": {
+        "present": false
+      },
+      "notes": "Never in storm. No battles occur here. Free haven for all factions.",
+      "adjacentDraft": [
+        "windPass",
+        "falseWallEast",
+        "hargPass",
+        "cielagoNorth"
+      ]
+    },
+    "hargPass": {
+      "name": "Harg Pass",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "polarSink",
+        "falseWallEast",
+        "theMinorErg",
+        "falseWallSouth"
+      ]
+    },
+    "falseWallSouth": {
+      "name": "False Wall South",
+      "type": "rock",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "theMinorErg",
+        "hargPass",
+        "tueksSietch",
+        "southMesa",
+        "cielagoEast"
+      ]
+    },
+    "tueksSietch": {
+      "name": "Tuek's Sietch",
+      "type": "stronghold",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "falseWallSouth",
+        "southMesa"
+      ]
+    },
+    "southMesa": {
+      "name": "South Mesa",
+      "type": "rock",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 10
+      },
+      "notes": "The '10' spice icon sits near the Tuek's Sietch/South Mesa boundary on the photo, assigned here provisionally, worth confirming which territory it's actually inside.",
+      "adjacentDraft": [
+        "redChasm",
+        "tueksSietch",
+        "falseWallSouth",
+        "cielagoEast"
+      ]
+    },
+    "habbanyaSietch": {
+      "name": "Habbanya Sietch",
+      "type": "stronghold",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "habbanyaErg",
+        "habbanyaRidgeFlat",
+        "cielagoWest"
+      ]
+    },
+    "habbanyaRidgeFlat": {
+      "name": "Habbanya Ridge Flat",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 10
+      },
+      "adjacentDraft": [
+        "habbanyaSietch",
+        "cielagoWest",
+        "meridian"
+      ]
+    },
+    "cielagoWest": {
+      "name": "Cielago West",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "falseWallWest",
+        "habbanyaSietch",
+        "habbanyaRidgeFlat",
+        "cielagoDepression",
+        "cielagoNorth"
+      ]
+    },
+    "cielagoNorth": {
+      "name": "Cielago North",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 8
+      },
+      "adjacentDraft": [
+        "windPass",
+        "polarSink",
+        "cielagoWest",
+        "cielagoDepression"
+      ]
+    },
+    "cielagoDepression": {
+      "name": "Cielago Depression",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "cielagoWest",
+        "cielagoNorth",
+        "meridian",
+        "cielagoEast",
+        "cielagoSouth"
+      ]
+    },
+    "cielagoEast": {
+      "name": "Cielago East",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "cielagoDepression",
+        "southMesa",
+        "falseWallSouth",
+        "cielagoSouth"
+      ]
+    },
+    "meridian": {
+      "name": "Meridian",
+      "type": "sand",
+      "spiceBlow": {
+        "present": false
+      },
+      "adjacentDraft": [
+        "habbanyaRidgeFlat",
+        "cielagoDepression",
+        "cielagoSouth"
+      ]
+    },
+    "cielagoSouth": {
+      "name": "Cielago South",
+      "type": "sand",
+      "spiceBlow": {
+        "present": true,
+        "maxValue": 12
+      },
+      "adjacentDraft": [
+        "meridian",
+        "cielagoDepression",
+        "cielagoEast"
+      ]
+    }
   },
   "stormStart": {
     "notes": "Marked on the board edge near Cielago South/Meridian. This is the sector the storm's random starting position is measured from, per the rulebook's First Storm procedure, not a territory itself."
