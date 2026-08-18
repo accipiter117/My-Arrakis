@@ -1,19 +1,260 @@
 {
-  "_schema": {
-    "notes": "Leader roster (names, fighting values, traitor eligibility) is deliberately left empty here rather than reconstructed from memory. Leader identity and fighting value are core to combat resolution and traitor probability, so these need pulling directly from the GF9 rulebook / official card list before the engine can trust them. Populate per faction using the shape below.",
-    "leaderShape": {
-      "id": "string, unique",
-      "name": "string",
-      "faction": "string, matches factions.json id",
-      "fightingValue": "number, combat strength",
-      "isSpecial": "boolean, true for unique leaders like Kwisatz Haderach",
-      "traitorPoolEligible": "boolean"
-    }
+  "_notes": {
+    "source": "Leader roster and fighting values cross-verified from two independent readings of the same source (a CC-BY 3.0 fan reference compiling the original Avalon Hill Dune components list): once via rendered PDF image, once via the accompanying plain-text component list. Both agree exactly.",
+    "confidence": "High for the leader roster and fighting values themselves, these are foundational to the game's identity and have been stable across AH and GF9 editions. Not a GF9-2019-specific primary source though, flagging that distinction rather than overclaiming certainty.",
+    "caveat": "GF9's own promotional material describes the 2019 edition as changing only about 3-5% of the original rules, and faction/leader identity (named characters tied to the novel) is exactly the kind of thing unlikely to be touched. Still worth a quick visual confirm against the physical leader discs whenever convenient, since this claim is about typical revision scope, not a guarantee."
   },
-  "atreides": [],
-  "harkonnen": [],
-  "emperor": [],
-  "fremen": [],
-  "guild": [],
-  "gesserit": []
+  "atreides": [
+    {
+      "id": "ladyJessica",
+      "name": "Lady Jessica",
+      "faction": "atreides",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "thufirHawat",
+      "name": "Thufir Hawat",
+      "faction": "atreides",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "gurneyHalleck",
+      "name": "Gurney Halleck",
+      "faction": "atreides",
+      "fightingValue": 4,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "duncanIdaho",
+      "name": "Duncan Idaho",
+      "faction": "atreides",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "drYueh",
+      "name": "Dr. Wellington Yueh",
+      "faction": "atreides",
+      "fightingValue": 1,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
+  ],
+  "harkonnen": [
+    {
+      "id": "feydRautha",
+      "name": "Feyd-Rautha",
+      "faction": "harkonnen",
+      "fightingValue": 6,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "beastRabban",
+      "name": "Beast Rabban",
+      "faction": "harkonnen",
+      "fightingValue": 4,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "piterDeVries",
+      "name": "Piter De Vries",
+      "faction": "harkonnen",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "captainIakinNefud",
+      "name": "Captain Iakin Nefud",
+      "faction": "harkonnen",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "ummanKudu",
+      "name": "Umman Kudu",
+      "faction": "harkonnen",
+      "fightingValue": 1,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
+  ],
+  "emperor": [
+    {
+      "id": "countFenring",
+      "name": "Count Hasimir Fenring",
+      "faction": "emperor",
+      "fightingValue": 6,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "captainAramsham",
+      "name": "Captain Aramsham",
+      "faction": "emperor",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "burseg",
+      "name": "Burseg",
+      "faction": "emperor",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "caid",
+      "name": "Caid",
+      "faction": "emperor",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true,
+      "notes": "Image and text source agree on 3, differing from an early single-source draft that suggested 2. Text list is explicit: 'Caid (3) Emperor'."
+    },
+    {
+      "id": "bashar",
+      "name": "Bashar",
+      "faction": "emperor",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
+  ],
+  "fremen": [
+    {
+      "id": "stilgar",
+      "name": "Stilgar",
+      "faction": "fremen",
+      "fightingValue": 7,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "chani",
+      "name": "Chani",
+      "faction": "fremen",
+      "fightingValue": 6,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "otheym",
+      "name": "Otheym",
+      "faction": "fremen",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "shadoutMapes",
+      "name": "Shadout Mapes",
+      "faction": "fremen",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "jamis",
+      "name": "Jamis",
+      "faction": "fremen",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
+  ],
+  "guild": [
+    {
+      "id": "stabanTuek",
+      "name": "Staban Tuek",
+      "faction": "guild",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "esmarTuek",
+      "name": "Esmar Tuek",
+      "faction": "guild",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "masterBewt",
+      "name": "Master Bewt",
+      "faction": "guild",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "sooSooSook",
+      "name": "Soo Soo Sook",
+      "faction": "guild",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "guildRepresentative",
+      "name": "Guild Representative",
+      "faction": "guild",
+      "fightingValue": 1,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
+  ],
+  "gesserit": [
+    {
+      "id": "alia",
+      "name": "Alia",
+      "faction": "gesserit",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "ladyMargotFenring",
+      "name": "Lady Margot Fenring",
+      "faction": "gesserit",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "princessIrulan",
+      "name": "Princess Irulan",
+      "faction": "gesserit",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "reverendMotherRamallo",
+      "name": "Reverend Mother Ramallo",
+      "faction": "gesserit",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "wannaMarcus",
+      "name": "Wanna Marcus",
+      "faction": "gesserit",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
+  ]
 }
