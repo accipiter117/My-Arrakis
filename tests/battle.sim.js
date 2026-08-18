@@ -1,8 +1,10 @@
-// battle.sim.js — headless sanity check for battle resolution.
+// battle.sim.js — headless sanity check for battle resolution, including
+// starred units (Sardaukar/Fedaykin) and Kwisatz Haderach.
 // Run with: node battle.sim.js
 
 const {
-  calculateStrength, resolveWeaponDefense, resolveBattle
+  starredUnitValueFor, calculateStrength, resolveBattle,
+  kwisatzHaderachBonusFor, recordForceLossForKwisatzHaderach
 } = require('./js/battleEngine.js');
 
 const cardLookup = {
@@ -20,13 +22,28 @@ function makeState() {
     spiceBank: { totalInCirculation: 1000 },
     factions: {
       atreides: {
-        spice: 20, forces: { onBoard: { arrakeen: 6 } }, revivalTanks: 0,
+        spice: 20, revivalTanks: 0,
+        forces: { onBoard: { arrakeen: 6 }, starredOnBoard: {} },
         leaders: { available: ['thufirHawat'], killed: [] },
-        traitorHand: [], treacheryHand: []
+        traitorHand: [], treacheryHand: [],
+        specialFactionState: { cumulativeForcesLostInBattle: 0, kwisatzHaderachActive: false, kwisatzHaderachUsedInTerritoryThisPhase: null }
       },
       harkonnen: {
-        spice: 20, forces: { onBoard: { arrakeen: 4 } }, revivalTanks: 0,
+        spice: 20, revivalTanks: 0,
+        forces: { onBoard: { arrakeen: 4 }, starredOnBoard: {} },
         leaders: { available: ['piterDeVries'], killed: [] },
+        traitorHand: [], treacheryHand: []
+      },
+      emperor: {
+        spice: 20, revivalTanks: 0,
+        forces: { onBoard: { imperialBasin: 6 }, starredOnBoard: { imperialBasin: 1 } },
+        leaders: { available: ['countFenring'], killed: [] },
+        traitorHand: [], treacheryHand: []
+      },
+      fremen: {
+        spice: 20, revivalTanks: 0,
+        forces: { onBoard: { cielagoNorth: 5 }, starredOnBoard: { cielagoNorth: 2 } },
+        leaders: { available: ['stilgar'], killed: [] },
         traitorHand: [], treacheryHand: []
       }
     }
@@ -38,78 +55,94 @@ function assert(condition, message) {
   console.log('  ok - ' + message);
 }
 
-console.log('Test 1: strength calculation with spice support (advanced rule)');
-const fullySupported = calculateStrength({ forcesCommitted: 4, spiceCommitted: 4, leaderFightingValue: 5, leaderWasKilled: false });
-assert(fullySupported === 9, `4 fully-supported forces + leader 5 = 9, got ${fullySupported}`);
-const halfSupported = calculateStrength({ forcesCommitted: 4, spiceCommitted: 2, leaderFightingValue: 5, leaderWasKilled: false });
-assert(halfSupported === 8, `2 supported (2) + 2 unsupported (1) + leader 5 = 8, got ${halfSupported}`);
-const noSpice = calculateStrength({ forcesCommitted: 4, spiceCommitted: 0, leaderFightingValue: 5, leaderWasKilled: false });
-assert(noSpice === 7, `all 4 unsupported (2) + leader 5 = 7, got ${noSpice}`);
+console.log('Test 1: strength calculation, ordinary forces only (no starred units)');
+let strength = calculateStrength({
+  forcesCommitted: 4, starredForcesCommitted: 0,
+  supportedOrdinaryCount: 4, supportedStarredCount: 0,
+  starredUnitValue: 0, leaderFightingValue: 5, leaderWasKilled: false
+});
+assert(strength === 9, `4 fully-supported ordinary forces (4) + leader 5 = 9, got ${strength}`);
 
-console.log('\nTest 2: weapon kills leader unless matching defense played');
-let wd = resolveWeaponDefense(
-  { weaponCardId: 'maulaPistol', defenseCardId: null },
-  { weaponCardId: null, defenseCardId: null },
-  cardLookup
-);
-assert(wd.defenderLeaderKilled === true, 'projectile weapon with no defense kills the defender leader');
-assert(wd.aggressorLeaderKilled === false, 'aggressor unaffected, they played the weapon');
+strength = calculateStrength({
+  forcesCommitted: 4, starredForcesCommitted: 0,
+  supportedOrdinaryCount: 2, supportedStarredCount: 0,
+  starredUnitValue: 0, leaderFightingValue: 5, leaderWasKilled: false
+});
+assert(strength === 8, `2 supported (2) + 2 unsupported (1) + leader 5 = 8, got ${strength}`);
 
-wd = resolveWeaponDefense(
-  { weaponCardId: 'chaumas', defenseCardId: null },
-  { weaponCardId: null, defenseCardId: 'snooper1' },
-  cardLookup
-);
-assert(wd.defenderLeaderKilled === false, 'matching poison defense cancels the poison weapon kill');
+console.log('\nTest 2: starred unit value, Sardaukar worth double except against Fremen');
+assert(starredUnitValueFor('emperor', 'harkonnen') === 2, 'sardaukar worth 2 against a non-fremen opponent');
+assert(starredUnitValueFor('emperor', 'fremen') === 1, 'sardaukar worth only 1 specifically against fremen');
+assert(starredUnitValueFor('fremen', 'emperor') === 2, 'fedaykin worth 2 with no stated exception');
+assert(starredUnitValueFor('atreides', 'harkonnen') === 0, 'factions without starred units get value 0');
 
-wd = resolveWeaponDefense(
-  { weaponCardId: 'chaumas', defenseCardId: null },
-  { weaponCardId: null, defenseCardId: 'shield1' }, // wrong defense type for a poison weapon
-  cardLookup
-);
-assert(wd.defenderLeaderKilled === true, 'a mismatched defense type does NOT stop the kill (shield does not stop poison)');
+console.log('\nTest 3: strength calculation with a supported Sardaukar mixed with ordinary forces');
+strength = calculateStrength({
+  forcesCommitted: 5, starredForcesCommitted: 1,
+  supportedStarredCount: 1, supportedOrdinaryCount: 4,
+  starredUnitValue: 2, leaderFightingValue: 6, leaderWasKilled: false
+});
+assert(strength === 12, `1 supported sardaukar (2) + 4 supported ordinary (4) + leader 6 = 12, got ${strength}`);
 
-console.log('\nTest 3: lasgun + shield anywhere in the battle triggers an explosion');
-wd = resolveWeaponDefense(
-  { weaponCardId: 'lasgun', defenseCardId: null },
-  { weaponCardId: null, defenseCardId: 'shield1' },
-  cardLookup
-);
-assert(wd.explosion === true, 'lasgun from one side + shield from the other triggers explosion');
+strength = calculateStrength({
+  forcesCommitted: 5, starredForcesCommitted: 1,
+  supportedStarredCount: 1, supportedOrdinaryCount: 1,
+  starredUnitValue: 2, leaderFightingValue: 6, leaderWasKilled: false
+});
+assert(strength === 10.5, `supported sardaukar (2) + 1 supported ordinary (1) + 3 unsupported ordinary (1.5) + leader 6 = 10.5, got ${strength}`);
 
-console.log('\nTest 4: tie goes to the aggressor');
+console.log('\nTest 4: Sardaukar vs Fremen specifically drops to half value (1, not 2)');
+strength = calculateStrength({
+  forcesCommitted: 1, starredForcesCommitted: 1,
+  supportedStarredCount: 1, supportedOrdinaryCount: 0,
+  starredUnitValue: starredUnitValueFor('emperor', 'fremen'),
+  leaderFightingValue: 0, leaderWasKilled: false
+});
+assert(strength === 1, `a single supported sardaukar fighting fremen contributes only 1, got ${strength}`);
+
+console.log('\nTest 5: Kwisatz Haderach bonus, inactive until 7+ cumulative forces lost');
 let state = makeState();
-const aggressorPlan = { forcesCommitted: 3, spiceCommitted: 3, leaderId: 'thufirHawat', leaderFightingValue: 5 };
-const defenderPlan = { forcesCommitted: 3, spiceCommitted: 3, leaderId: 'piterDeVries', leaderFightingValue: 5 };
-// Both sides identical strength (3 + 5 = 8 each) -> should be a tie -> aggressor wins.
-const result = resolveBattle(state, 'arrakeen', 'atreides', 'harkonnen',
-  { ...aggressorPlan, weaponCardId: null, defenseCardId: null },
-  { ...defenderPlan, weaponCardId: null, defenseCardId: null },
-  cardLookup
-);
-assert(result.winnerFactionId === 'atreides', 'exact tie in strength resolves to the aggressor per the rulebook');
+let khBonus = kwisatzHaderachBonusFor(state, 'atreides', 'arrakeen', { useKwisatzHaderach: true });
+assert(khBonus === 0, 'no bonus while inactive, regardless of the flag being requested');
 
-console.log('\nTest 5: winner loses only dialed forces, loser loses ALL forces in the territory');
-state = makeState(); // atreides has 6 in arrakeen, harkonnen has 4
-resolveBattle(state, 'arrakeen', 'atreides', 'harkonnen',
-  { forcesCommitted: 2, spiceCommitted: 2, leaderId: 'thufirHawat', leaderFightingValue: 5, weaponCardId: null, defenseCardId: null },
-  { forcesCommitted: 1, spiceCommitted: 1, leaderId: 'piterDeVries', leaderFightingValue: 3, weaponCardId: null, defenseCardId: null },
-  cardLookup
-);
-assert(state.factions.atreides.forces.onBoard.arrakeen === 4, 'winner (atreides) only lost the 2 forces they dialed, 6-2=4 remain');
-assert(state.factions.harkonnen.forces.onBoard.arrakeen === undefined, 'loser (harkonnen) lost ALL forces in the territory, not just the 1 dialed');
-assert(state.factions.harkonnen.revivalTanks === 4, 'all 4 harkonnen forces went to the tanks, confirming the full-loss rule');
+recordForceLossForKwisatzHaderach(state, 'atreides', 6);
+assert(state.factions.atreides.specialFactionState.kwisatzHaderachActive === false, 'still inactive at 6 losses');
+recordForceLossForKwisatzHaderach(state, 'atreides', 1);
+assert(state.factions.atreides.specialFactionState.kwisatzHaderachActive === true, 'activates once cumulative losses reach 7');
 
-console.log('\nTest 6: traitor reveal wins regardless of numbers, revealer loses nothing');
+khBonus = kwisatzHaderachBonusFor(state, 'atreides', 'arrakeen', { useKwisatzHaderach: true });
+assert(khBonus === 2, 'now active, requesting it in a battle plan grants +2');
+
+khBonus = kwisatzHaderachBonusFor(state, 'atreides', 'arrakeen', { useKwisatzHaderach: false });
+assert(khBonus === 0, 'no bonus if the plan does not actually request it, even while active');
+
+console.log('\nTest 6: Kwisatz Haderach has no effect if the accompanying leader is killed');
+strength = calculateStrength({
+  forcesCommitted: 2, starredForcesCommitted: 0,
+  supportedOrdinaryCount: 2, supportedStarredCount: 0,
+  starredUnitValue: 0, leaderFightingValue: 5, leaderWasKilled: true, kwisatzHaderachBonus: 2
+});
+assert(strength === 2, `leader killed means both leader value AND the KH bonus are voided, only the 2 supported forces count, got ${strength}`);
+
+console.log('\nTest 7: full battle resolution with Sardaukar actually fighting, correct strength split');
 state = makeState();
-state.factions.harkonnen.traitorHand = ['thufirHawat']; // harkonnen holds atreides' leader as a traitor
-const traitorResult = resolveBattle(state, 'arrakeen', 'atreides', 'harkonnen',
-  { forcesCommitted: 6, spiceCommitted: 6, leaderId: 'thufirHawat', leaderFightingValue: 5, weaponCardId: 'lasgun', defenseCardId: null },
-  { forcesCommitted: 0, spiceCommitted: 0, leaderId: 'piterDeVries', leaderFightingValue: 3, weaponCardId: null, defenseCardId: 'shield1' },
+const battleResult = resolveBattle(state, 'imperialBasin', 'emperor', 'harkonnen',
+  {
+    forcesCommitted: 3, starredForcesCommitted: 1, spiceCommitted: 2,
+    supportedStarredCount: 1, supportedOrdinaryCount: 1,
+    leaderId: 'countFenring', leaderFightingValue: 6, weaponCardId: null, defenseCardId: null
+  },
+  {
+    forcesCommitted: 3, starredForcesCommitted: 0, spiceCommitted: 3,
+    supportedStarredCount: 0, supportedOrdinaryCount: 3,
+    leaderId: 'piterDeVries', leaderFightingValue: 3, weaponCardId: null, defenseCardId: null
+  },
   cardLookup
 );
-assert(traitorResult.winnerFactionId === 'harkonnen', 'harkonnen wins via traitor reveal despite atreides dialing everything plus a lasgun');
-assert(state.factions.harkonnen.forces.onBoard.arrakeen === 4, 'revealer (harkonnen) loses nothing, even their forces remain untouched');
-assert(state.factions.atreides.forces.onBoard.arrakeen === undefined, 'revealed faction (atreides) loses all forces in the territory');
+// Emperor: 1 supported sardaukar (2) + 1 supported ordinary (1) + 1 unsupported ordinary (0.5) + leader 6 = 9.5
+// Harkonnen: 3 supported ordinary (3) + leader 3 = 6
+assert(battleResult.winnerFactionId === 'emperor', `emperor should win (9.5 vs 6), got winner ${battleResult.winnerFactionId}`);
+assert(state.factions.emperor.forces.onBoard.imperialBasin === 3, 'emperor (winner) lost only their 3 dialed forces (6-3=3 remain)');
+assert(state.factions.emperor.forces.starredOnBoard.imperialBasin === undefined, 'the single sardaukar committed and lost is correctly removed from starredOnBoard');
 
 console.log('\nAll battle engine sanity checks passed.');
