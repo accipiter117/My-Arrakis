@@ -14,16 +14,20 @@ function makeState() {
     spiceBank: { totalInCirculation: 1000 },
     factions: {
       fremen: {
-        spice: 1, revivalTanks: 5, forces: { reserve: 3 },
+        spice: 1, revivalTanks: 5, starredRevivalTanks: 1, forces: { reserve: 3, starredReserve: 0 },
         leaders: { available: ['chani'], killed: ['stilgar', 'otheym'] }
       },
       atreides: {
-        spice: 10, revivalTanks: 6, forces: { reserve: 0 },
+        spice: 10, revivalTanks: 6, starredRevivalTanks: 0, forces: { reserve: 0, starredReserve: 0 },
         leaders: { available: [], killed: ['thufirHawat', 'gurneyHalleck', 'duncanIdaho', 'drYueh', 'ladyJessica'] }
       },
       gesserit: {
-        spice: 15, revivalTanks: 0, forces: { reserve: 0 },
+        spice: 15, revivalTanks: 0, starredRevivalTanks: 0, forces: { reserve: 0, starredReserve: 0 },
         leaders: { available: ['alia'], killed: [] }
+      },
+      emperor: {
+        spice: 10, revivalTanks: 4, starredRevivalTanks: 2, forces: { reserve: 0, starredReserve: 0 },
+        leaders: { available: ['countFenring'], killed: [] }
       }
     }
   };
@@ -100,5 +104,22 @@ let secondLeaderRevive;
 try { reviveLeader(state, 'atreides', 'gurneyHalleck', 4); secondLeaderRevive = 'allowed'; }
 catch (e) { secondLeaderRevive = 'blocked'; }
 assert(secondLeaderRevive === 'blocked', 'only 1 leader revival allowed per turn');
+
+console.log('\nTest 6: starred force revival capped at 1 per turn regardless of overall cap or spice');
+state = makeState();
+const emperorCheck = canReviveForces(state, 'emperor', 2, 2); // trying to revive 2 sardaukar at once
+assert(emperorCheck.ok === false, 'cannot revive 2 starred forces in one turn even within the overall 3-force cap');
+
+const emperorOk = canReviveForces(state, 'emperor', 2, 1); // 1 sardaukar + 1 ordinary
+assert(emperorOk.ok === true, 'reviving 1 starred + 1 ordinary together is fine');
+reviveForces(state, 'emperor', 2, 1);
+assert(state.factions.emperor.forces.starredReserve === 1, 'starred reserve increased by the 1 revived sardaukar');
+assert(state.factions.emperor.starredRevivalTanks === 1, 'starred tanks decreased correctly (2 - 1 = 1)');
+assert(state.factions.emperor.forces.reserve === 2, 'total reserve increased by 2 (1 starred + 1 ordinary)');
+
+let secondStarredRevive;
+try { reviveForces(state, 'emperor', 1, 1); secondStarredRevive = 'allowed'; }
+catch (e) { secondStarredRevive = 'blocked'; }
+assert(secondStarredRevive === 'blocked', 'cannot revive a second starred force in the same turn');
 
 console.log('\nAll charity + revival sanity checks passed.');
