@@ -1,0 +1,13 @@
+{
+  "_notes": {
+    "source": "Cross-verified against the independent spice deck card list during the leaders.json/treacheryDeck.json pass. Territory card values are NOT duplicated in this file, deliberately, spiceEngine.js looks them up from territories.json's spiceBlow.maxValue at draw time so the two files can't silently drift apart.",
+    "composition": "6 Shai-Hulud (worm) cards, plus one territory card per spice-blow territory in territories.json (15 in the base game). Matches the rulebook's description of the deck exactly."
+  },
+  "shaiHuludCount": 6,
+  "territoryCardIds": [
+    "brokenLand", "cielagoNorth", "cielagoSouth", "funeralPlain",
+    "habbanyaErg", "habbanyaRidgeFlat", "haggaBasin", "oldGap",
+    "redChasm", "rockOutcroppings", "sihayaRidge", "southMesa",
+    "theGreatFlat", "theMinorErg", "windPassNorth"
+  ]
+}
