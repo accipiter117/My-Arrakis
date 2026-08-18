@@ -4,7 +4,9 @@
     "confidence": "Territory names, terrain type, and spice blow presence/value: high confidence, read directly off the image. Adjacency: draft, based on visually traced shared borders, NOT yet confirmed against the physical board. Sectors: not yet added, pending user's count.",
     "pending": [
       "Sector numbers (1-18) and which territories span multiple sectors, user is counting these directly off the board.",
-      "Remaining adjacency outside the confirmed clusters below is still a visual-trace draft and could use a full spot-check against the physical board at some point, but the two clusters that were genuinely ambiguous (Tsimpo/Carthag/Hagga Basin/Imperial Basin/Arsunt, and Polar Sink/Harg Pass/Cielago North/Wind Pass North/Imperial Basin/Arsunt) are now confirmed by the user directly against the board."
+      "Full re-verification pass completed via systematic overlapping crops (not a single global read) plus cross-reference against an independent fan rules compilation of the same board geography, which caught 4 missing edges the original draft had wrong (Tuek's Sietch-Pasty Mesa, Pasty Mesa-Shield Wall, Shield Wall-Imperial Basin, Cielago North-False Wall South).",
+      "A small number of genuinely ambiguous edges remain even after the close re-pass, flagged individually below rather than asserted either way: does Sihaya Ridge border Arrakeen/Rim Wall West directly, or only Basin/Gara Kulon; the exact Hole in the Rock vs Shield Wall boundary; whether Cielago East touches South Mesa; whether Plastic Basin/Hagga Basin touch Wind Pass at a real shared edge or just a corner point.",
+      "Everything else in adjacentDraft has now been through two independent passes (visual trace + cross-reference where the source happened to mention it) but has not been individually confirmed against the physical board the way the earlier two clusters were."
     ]
   },
   "territories": {
@@ -178,7 +180,8 @@
         "arrakeen",
         "falseWallEast",
         "carthag",
-        "tsimpo"
+        "tsimpo",
+        "shieldWall"
       ]
     },
     "shieldWall": {
@@ -191,7 +194,9 @@
         "rimWallWest",
         "holeInTheRock",
         "theMinorErg",
-        "falseWallEast"
+        "falseWallEast",
+        "pastyMesa",
+        "imperialBasin"
       ]
     },
     "holeInTheRock": {
@@ -309,7 +314,9 @@
       "adjacentDraft": [
         "garaKulon",
         "theMinorErg",
-        "redChasm"
+        "redChasm",
+        "tueksSietch",
+        "shieldWall"
       ]
     },
     "redChasm": {
@@ -434,7 +441,8 @@
         "hargPass",
         "tueksSietch",
         "southMesa",
-        "cielagoEast"
+        "cielagoEast",
+        "cielagoNorth"
       ]
     },
     "tueksSietch": {
@@ -445,7 +453,8 @@
       },
       "adjacentDraft": [
         "falseWallSouth",
-        "southMesa"
+        "southMesa",
+        "pastyMesa"
       ]
     },
     "southMesa": {
@@ -514,7 +523,8 @@
         "windPass",
         "polarSink",
         "cielagoDepression",
-        "cielagoWest"
+        "cielagoWest",
+        "falseWallSouth"
       ]
     },
     "cielagoDepression": {
