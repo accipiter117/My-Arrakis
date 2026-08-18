@@ -24,7 +24,7 @@ function moveRangeFor(state, factionId) {
   const hasOrnithopters = hasOrnithopterAccess(state, factionId);
   const isFremen = factionId === 'fremen';
 
-  if (hasOrnithopters) return 3; // rulebook doesn't specify Fremen+ornithopter stacking beyond this, see notes.md
+  if (hasOrnithopters) return 3; // capped at 3 even for Fremen; desert knowledge doesn't make the 'thopter fly faster, confirmed ruling
   if (isFremen) return 2;
   return 1;
 }
