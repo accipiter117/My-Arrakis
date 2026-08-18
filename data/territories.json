@@ -66,13 +66,15 @@
       "name": "Rock Outcroppings",
       "type": "rock",
       "spiceBlow": {
-        "present": false
+        "present": true,
+        "maxValue": 6
       },
       "adjacentDraft": [
         "brokenLand",
         "plasticBasin",
         "bightOfTheCliff"
-      ]
+      ],
+      "notes": "Spice blow missed in the original board-photo read, added after cross-referencing the independent spice deck card list, which explicitly lists 'Rock Outcroppings (6)'."
     },
     "plasticBasin": {
       "name": "Plastic Basin",
@@ -374,8 +376,7 @@
       "name": "Wind Pass",
       "type": "sand",
       "spiceBlow": {
-        "present": true,
-        "maxValue": 6
+        "present": false
       },
       "adjacentDraft": [
         "arsunt",
@@ -383,13 +384,15 @@
         "polarSink",
         "falseWallWest",
         "cielagoNorth"
-      ]
+      ],
+      "notes": "Originally read as having a 6-value spice blow from the board photo. The independent spice deck card list instead attributes that value to Wind Pass North, and the two labels sit close enough together on the board that a misattribution either direction is plausible. Deferring to the dedicated card list here; worth a final glance at the physical board to be certain."
     },
     "windPassNorth": {
       "name": "Wind Pass North",
       "type": "sand",
       "spiceBlow": {
-        "present": false
+        "present": true,
+        "maxValue": 6
       },
       "adjacentDraft": [
         "arsunt",
@@ -397,7 +400,8 @@
         "windPass",
         "polarSink",
         "theGreatFlat"
-      ]
+      ],
+      "notes": "See note on Wind Pass, the spice blow value at this position was originally attributed to the neighbouring Wind Pass territory instead."
     },
     "polarSink": {
       "name": "Polar Sink",
