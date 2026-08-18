@@ -1,0 +1,216 @@
+{
+  "atreides": {
+    "id": "atreides",
+    "name": "House Atreides",
+    "startingStronghold": "arrakeen",
+    "startingSpice": null,
+    "startingForces": { "reserve": null, "onBoard": null },
+    "identity": "information",
+    "specialAbilities": [
+      {
+        "id": "prescience",
+        "name": "Prescience",
+        "trigger": "preBattlePlanLock",
+        "effect": "revealOneField",
+        "revealableFields": ["leader", "weapon", "defense", "dialNumber"],
+        "targetScope": "opponentInBattle",
+        "notes": "Player chooses which single field to demand before both plans lock."
+      },
+      {
+        "id": "kwisatzHaderach",
+        "name": "Kwisatz Haderach",
+        "trigger": "cumulativeCombatLosses",
+        "unlockThreshold": null,
+        "effect": "unlockSpecialLeader",
+        "notes": "Threshold is losses-taken, not losses-inflicted. Confirm exact number against GF9 rulebook."
+      }
+    ],
+    "aiWeighting": {
+      "informationValue": "high",
+      "militaryValue": "low",
+      "notes": "Should avoid committing to battles where prescience hasn't been used. Prefers fewer, better-informed fights over volume."
+    }
+  },
+  "harkonnen": {
+    "id": "harkonnen",
+    "name": "House Harkonnen",
+    "startingStronghold": "carthag",
+    "startingSpice": null,
+    "startingForces": { "reserve": null, "onBoard": null },
+    "identity": "economy_of_cards",
+    "specialAbilities": [
+      {
+        "id": "extraTreacheryDraw",
+        "name": "Extra Treachery Card",
+        "trigger": "onCardAcquisition",
+        "effect": "drawAdditionalCard",
+        "amount": 1
+      },
+      {
+        "id": "extraTraitorDraw",
+        "name": "Extra Traitor Card",
+        "trigger": "setup",
+        "effect": "drawAdditionalTraitor",
+        "handSizeOverride": 4,
+        "notes": "Standard traitor hand is 3; Harkonnen draws 4 and keeps as many as the rules permit. Confirm keep-count against rulebook."
+      }
+    ],
+    "aiWeighting": {
+      "informationValue": "medium",
+      "militaryValue": "high",
+      "bluffingWeight": "high",
+      "notes": "Card advantage rewards large decisive battles. Should bid aggressively to deny cards even without intent to use them."
+    }
+  },
+  "emperor": {
+    "id": "emperor",
+    "name": "House Corrino",
+    "startingStronghold": null,
+    "startingSpice": null,
+    "startingForces": { "reserve": null, "onBoard": null },
+    "identity": "passive_economy",
+    "specialAbilities": [
+      {
+        "id": "sardaukarStrength",
+        "name": "Sardaukar Elevated Combat Value",
+        "trigger": "battleResolution",
+        "effect": "forceStrengthMultiplier",
+        "unitType": "sardaukar",
+        "multiplier": null,
+        "notes": "Confirm exact per-force strength value against rulebook."
+      },
+      {
+        "id": "bidRevenue",
+        "name": "Bid Spice Redirect",
+        "trigger": "onBidPayment",
+        "effect": "redirectSpiceFromBankToFaction",
+        "condition": "paidByOtherFaction"
+      }
+    ],
+    "aiWeighting": {
+      "informationValue": "low",
+      "economicValue": "high",
+      "militaryValue": "medium",
+      "notes": "Should avoid early aggression. Spice reserves compound the longer bidding phases go uncontested by Emperor directly."
+    }
+  },
+  "fremen": {
+    "id": "fremen",
+    "name": "Fremen",
+    "startingStronghold": null,
+    "startingSpice": null,
+    "startingForces": { "reserve": null, "onBoard": null },
+    "identity": "attrition_survival",
+    "specialAbilities": [
+      {
+        "id": "extendedMovement",
+        "name": "Extended Movement Range",
+        "trigger": "movementPhase",
+        "effect": "movementRangeBonus",
+        "amount": null
+      },
+      {
+        "id": "stormResistance",
+        "name": "Storm Loss Reduction",
+        "trigger": "stormPhase",
+        "effect": "reduceForceLossFraction",
+        "notes": "Confirm exact fraction/mechanic against rulebook."
+      },
+      {
+        "id": "fremenVictory",
+        "name": "Fremen Victory Condition",
+        "trigger": "endOfGame",
+        "effect": "alternateVictoryCheck",
+        "notes": "Trigger condition (turn count / stronghold state) needs confirming against rulebook before implementing as a hard check."
+      }
+    ],
+    "aiWeighting": {
+      "informationValue": "low",
+      "militaryValue": "medium",
+      "survivalValue": "high",
+      "notes": "Should deliberately avoid looking like the leading faction early. Long-game oriented; threat level to others should stay artificially suppressed in its own self-assessment until late turns."
+    }
+  },
+  "guild": {
+    "id": "guild",
+    "name": "Spacing Guild",
+    "startingStronghold": "tuekssietch",
+    "startingSpice": null,
+    "startingForces": { "reserve": null, "onBoard": null },
+    "identity": "toll_and_tempo",
+    "specialAbilities": [
+      {
+        "id": "shipmentRevenue",
+        "name": "Shipment Spice Redirect",
+        "trigger": "onShipmentPayment",
+        "effect": "redirectSpiceFromBankToFaction",
+        "condition": "paidByOtherFaction"
+      },
+      {
+        "id": "shipmentDiscount",
+        "name": "Guild Shipping Discount",
+        "trigger": "onOwnShipment",
+        "effect": "costMultiplier",
+        "multiplier": null
+      },
+      {
+        "id": "flexibleTiming",
+        "name": "Act at Any Point in Shipment/Movement",
+        "trigger": "shipmentMovementPhase",
+        "effect": "turnOrderOverride",
+        "notes": "Guild chooses when in the phase order to act rather than following standard sequence."
+      },
+      {
+        "id": "guildVictory",
+        "name": "Guild Alternate Victory",
+        "trigger": "finalTurnReached",
+        "effect": "alternateVictoryCheck",
+        "notes": "Confirm exact trigger turn against rulebook."
+      }
+    ],
+    "aiWeighting": {
+      "informationValue": "medium",
+      "economicValue": "high",
+      "militaryValue": "low",
+      "notes": "Rational Guild avoids initiating conflict; wants the game to run long and wants every faction to keep needing its shipping lane."
+    }
+  },
+  "gesserit": {
+    "id": "gesserit",
+    "name": "Bene Gesserit",
+    "startingStronghold": null,
+    "startingSpice": null,
+    "startingForces": { "reserve": null, "onBoard": null },
+    "identity": "hidden_objective",
+    "specialAbilities": [
+      {
+        "id": "voice",
+        "name": "Voice",
+        "trigger": "preBattlePlanLock",
+        "effect": "forcePlayOrWithholdCardCategory",
+        "targetScope": "opponentInBattle"
+      },
+      {
+        "id": "coexistence",
+        "name": "Peaceful Coexistence",
+        "trigger": "occupyingEnemyTerritory",
+        "effect": "suppressBattleTrigger",
+        "notes": "Single advisor-status leader only, per rulebook. Confirm force limit."
+      },
+      {
+        "id": "prediction",
+        "name": "Prediction Victory",
+        "trigger": "setup",
+        "effect": "privateWinConditionDeclaration",
+        "declaresAt": "gameStart",
+        "notes": "Private faction + turn guess made at setup, hidden from all other players and normally from the AI's own general decision layer too."
+      }
+    ],
+    "aiWeighting": {
+      "informationValue": "high",
+      "militaryValue": "low",
+      "deceptionValue": "high",
+      "notes": "Real objective often invisible to the rest of the table. Passive/defensive play is frequently correct and should not be 'corrected' toward aggression."
+    }
+  }
+}
