@@ -4,7 +4,7 @@
     "confidence": "Territory names, terrain type, and spice blow presence/value: high confidence, read directly off the image. Adjacency: draft, based on visually traced shared borders, NOT yet confirmed against the physical board. Sectors: not yet added, pending user's count.",
     "pending": [
       "Sector numbers (1-18) and which territories span multiple sectors, user is counting these directly off the board.",
-      "Adjacency below should be spot-checked against the physical board before being trusted for movement logic. A few boundary calls (Tsimpo/Hagga Basin/Carthag cluster, and the Cielago North/Harg Pass/False Wall South cluster) were the least visually clear and are the ones most worth double-checking first."
+      "Remaining adjacency outside the confirmed clusters below is still a visual-trace draft and could use a full spot-check against the physical board at some point, but the two clusters that were genuinely ambiguous (Tsimpo/Carthag/Hagga Basin/Imperial Basin/Arsunt, and Polar Sink/Harg Pass/Cielago North/Wind Pass North/Imperial Basin/Arsunt) are now confirmed by the user directly against the board."
     ]
   },
   "territories": {
@@ -41,10 +41,11 @@
         "present": false
       },
       "adjacentDraft": [
-        "brokenLand",
-        "plasticBasin",
+        "imperialBasin",
         "carthag",
-        "haggaBasin"
+        "brokenLand",
+        "haggaBasin",
+        "plasticBasin"
       ]
     },
     "basin": {
@@ -104,9 +105,9 @@
       },
       "adjacentDraft": [
         "tsimpo",
-        "haggaBasin",
         "imperialBasin",
-        "arrakeen"
+        "haggaBasin",
+        "arsunt"
       ]
     },
     "arrakeen": {
@@ -118,7 +119,6 @@
       "adjacentDraft": [
         "oldGap",
         "basin",
-        "carthag",
         "imperialBasin",
         "rimWallWest",
         "sihayaRidge"
@@ -172,11 +172,13 @@
       },
       "notes": "Per rulebook: the one sand territory storm damage does NOT apply to.",
       "adjacentDraft": [
-        "carthag",
-        "arrakeen",
-        "rimWallWest",
         "arsunt",
-        "falseWallEast"
+        "polarSink",
+        "rimWallWest",
+        "arrakeen",
+        "falseWallEast",
+        "carthag",
+        "tsimpo"
       ]
     },
     "shieldWall": {
@@ -261,10 +263,12 @@
         "present": false
       },
       "adjacentDraft": [
+        "windPass",
         "haggaBasin",
         "imperialBasin",
         "windPassNorth",
-        "windPass"
+        "carthag",
+        "polarSink"
       ]
     },
     "falseWallEast": {
@@ -382,9 +386,10 @@
       },
       "adjacentDraft": [
         "arsunt",
-        "theGreatFlat",
         "falseWallWest",
-        "windPass"
+        "windPass",
+        "polarSink",
+        "theGreatFlat"
       ]
     },
     "polarSink": {
@@ -395,10 +400,13 @@
       },
       "notes": "Never in storm. No battles occur here. Free haven for all factions.",
       "adjacentDraft": [
+        "imperialBasin",
+        "arsunt",
+        "cielagoNorth",
         "windPass",
+        "windPassNorth",
         "falseWallEast",
-        "hargPass",
-        "cielagoNorth"
+        "hargPass"
       ]
     },
     "hargPass": {
@@ -408,10 +416,11 @@
         "present": false
       },
       "adjacentDraft": [
-        "polarSink",
-        "falseWallEast",
         "theMinorErg",
-        "falseWallSouth"
+        "cielagoNorth",
+        "polarSink",
+        "falseWallSouth",
+        "falseWallEast"
       ]
     },
     "falseWallSouth": {
@@ -501,10 +510,11 @@
         "maxValue": 8
       },
       "adjacentDraft": [
+        "hargPass",
         "windPass",
         "polarSink",
-        "cielagoWest",
-        "cielagoDepression"
+        "cielagoDepression",
+        "cielagoWest"
       ]
     },
     "cielagoDepression": {
