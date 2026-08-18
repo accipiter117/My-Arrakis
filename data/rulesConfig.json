@@ -1,20 +1,50 @@
 {
-  "ruleset": "standard_advanced_v1",
+  "ruleset": "advanced_always_v1",
+  "_notes": "Per explicit instruction: advanced rules are always incorporated, not a togglable option. This file exists to make which specific rules that means auditable, not to make it optional at runtime.",
   "official": {
-    "description": "Core rules as printed in the base GF9 rulebook. Always active.",
-    "shippingCostFullRate": true,
-    "guildShippingDiscount": true,
-    "prescienceOneFieldOnly": true
+    "description": "Core rules as printed in the base GF9 rulebook. Always active regardless of advanced/standard.",
+    "shippingCostPerForce": { "toStronghold": 1, "toOtherTerritory": 2 },
+    "guildShippingDiscount": 0.5,
+    "prescienceOneFieldOnly": true,
+    "reviveForceCostPerForce": 2,
+    "reviveForceLimitPerTurn": 3
   },
-  "officialAdvanced": {
-    "description": "Advanced-game rules toggled on for the Phase 1 target (6-player advanced).",
-    "advancedBattlePlans": true,
-    "advancedBidding": true,
-    "notes": "Confirm the exact list of what 'advanced' changes versus base rules against the GF9 PDF before locking these flags."
+  "advanced": {
+    "description": "Rules the base rulebook itself labels Advanced Game. Always active per project instruction, this is not a runtime toggle.",
+    "doubleSpiceBlow": {
+      "enabled": true,
+      "notes": "Two Spice Cards revealed per Spice Blow phase instead of one, with two separate discard piles (A and B). Each resolves independently, including its own possible Nexus."
+    },
+    "strongholdSpiceCollection": {
+      "enabled": true,
+      "carthagPerTurn": 2,
+      "arrakeenPerTurn": 2,
+      "tueksSietchPerTurn": 1,
+      "notes": "Passive income just for occupying at the time of collection, stacks if a faction occupies more than one qualifying stronghold. Independent of the normal 2/3-spice-per-force collection rate for territories with an active spice blow."
+    },
+    "combatSpiceSupport": {
+      "enabled": true,
+      "notes": "Each force in a battle counts at full strength only if 1 spice is committed to it; uncommitted forces count at half strength. Battle Plan must declare total spice expended alongside the dialed number. Spice goes to the Spice Bank regardless of win/loss, except when a Traitor is revealed (winner owes nothing)."
+    },
+    "karamaCards": {
+      "enabled": true,
+      "notes": "In addition to the base-game effect (cancel one opponent faction advantage for the phase), advanced Karama grants each faction a unique one-time power on play. Bene Gesserit has no advanced Karama power in the base game. Full per-faction power table needs transcribing into rulesConfig or a dedicated karamaPowers.json before the bidding/battle engine can implement it, not yet done here."
+    }
+  },
+  "expansionAdvanced": {
+    "description": "Advanced-game additions from the two expansions, same always-on treatment once an expansion faction is in play.",
+    "ixianHiddenMobileStrongholdMovement": true,
+    "tleilaxuGholaRevival": true,
+    "choamInflationToken": true,
+    "richeseBlackMarket": true,
+    "leaderSkillCards": { "enabled": false, "notes": "CHOAM & Richese variant, opt-in per rulebook rather than always-on, not a base advanced rule. Leaving disabled by default, revisit if wanted." },
+    "advancedStrongholdCards": { "enabled": false, "notes": "Same as Leader Skill Cards, an opt-in variant rather than a base advanced rule." }
   },
   "optional": {
-    "description": "Variant/optional rules, off by default.",
-    "enabled": []
+    "description": "True optional/variant rules (not the base game's own Advanced Game section). Off by default, distinct from the always-on advanced rules above.",
+    "enabled": [],
+    "allianceVariant": "default",
+    "notes": "The rulebook's Optional Rules for Alliances table (page 24) offers five named presets. Default is the original unrestricted alliance game. Worth a decision later, not urgent for Phase 1."
   },
   "expansions": {
     "ixianTleilaxu": { "enabled": false },
@@ -34,7 +64,14 @@
     "default": 6
   },
   "victoryVariants": {
-    "standardStrongholdCount": null,
-    "notes": "Confirm stronghold count required for standard solo/alliance victory against rulebook before hardcoding."
+    "soloStrongholdCount": 3,
+    "allianceStrongholdCount": 4,
+    "twoPlayerStrongholdCount": 4,
+    "threePlayerRecommendedFactions": ["atreides", "harkonnen", "fremen"],
+    "threePlayerAllianceStrongholdCount": 4,
+    "fourPlayerRecommendedExclusions": ["guild", "gesserit"],
+    "fivePlayerRecommendedExclusions": ["gesserit"],
+    "maxTurns": 10,
+    "notes": "Confirmed directly from the base rulebook text. Solo win is 3 strongholds (or all 3 Tech Tokens if Ixian/Tleilaxu expansion is active, per that expansion's rulebook), alliance win is 4 (first player) held jointly. Two-player games use 4 regardless of alliance status."
   }
 }
