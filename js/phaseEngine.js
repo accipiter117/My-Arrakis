@@ -46,7 +46,12 @@ function nextPhase(state) {
 }
 
 function shouldEnterNexus(state) {
-  return Boolean(state.board.spiceBlowMarkers.some(m => m.triggeredNexus));
+  // spiceEngine.js's resolveSpiceBlowPhase() sets state.nexus.active
+  // directly, that's the real signal. This function used to check for a
+  // 'triggeredNexus' field on spice blow markers instead, which
+  // spiceEngine.js never actually sets, a real mismatch between two files
+  // written in different sessions that never got cross-checked until now.
+  return Boolean(state.nexus?.active);
 }
 
 function currentPhase(state) {
