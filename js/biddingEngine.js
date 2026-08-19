@@ -124,7 +124,14 @@ function determineOpeningBidder(state) {
 }
 
 function firstEligibleFrom(order, startId, state) {
-  const startIdx = order.indexOf(startId);
+  // Defensive: if startId isn't actually in order (missing/invalid
+  // firstPlayer, or a between-alliances edge case), indexOf returns -1,
+  // and JS's negative modulo on array access returns undefined rather
+  // than wrapping around, which crashed downstream instead of degrading.
+  // Falling back to position 0 is an explicit, safe default here, not
+  // just here for the caller to have already sorted out a valid start.
+  const rawIdx = order.indexOf(startId);
+  const startIdx = rawIdx === -1 ? 0 : rawIdx;
   for (let i = 0; i < order.length; i++) {
     const candidate = order[(startIdx + i) % order.length];
     if (!isAtHandLimit(state, candidate)) return candidate;
