@@ -23,10 +23,17 @@ function buildTraitorDeck(leadersData, activeFactionIds) {
   return deck;
 }
 
-function shuffle(array, rng = Math.random) {
+function shuffle(array, arrayShuffleFn) {
+  // Standardized on the same (array) => shuffledArray convention used by
+  // spiceEngine.buildSpiceDeck and every other shuffle point in the
+  // codebase. An earlier version of this function took a raw rng()=>number
+  // instead, which was inconsistent with that and caused a real bug the
+  // first time setupEngine.js tried to pass one shuffle function to both.
+  if (arrayShuffleFn) return arrayShuffleFn(array);
+
   const result = array.slice();
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
+    const j = Math.floor(Math.random() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
