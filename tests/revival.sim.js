@@ -122,4 +122,11 @@ try { reviveForces(state, 'emperor', 1, 1); secondStarredRevive = 'allowed'; }
 catch (e) { secondStarredRevive = 'blocked'; }
 assert(secondStarredRevive === 'blocked', 'cannot revive a second starred force in the same turn');
 
+console.log('\nTest 7: cannot revive more ordinary forces than ordinary forces in the tanks');
+state = makeState();
+state.factions.emperor.revivalTanks = 2;
+state.factions.emperor.starredRevivalTanks = 2; // only sardaukar in the tanks
+assert(canReviveForces(state, 'emperor', 2, 0).ok === false, 'two ordinary forces refused when the tanks hold only starred');
+assert(canReviveForces(state, 'emperor', 1, 1).ok === true, 'one starred revival is fine');
+
 console.log('\nAll charity + revival sanity checks passed.');
