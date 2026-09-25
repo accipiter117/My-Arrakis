@@ -12,7 +12,16 @@ interface.
 It reads only public state plus its own private state. It never reads
 another faction's spice, hand, traitors or battle plan.
 
-## Simulation results (tests/aiSimulation.sim.js, 100 games, Basic AI x6)
+## Latest simulation (150 games, Basic AI x6)
+
+- 0 failures, with invariants now also proving every faction's total forces
+  and starred forces are conserved across reserve, board and tanks
+- Winners: Guild 86, Fremen 32, Harkonnen 22, Atreides 8, Bene Gesserit 2
+  (Prediction now works), Emperor 0
+- Emperor remains the outlier. Starred-unit bugs (below) were one cause;
+  the rest is the Basic AI's naive shipping. Revisit with the strategic AI.
+
+## Earlier simulation (100 games, before the starred-unit fixes)
 
 - 0 failures; invariants checked after every phase (whole-number spice,
   no negative forces or reserves, hand limits, treachery card conservation)
@@ -43,3 +52,7 @@ another faction's spice, hand, traitors or battle plan.
   crashing around turn 8 once the deck ran dry
 - Guild half-price shipping produced fractional spice (now rounded up)
 - Killed leaders paid the battle winner 0 spice instead of their value
+- Sardaukar and Fedaykin were never shipped, so never reached a battle
+- Starred forces lost in battle, to worms or to the ally penalty returned
+  as ordinary forces; the worm also left "ghost" starred forces behind
+- Revival could take ordinary forces from tanks holding only starred ones
