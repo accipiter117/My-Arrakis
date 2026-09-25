@@ -27,6 +27,7 @@ import * as battleEngine from './battleEngine.js';
 import * as spiceCollectionEngine from './spiceCollectionEngine.js';
 import * as victoryEngine from './victoryEngine.js';
 import * as allianceEngine from './allianceEngine.js';
+import * as traitorDeckEngine from './traitorDeckEngine.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -40,6 +41,12 @@ const passiveDecisionProvider = {
   // value for subsequent storms (1-3 range).
   chooseStormDial(state, factionId, isFirstStorm) {
     return isFirstStorm ? 0 : 1;
+  },
+  // Keeps the first dealt card that isn't one of its own leaders (falls
+  // back to the first card if all four are its own).
+  chooseTraitor(state, factionId, pendingHand) {
+    const opponent = pendingHand.find(c => c.factionId !== factionId);
+    return (opponent ?? pendingHand[0]).leaderId;
   },
   // Never proposes or breaks alliances.
   chooseAllianceActions(state) {
@@ -116,7 +123,15 @@ function runStormPhase(state, decisionProvider) {
 }
 
 function runSpiceBlowPhase(state, decisionProvider) {
-  const result = spiceEngine.resolveSpiceBlowPhase(state);
+  spiceEngine.resolveSpiceBlowPhase(state);
+  // Snapshot what was placed now, later phases (collection, worms) can
+  // remove these markers before anything reads the log.
+  const result = {
+    placed: state.board.spiceBlowMarkers
+      .filter(m => m.turn === state.meta.turn)
+      .map(m => ({ territoryId: m.territoryId, amount: m.amount })),
+    nexus: Boolean(state.nexus.active)
+  };
   if (state.nexus.active) {
     const actions = decisionProvider.chooseAllianceActions(state);
     for (const factionId of actions.breakFrom ?? []) {
@@ -150,19 +165,21 @@ function runBiddingPhase(state, decisionProvider) {
   const results = [];
 
   while (state.bidding?.active) {
-    const cardId = state.bidding.cardsUpForBid[state.bidding.currentCardIndex];
-    let opener = biddingEngine.determineOpeningBidder(state);
+    const cardIndex = state.bidding.currentCardIndex;
+    const cardId = state.bidding.cardsUpForBid[cardIndex];
+    const opener = biddingEngine.determineOpeningBidder(state);
     const order = (state.meta.turnOrder ?? []).filter(id => !biddingEngine.isAtHandLimit(state, id));
-    const startIdx = order.indexOf(opener);
+    let idx = Math.max(0, order.indexOf(opener));
 
-    // Single pass around the table asking each eligible faction once,
-    // sufficient for a passive provider that never raises, a real
-    // decision provider would need this loop to keep going while any
-    // faction still wants to raise, left as-is since the passive stub
-    // never creates that situation.
-    for (let i = 0; i < order.length; i++) {
-      const factionId = order[(startIdx + i) % order.length];
+    // Keep going around the table until only the high bidder (or nobody)
+    // is left. Terminates because every bid must strictly exceed the last
+    // and spice is finite, and a faction that passes is out for this card.
+    let safety = 0;
+    while (!biddingEngine.isAuctionResolved(state) && safety++ < 500) {
+      const factionId = order[idx % order.length];
+      idx++;
       if (state.bidding.passedThisCard.includes(factionId)) continue;
+      if (factionId === state.bidding.currentBidder) continue;
       const bid = decisionProvider.chooseBid(state, factionId, cardId, state.bidding.currentBid);
       if (bid && biddingEngine.canBid(state, factionId, bid).ok) {
         biddingEngine.placeBid(state, factionId, bid);
@@ -171,9 +188,10 @@ function runBiddingPhase(state, decisionProvider) {
       }
     }
 
-    if (biddingEngine.isAuctionResolved(state)) {
-      results.push(biddingEngine.resolveCurrentCard(state));
-    }
+    const winner = state.bidding.currentBidder;
+    const price = state.bidding.currentBid;
+    biddingEngine.resolveCurrentCard(state);
+    results.push(winner ? { winner, price } : { unsold: true, cardsReturned: state.bidding.cardsUpForBid.length - cardIndex });
   }
 
   return results;
@@ -209,7 +227,8 @@ function runShipmentMovementPhase(state, decisionProvider) {
     if (decision.shipment) {
       const { territoryId, amount } = decision.shipment;
       if (movementEngine.canShip(state, factionId, territoryId, amount).ok) {
-        results.push({ factionId, type: 'shipment', ...movementEngine.executeShipment(state, factionId, territoryId, amount) });
+        movementEngine.executeShipment(state, factionId, territoryId, amount);
+        results.push({ factionId, type: 'shipment', territoryId, amount });
       }
     }
     if (decision.movement) {
@@ -286,6 +305,24 @@ function runMentatPausePhase(state, territoriesData) {
   return result;
 }
 
+// --- Setup-time decisions ------------------------------------------
+
+// Runs once, straight after initializeGame(). Every faction except
+// Harkonnen (who keeps all four automatically) picks one traitor from its
+// dealt hand; the other three go to the bottom of the traitor deck.
+function runTraitorSelection(state, decisionProvider) {
+  const results = [];
+  for (const factionId of Object.keys(state.factions)) {
+    const pending = state.factions[factionId].pendingTraitorHand;
+    if (!pending) continue;
+    const choice = decisionProvider.chooseTraitor(state, factionId, pending);
+    const result = traitorDeckEngine.selectTraitor(state, factionId, choice);
+    state.decks.traitorDeck = [...state.decks.traitorDeck, ...result.returnedToDeck];
+    results.push({ factionId, kept: result.kept });
+  }
+  return results;
+}
+
 // --- Full turn orchestration -----------------------------------------
 
 // Runs exactly one phase's logic (not advancing past it), returns what
@@ -294,6 +331,7 @@ function runMentatPausePhase(state, territoriesData) {
 // the UI reimplementing phase dispatch separately.
 function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup) {
   const phase = phaseEngine.currentPhase(state);
+  const turn = state.meta.turn; // stamped before anything can advance it
   let result = null;
 
   switch (phase) {
@@ -318,7 +356,7 @@ function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup) 
       throw new Error(`turnEngine has no runner for phase "${phase}"`);
   }
 
-  return { phase, result };
+  return { phase, result, turn };
 }
 
 // Steps exactly one phase forward, including advancing phaseEngine past
@@ -361,6 +399,7 @@ export {
   runSpiceCollectionPhase,
   runMentatPausePhase,
   stepOnePhase,
+  runTraitorSelection,
   runFullTurn,
   findBattleTerritories
 };
