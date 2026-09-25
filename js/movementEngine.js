@@ -195,7 +195,7 @@ function resetTurnMovementFlags(state) {
   return state;
 }
 
-module.exports = {
+export {
   hasOrnithopterAccess,
   moveRangeFor,
   isStrongholdBlocked,
