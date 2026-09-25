@@ -28,8 +28,14 @@ function buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle) {
 
 function drawSpiceCard(state) {
   if (state.decks.spiceDeck.length === 0) {
-    state.decks.spiceDeck = reshuffle(state.decks.spiceDiscard);
-    state.decks.spiceDiscard = [];
+    // Advanced rules use two discard piles (A and B). An earlier version
+    // reshuffled a single 'spiceDiscard' pile that no longer exists, which
+    // crashed the first time the deck ran dry (around turn 8). Only caught
+    // by running a long game in a real browser.
+    const discards = [...(state.decks.spiceDiscardA ?? []), ...(state.decks.spiceDiscardB ?? [])];
+    state.decks.spiceDeck = reshuffle(discards);
+    state.decks.spiceDiscardA = [];
+    state.decks.spiceDiscardB = [];
   }
   return state.decks.spiceDeck.pop();
 }
