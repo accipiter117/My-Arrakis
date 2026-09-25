@@ -1,9 +1,9 @@
 // spiceCollection.sim.js — headless sanity check.
 // Run with: node spiceCollection.sim.js
 
-const {
+import {
   collectionRateFor, collectFromSpiceBlow, collectAllSpiceBlows, collectIncreasedSpiceFlow, resolveSpiceCollectionPhase
-} = require('./js/spiceCollectionEngine.js');
+} from '../js/spiceCollectionEngine.js';
 
 function makeState() {
   return {
