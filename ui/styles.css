@@ -373,6 +373,12 @@ table.territories-table {
 
 .decision__body p { margin: 0 0 0.75rem; font-size: 0.9rem; }
 .decision__note { color: var(--ink-soft); font-style: italic; }
+.decision__intel {
+  background: var(--faction-atreides);
+  color: var(--parchment);
+  padding: 0.5rem 0.7rem;
+  border-radius: var(--radius);
+}
 .decision__cost { font-family: var(--font-data); font-size: 0.85rem; color: var(--gold); font-weight: 700; }
 .decision__error {
   font-size: 0.85rem;
