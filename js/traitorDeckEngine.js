@@ -97,7 +97,7 @@ function selectTraitor(state, factionId, chosenLeaderId) {
   return { factionId, kept: chosenLeaderId, returnedToDeck: returned };
 }
 
-module.exports = {
+export {
   buildTraitorDeck,
   shuffle,
   dealTraitorHands,
