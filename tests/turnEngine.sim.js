@@ -89,4 +89,14 @@ assert(battleLog[0].territoryId === 'arrakeen', 'the detected battle site is cor
 assert(battleLog[0].winnerFactionId === 'atreides' || battleLog[0].winnerFactionId === 'harkonnen', 'a real winner was determined, not stuck or thrown');
 assert(state.meta.lastBattleParticipants.includes('atreides') && state.meta.lastBattleParticipants.includes('harkonnen'), 'battle participants correctly tracked for next turn\'s storm dialer selection');
 
+console.log('\nTest 9: a full 10-turn game runs without throwing (exhausts and reshuffles the spice deck)');
+state = freshGame();
+phaseEngine.nextPhase(state);
+for (let i = 0; i < 10 && !state.victory.achieved; i++) {
+  turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
+}
+assert(state.meta.turn >= 10 || state.victory.achieved, `game should reach turn 10 or end in victory, got turn ${state.meta.turn}`);
+const spiceCardsTotal = state.decks.spiceDeck.length + state.decks.spiceDiscardA.length + state.decks.spiceDiscardB.length;
+assert(spiceCardsTotal === 21, `all 21 spice cards accounted for after reshuffling, got ${spiceCardsTotal}`);
+
 console.log('\nAll turn engine integration checks passed.');
