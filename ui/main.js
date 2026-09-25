@@ -6,14 +6,14 @@
 // that's not right." Not a finished game, not a rendered board, a
 // state inspector with buttons.
 //
-// Every faction plays through turnEngine.passiveDecisionProvider for now,
-// nobody actually decides anything yet, that's the AI layer, separate
-// work. This proves the engine runs correctly turn over turn; it is not
-// itself an opponent.
+// All six factions are computer-controlled for now, through whichever
+// decision provider is selected: the Basic AI (js/ai/basicAI.js) or the
+// passive engine-test stub. Human controls are the next step.
 
 import { initializeGame } from '../js/setupEngine.js';
 import * as turnEngine from '../js/turnEngine.js';
 import * as phaseEngine from '../js/phaseEngine.js';
+import { createBasicAI } from '../js/ai/basicAI.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
 
@@ -40,6 +40,7 @@ let gameState = null;
 let territoriesData = null;
 let cardLookup = {};
 let logEntries = [];
+let decisionProvider = turnEngine.passiveDecisionProvider;
 
 // --- Data loading --------------------------------------------------------
 
@@ -90,9 +91,14 @@ async function startNewGame() {
     // Setup itself isn't a runnable phase, per the rulebook it's a
     // one-time sequence, already applied entirely by initializeGame().
     // Advance straight to the first real phase.
+    const aiChoice = document.getElementById('select-ai').value;
+    decisionProvider = aiChoice === 'basic'
+      ? createBasicAI({ leadersData: data.leaders, cardLookup })
+      : turnEngine.passiveDecisionProvider;
+
     logEntries = [];
-    addLogEntry('setup', 'Game initialized: 6 factions, decks built and dealt.');
-    const picks = turnEngine.runTraitorSelection(gameState, turnEngine.passiveDecisionProvider);
+    addLogEntry('setup', `Game initialized: 6 factions, decks built and dealt. Opponents: ${aiChoice === 'basic' ? 'Basic AI' : 'Passive'}.`);
+    const picks = turnEngine.runTraitorSelection(gameState, decisionProvider);
     addLogEntry('setup', `Traitors chosen by ${picks.length} factions (Harkonnen keeps all four).`);
 
     phaseEngine.nextPhase(gameState);
@@ -110,7 +116,7 @@ async function startNewGame() {
 
 function stepPhase() {
   if (!gameState || gameState.victory.achieved) return;
-  const entry = turnEngine.stepOnePhase(gameState, turnEngine.passiveDecisionProvider, territoriesData, cardLookup);
+  const entry = turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup);
   describeLogEntry(entry);
   render();
   checkVictory();
@@ -118,7 +124,7 @@ function stepPhase() {
 
 function runTurn() {
   if (!gameState || gameState.victory.achieved) return;
-  const log = turnEngine.runFullTurn(gameState, turnEngine.passiveDecisionProvider, territoriesData, cardLookup);
+  const log = turnEngine.runFullTurn(gameState, decisionProvider, territoriesData, cardLookup);
   for (const entry of log) describeLogEntry(entry);
   render();
   checkVictory();
