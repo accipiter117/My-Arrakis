@@ -54,6 +54,10 @@
     "description": "Rules that exist only because a physical-table interaction needs a digital equivalent. Every entry here must have a one-line justification so it's auditable later.",
     "entries": [
       {
+        "id": "prescienceOpponentLocksFirst",
+        "justification": "Atreides Prescience at the table: Atreides asks one question and the opponent must then play what they revealed. Digitally the opponent locks their whole plan first and Atreides is shown the named element before locking. Equivalent outcome, and it removes any chance of the revealed answer being changed afterwards."
+      },
+      {
         "id": "hiddenBidOrderDisplay",
         "justification": "Physical bidding relies on players holding cards face down; digital equivalent is a sequential reveal-and-decide UI rather than simultaneous entry, to preserve bidding psychology per section 16 of the brief."
       }
