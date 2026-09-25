@@ -90,4 +90,24 @@ result = resolveMentatPause(state, territoriesData);
 assert(result.gameOver === true, 'final turn with no other winner triggers a fallback victory');
 assert(result.method === 'guild-special', 'guild wins automatically as the fallback when fremen conditions are not met and guild is present');
 
+console.log('\nTest 9: Bene Gesserit Prediction steals a correctly predicted win');
+state = makeState(4);
+state.factions.gesserit = { forces: { onBoard: {} }, specialFactionState: { prediction: { factionId: 'atreides', turn: 4 } } };
+state.factions.atreides.forces.onBoard = { arrakeen: 5, carthag: 3, tueksSietch: 2 };
+result = resolveMentatPause(state, territoriesData);
+assert(result.winners.length === 1 && result.winners[0] === 'gesserit', 'bene gesserit wins alone instead of atreides');
+assert(result.method === 'gesserit-prediction', 'method tagged as prediction');
+
+console.log('\nTest 10: wrong turn, the predicted faction keeps its win');
+state.factions.gesserit.specialFactionState.prediction.turn = 5;
+result = resolveMentatPause(state, territoriesData);
+assert(result.winners.includes('atreides') && result.method === 'stronghold-solo', 'atreides keeps the win when the turn is wrong');
+
+console.log('\nTest 11: prediction does not apply to a Fremen special victory');
+state = makeState(10);
+state.factions.gesserit = { forces: { onBoard: {} }, specialFactionState: { prediction: { factionId: 'fremen', turn: 10 } } };
+state.factions.fremen.forces.onBoard = { sietchTabr: 3, habbanyaSietch: 2 };
+result = resolveMentatPause(state, territoriesData);
+assert(result.method === 'fremen-special' && result.winners.includes('fremen'), 'fremen special win stands despite a matching prediction');
+
 console.log('\nAll victory engine sanity checks passed.');
