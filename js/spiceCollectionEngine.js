@@ -96,7 +96,7 @@ function resolveSpiceCollectionPhase(state, turnOrder) {
   return { blowCollections, strongholdCollections };
 }
 
-module.exports = {
+export {
   collectionRateFor,
   collectFromSpiceBlow,
   collectAllSpiceBlows,
