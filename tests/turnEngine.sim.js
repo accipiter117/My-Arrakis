@@ -38,7 +38,7 @@ assert(phaseEngine.currentPhase(state) === 'setup', 'starts in the setup phase')
 phaseEngine.nextPhase(state); // move off 'setup' into 'storm', mirroring what a real setup flow would do once
 assert(phaseEngine.currentPhase(state) === 'storm', 'now sitting in storm, ready for the first real turn');
 
-const log1 = turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
+const log1 = await turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
 assert(state.meta.turn === 2, `turn counter should advance to 2 after one full turn, got ${state.meta.turn}`);
 assert(phaseEngine.currentPhase(state) === 'storm', 'lands back on storm, ready for the next turn');
 assert(log1.some(entry => entry.phase === 'charity'), 'charity phase actually ran and was logged');
@@ -58,7 +58,7 @@ console.log('\nTest 4: Storm position stays put on turn 1 (passive dial is 0-0 f
 assert(state.board.stormPosition === 0, `storm should not have moved on turn 1 with passive 0-0 dials, got position ${state.board.stormPosition}`);
 
 console.log('\nTest 5: a second full turn advances the storm using the subsequent-turn dial range (1-3)');
-const log2 = turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
+const log2 = await turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
 assert(state.meta.turn === 3, `turn counter should now be 3, got ${state.meta.turn}`);
 assert(state.board.stormPosition === 2, `passive dials of 1+1=2 sectors should move the storm from 0 to 2, got ${state.board.stormPosition}`);
 
@@ -66,7 +66,7 @@ console.log('\nTest 6: five full turns run with no throw and no spice bank corru
 state = freshGame();
 phaseEngine.nextPhase(state);
 for (let i = 0; i < 5; i++) {
-  turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
+  await turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
 }
 assert(state.meta.turn === 6, `expected turn 6 after 5 full turns, got ${state.meta.turn}`);
 assert(Number.isFinite(state.spiceBank.totalInCirculation), 'spice bank total is still a real finite number, not NaN or undefined, after 5 turns');
@@ -78,7 +78,7 @@ state = freshGame();
 // stronghold before running the battle phase, exactly the kind of setup
 // findBattleTerritories() needs to detect on its own.
 state.factions.harkonnen.forces.onBoard.arrakeen = 4;
-const battleLog = turnEngine.runBattlePhase(state, turnEngine.passiveDecisionProvider, {});
+const battleLog = await turnEngine.runBattlePhase(state, turnEngine.passiveDecisionProvider, {});
 assert(battleLog.length === 1, 'exactly one battle was detected and resolved at arrakeen');
 assert(battleLog[0].territoryId === 'arrakeen', 'the detected battle site is correct');
 // Atreides has more forces (10 vs 4) and a leader with fighting value 0
@@ -93,7 +93,7 @@ console.log('\nTest 9: a full 10-turn game runs without throwing (exhausts and r
 state = freshGame();
 phaseEngine.nextPhase(state);
 for (let i = 0; i < 10 && !state.victory.achieved; i++) {
-  turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
+  await turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
 }
 assert(state.meta.turn >= 10 || state.victory.achieved, `game should reach turn 10 or end in victory, got turn ${state.meta.turn}`);
 const spiceCardsTotal = state.decks.spiceDeck.length + state.decks.spiceDiscardA.length + state.decks.spiceDiscardB.length;
@@ -101,7 +101,7 @@ assert(spiceCardsTotal === 21, `all 21 spice cards accounted for after reshuffli
 
 console.log('\nTest 10: traitor selection resolves every pending hand and conserves the traitor deck');
 state = freshGame();
-const picks = turnEngine.runTraitorSelection(state, turnEngine.passiveDecisionProvider);
+const picks = await turnEngine.runTraitorSelection(state, turnEngine.passiveDecisionProvider);
 assert(picks.length === 5, `five factions pick (harkonnen keeps all four automatically), got ${picks.length}`);
 for (const f of allSix) {
   assert(!state.factions[f].pendingTraitorHand, `${f} has no pending hand left`);
