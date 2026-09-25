@@ -19,9 +19,9 @@
 //     exposed as separate functions rather than automated inside
 //     initializeGame() itself.
 
-const { createInitialGameState } = require('./gameState.js');
-const { buildSpiceDeck } = require('./spiceEngine.js');
-const { buildTraitorDeck, shuffle: shuffleTraitors, dealTraitorHands } = require('./traitorDeckEngine.js');
+import { createInitialGameState } from './gameState.js';
+import { buildSpiceDeck } from './spiceEngine.js';
+import { buildTraitorDeck, shuffle as shuffleTraitors, dealTraitorHands } from './traitorDeckEngine.js';
 
 // Starting resources, transcribed directly from each faction's player
 // sheet in the base rulebook (the "AT START" / "FREE REVIVAL" boxes).
@@ -213,7 +213,7 @@ function initializeGame(config) {
   return state;
 }
 
-module.exports = {
+export {
   STARTING_CONDITIONS,
   STARTING_TREACHERY_COUNT,
   initializeFactionResources,
