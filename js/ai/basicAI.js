@@ -1,0 +1,228 @@
+// js/ai/basicAI.js
+//
+// Basic AI (brief Phase 3): plays legally and with simple sense, not
+// strategy. It bids, ships, moves, revives and fights, which makes games
+// actually happen, but it does not assess threats, bluff, form alliances
+// or plan ahead. That is the strategic layer (Phase 4), built on top of
+// this same decision-provider interface later.
+//
+// HIDDEN INFORMATION RULE (brief section 6): every method here reads only
+//   - public state: board positions, spice blow markers, storm, turn,
+//     which leaders are dead, alliances
+//   - its OWN faction's private state: spice, hand, traitors, reserves
+// It never reads another faction's spice, treachery hand, traitor hand
+// or battle plan. Opponent spice sits behind a player shield in the
+// physical game, so it is treated as unknown here too.
+//
+// Every decision is only a proposal: turnEngine runs it through the same
+// canX() validators a human action would use, so an illegal proposal is
+// simply refused rather than bending the rules.
+
+import * as movementEngine from '../movementEngine.js';
+import * as revivalEngine from '../revivalEngine.js';
+
+const WEAPON_CATEGORIES = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
+const DEFENSE_CATEGORIES = ['poisonDefense', 'projectileDefense'];
+
+export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
+  // Leader fighting values are printed on the discs, so they are public.
+  const leaderValue = {};
+  for (const factionLeaders of Object.values(leadersData)) {
+    if (!Array.isArray(factionLeaders)) continue; // skips the _notes metadata entry
+    for (const leader of factionLeaders) leaderValue[leader.id] = leader.fightingValue;
+  }
+
+  const randInt = (min, max) => min + Math.floor(rng() * (max - min + 1));
+  const own = (state, factionId) => state.factions[factionId];
+
+  // --- Public board reading helpers -------------------------------------
+
+  function forcesIn(state, territoryId) {
+    const result = {};
+    for (const [factionId, faction] of Object.entries(state.factions)) {
+      const n = faction.forces.onBoard[territoryId] ?? 0;
+      if (n > 0) result[factionId] = n;
+    }
+    return result;
+  }
+
+  function enemyForcesIn(state, factionId, territoryId) {
+    const allyId = allyOf(state, factionId);
+    return Object.entries(forcesIn(state, territoryId))
+      .filter(([f]) => f !== factionId && f !== allyId)
+      .reduce((sum, [, n]) => sum + n, 0);
+  }
+
+  function allyOf(state, factionId) {
+    const alliance = (state.alliances ?? []).find(a => a.factions.includes(factionId));
+    return alliance ? alliance.factions.find(f => f !== factionId) : null;
+  }
+
+  function spiceAt(state, territoryId) {
+    return state.board.spiceBlowMarkers
+      .filter(m => m.territoryId === territoryId)
+      .reduce((sum, m) => sum + m.amount, 0);
+  }
+
+  // How much this faction wants to have forces in a territory. Simple,
+  // readable weights, deliberately not tuned: tuning is Phase 4/7 work.
+  function territoryValue(state, factionId, territoryId) {
+    if (territoryId === 'polarSink') return 1;
+    const territory = state.board.territories[territoryId];
+    if (!territory) return 0;
+    let value = 0;
+    const mine = own(state, factionId).forces.onBoard[territoryId] ?? 0;
+    if (territory.type === 'stronghold' && mine === 0) value += 12;
+    value += spiceAt(state, territoryId) * 0.8;
+    value -= enemyForcesIn(state, factionId, territoryId) * 1.2;
+    return value;
+  }
+
+  // --- Decisions --------------------------------------------------------
+
+  return {
+    name: 'Basic AI',
+
+    chooseStormDial(state, factionId, isFirstStorm) {
+      return isFirstStorm ? randInt(0, 20) : randInt(1, 3);
+    },
+
+    // Keep the most valuable opponent leader as a traitor.
+    chooseTraitor(state, factionId, pendingHand) {
+      const opponents = pendingHand.filter(c => c.factionId !== factionId);
+      const pool = opponents.length ? opponents : pendingHand;
+      return pool.slice().sort((a, b) => (leaderValue[b.leaderId] ?? 0) - (leaderValue[a.leaderId] ?? 0))[0].leaderId;
+    },
+
+    // No diplomacy at this tier.
+    chooseAllianceActions() {
+      return { form: [], breakFrom: [] };
+    },
+
+    // Bids on unknown cards up to a small personal valuation, keeping a
+    // spice reserve for shipping. Atreides legitimately sees each card
+    // before bidding (their faction ability), so only Atreides uses cardId.
+    chooseBid(state, factionId, cardId, currentBid) {
+      const me = own(state, factionId);
+      const keep = 4;
+      let valuation = 2 + randInt(0, 2);
+      if (me.treacheryHand.length === 0) valuation += 2;
+      if (factionId === 'harkonnen') valuation += 2; // every purchase comes with a free card
+      if (factionId === 'atreides' && cardId) {
+        const category = cardLookup[cardId]?.category;
+        if (category === 'worthless') return null;
+        if (WEAPON_CATEGORIES.includes(category) || DEFENSE_CATEGORIES.includes(category)) valuation += 2;
+      }
+      const next = currentBid + 1;
+      if (next > valuation || next > me.spice - keep) return null;
+      return next;
+    },
+
+    // Free revivals always; pays for more only when comfortably funded.
+    // Revives the cheapest dead leader if it has none left to fight with.
+    chooseRevival(state, factionId) {
+      const me = own(state, factionId);
+      const tanked = me.revivalTanks ?? 0;
+      const free = revivalEngine.freeRevivalAllowance(factionId);
+      let forces = Math.min(free, tanked);
+      if (me.spice >= 12) forces = Math.min(3, tanked);
+      const starred = Math.min(1, me.starredRevivalTanks ?? 0, forces);
+
+      let leaderId = null;
+      let leaderFightingValue;
+      if (revivalEngine.isEligibleForLeaderRevival(state, factionId) && me.leaders.killed.length) {
+        const cheapest = me.leaders.killed.slice().sort((a, b) => (leaderValue[a] ?? 0) - (leaderValue[b] ?? 0))[0];
+        if ((leaderValue[cheapest] ?? 0) + 2 <= me.spice) {
+          leaderId = cheapest;
+          leaderFightingValue = leaderValue[cheapest] ?? 0;
+        }
+      }
+      return { forces, starred, leaderId, leaderFightingValue };
+    },
+
+    // One shipment and one move, each only if it clearly improves things.
+    chooseShipmentAndMovement(state, factionId) {
+      const me = own(state, factionId);
+      let shipment = null;
+      let movement = null;
+
+      // Shipment: best-value territory we can afford a meaningful force for.
+      const reserve = me.forces.reserve ?? 0;
+      if (reserve > 0) {
+        let best = null;
+        for (const territoryId of Object.keys(state.board.territories)) {
+          const value = territoryValue(state, factionId, territoryId);
+          if (value <= 3) continue;
+          const perForce = movementEngine.shipmentCostPerForce(state, factionId, territoryId);
+          const affordable = perForce === 0 ? reserve : Math.floor((me.spice - 3) / perForce);
+          const needed = Math.max(3, enemyForcesIn(state, factionId, territoryId) + 2);
+          const amount = Math.min(reserve, affordable, Math.max(needed, 4), 8);
+          if (amount < 2) continue;
+          if (!movementEngine.canShip(state, factionId, territoryId, amount).ok) continue;
+          const score = value + rng();
+          if (!best || score > best.score) best = { territoryId, amount, score };
+        }
+        if (best) shipment = { territoryId: best.territoryId, amount: best.amount };
+      }
+
+      // Movement: shift forces towards something better within range,
+      // never stripping a held stronghold below a small garrison.
+      const range = movementEngine.moveRangeFor(state, factionId);
+      let bestMove = null;
+      for (const [from, count] of Object.entries(me.forces.onBoard)) {
+        const fromType = state.board.territories[from]?.type;
+        const garrison = fromType === 'stronghold' ? 4 : 0;
+        const movable = count - garrison;
+        if (movable < 2) continue;
+        const currentValue = fromType === 'stronghold' ? 6 : territoryValue(state, factionId, from);
+        for (const to of movementEngine.reachableTerritories(state, factionId, from, range)) {
+          const gain = territoryValue(state, factionId, to) - currentValue;
+          if (gain < 4) continue;
+          if (!movementEngine.canMove(state, factionId, from, to, movable).ok) continue;
+          const score = gain + rng();
+          if (!bestMove || score > bestMove.score) bestMove = { from, to, amount: movable, score };
+        }
+      }
+      if (bestMove) movement = { from: bestMove.from, to: bestMove.to, amount: bestMove.amount };
+
+      return { shipment, movement };
+    },
+
+    // Commits more for strongholds, backs forces with spice while keeping
+    // a little in reserve, plays its strongest leader and whatever weapon
+    // and defence it holds. Never pairs its own lasgun with its own shield.
+    chooseBattlePlan(state, factionId, territoryId) {
+      const me = own(state, factionId);
+      const present = me.forces.onBoard[territoryId] ?? 0;
+      const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
+      const isStronghold = state.board.territories[territoryId]?.type === 'stronghold';
+
+      const forcesCommitted = Math.min(present, Math.ceil(present * (isStronghold ? 0.75 : 0.5)));
+      const starredForcesCommitted = Math.min(starredPresent, forcesCommitted);
+      const spiceCommitted = Math.max(0, Math.min(forcesCommitted, me.spice - 2));
+      const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
+      const supportedOrdinaryCount = spiceCommitted - supportedStarredCount;
+
+      const leaders = me.leaders.available.slice().sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0));
+      const leaderId = leaders[0] ?? null;
+      const hand = me.treacheryHand.map(id => ({ id, category: cardLookup[id]?.category }));
+      const cheapHeroCardId = leaderId ? null : (hand.find(c => c.category === 'specialLeaderSubstitute')?.id ?? null);
+
+      const nonLasgun = hand.find(c => c.category === 'poisonWeapon' || c.category === 'projectileWeapon');
+      const lasgun = hand.find(c => c.category === 'specialWeapon');
+      const weaponCardId = (nonLasgun ?? lasgun)?.id ?? null;
+      const usingLasgun = weaponCardId && cardLookup[weaponCardId]?.category === 'specialWeapon';
+      const defense = hand.find(c => DEFENSE_CATEGORIES.includes(c.category) &&
+        !(usingLasgun && c.category === 'projectileDefense'));
+      const defenseCardId = defense?.id ?? null;
+
+      return {
+        forcesCommitted, starredForcesCommitted, spiceCommitted,
+        supportedStarredCount, supportedOrdinaryCount,
+        leaderId, leaderFightingValue: leaderId ? (leaderValue[leaderId] ?? 0) : 0,
+        cheapHeroCardId, weaponCardId, defenseCardId,
+        useKwisatzHaderach: Boolean(me.specialFactionState?.kwisatzHaderachActive && (leaderId || cheapHeroCardId))
+      };
+    }
+  };
+}
