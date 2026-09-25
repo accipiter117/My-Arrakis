@@ -90,10 +90,12 @@ async function startNewGame() {
     // Setup itself isn't a runnable phase, per the rulebook it's a
     // one-time sequence, already applied entirely by initializeGame().
     // Advance straight to the first real phase.
-    phaseEngine.nextPhase(gameState);
-
     logEntries = [];
     addLogEntry('setup', 'Game initialized: 6 factions, decks built and dealt.');
+    const picks = turnEngine.runTraitorSelection(gameState, turnEngine.passiveDecisionProvider);
+    addLogEntry('setup', `Traitors chosen by ${picks.length} factions (Harkonnen keeps all four).`);
+
+    phaseEngine.nextPhase(gameState);
     render();
     document.getElementById('btn-step-phase').disabled = false;
     document.getElementById('btn-run-turn').disabled = false;
@@ -147,25 +149,74 @@ function shuffleArray(array) {
 
 // --- Log formatting --------------------------------------------------
 
+const nameOf = id => FACTION_DISPLAY[id]?.name ?? id;
+const territoryNameOf = id => territoriesData?.territories?.[id]?.name ?? id;
+
 function describeLogEntry(entry) {
-  const { phase, result } = entry;
-  if (result === null || result === undefined) return; // no-op pass-throughs (nexus, movement, victoryCheck) stay quiet
+  const { phase, result, turn } = entry;
+  const addLogEntry = (p, text) => logEntries.push({ phase: p, text, turn });
+  if (result === null || result === undefined) return; // no-op pass-throughs stay quiet
 
-  if (Array.isArray(result)) {
-    if (result.length === 0) return;
-    addLogEntry(phase, `${result.length} event(s).`);
-    return;
-  }
-
-  if (phase === 'storm') {
-    addLogEntry(phase, `Moved ${result.sectorsToMove} sector(s) to position ${result.newPosition}. (Damage/First Player pending sector data.)`);
-  } else if (phase === 'mentatPause') {
-    addLogEntry(phase, result.gameOver ? `Victory: ${result.winners.join(', ')} (${result.method})` : 'No winner yet.');
-  } else if (phase === 'spiceBlow') {
-    const worm = result.triggeredNexus ? ' A Nexus was triggered.' : '';
-    addLogEntry(phase, `Spice blow resolved.${worm}`);
-  } else {
-    addLogEntry(phase, 'Resolved.');
+  switch (phase) {
+    case 'storm':
+      addLogEntry(phase, `Storm moved ${result.sectorsToMove} sector(s) to sector ${result.newPosition}. Damage not yet applied (awaiting sector data).`);
+      return;
+    case 'spiceBlow': {
+      const text = result.placed.length
+        ? result.placed.map(m => `${m.amount} spice in ${territoryNameOf(m.territoryId)}`).join(', ')
+        : 'no new spice placed';
+      addLogEntry(phase, `Spice blow: ${text}.${result.nexus ? ' Shai-Hulud appeared, a Nexus follows.' : ''}`);
+      return;
+    }
+    case 'charity':
+      if (!result.length) return;
+      addLogEntry(phase, result.map(r => `${nameOf(r.factionId)} +${r.amountReceived}`).join(', ') + ' spice.');
+      return;
+    case 'bidding': {
+      const sold = result.filter(r => r.winner);
+      const unsold = result.find(r => r.unsold);
+      const parts = sold.map(r => `${nameOf(r.winner)} bought a card for ${r.price}`);
+      if (unsold) parts.push(`a card drew no bids, ending the auction (${unsold.cardsReturned} returned to the deck)`);
+      addLogEntry(phase, (parts.join('; ') || 'No auction held') + '.');
+      return;
+    }
+    case 'revival':
+      if (!result.length) return;
+      addLogEntry(phase, result.map(r => r.leaderId
+        ? `${nameOf(r.factionId)} revived leader ${r.leaderId}`
+        : `${nameOf(r.factionId)} revived ${r.amount} force(s)${r.cost ? ` for ${r.cost} spice` : ''}`).join(', ') + '.');
+      return;
+    case 'shipment':
+      if (!result.length) return;
+      addLogEntry(phase, result.map(r => {
+        if (r.type === 'movement') return `${nameOf(r.factionId)} moved ${r.amount} from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)}`;
+        if (r.type === 'allyOverlapPenalty') return `${nameOf(r.penalizedFactionId)} lost ${r.forcesLost} forces sharing ${territoryNameOf(r.territoryId)} with an ally`;
+        return `${nameOf(r.factionId)} shipped ${r.amount} to ${territoryNameOf(r.territoryId)}`;
+      }).join('; ') + '.');
+      return;
+    case 'battle':
+      if (!result.length) return;
+      addLogEntry(phase, result.map(r => {
+        if (r.explosion) return `Lasgun/shield explosion in ${territoryNameOf(r.territoryId)}`;
+        if (r.mutualTraitors) return `Both leaders were traitors in ${territoryNameOf(r.territoryId)}`;
+        const how = r.traitor ? ' (traitor revealed)' : '';
+        return `${nameOf(r.winnerFactionId)} beat ${nameOf(r.loserFactionId)} in ${territoryNameOf(r.territoryId)}${how}`;
+      }).join('; ') + '.');
+      return;
+    case 'spiceCollection': {
+      const totals = {};
+      for (const c of [...result.blowCollections.flatMap(b => b.collections), ...result.strongholdCollections]) {
+        totals[c.factionId] = (totals[c.factionId] ?? 0) + c.collected;
+      }
+      const text = Object.entries(totals).map(([f, n]) => `${nameOf(f)} +${n}`).join(', ');
+      if (text) addLogEntry(phase, `Collected: ${text} spice.`);
+      return;
+    }
+    case 'mentatPause':
+      if (result.gameOver) addLogEntry(phase, `Victory: ${result.winners.map(nameOf).join(' & ')} (${result.method}).`);
+      return;
+    default:
+      addLogEntry(phase, 'Resolved.');
   }
 }
 
