@@ -176,7 +176,11 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
       const free = revivalEngine.freeRevivalAllowance(factionId);
       let forces = Math.min(free, tanked);
       if (me.spice >= 12) forces = Math.min(3, tanked);
-      const starred = Math.min(1, me.starredRevivalTanks ?? 0, forces);
+      // At most one starred force per turn; the rest must be ordinary ones
+      // actually present in the tanks.
+      const starredTanked = me.starredRevivalTanks ?? 0;
+      const starred = Math.min(1, starredTanked, forces);
+      forces = Math.min(forces, tanked - starredTanked + starred);
 
       let leaderId = null;
       let leaderFightingValue;
@@ -187,7 +191,17 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
           leaderFightingValue = leaderValue[cheapest] ?? 0;
         }
       }
-      return { forces, starred, leaderId, leaderFightingValue };
+      // Ghola: a free leader if we have none to fight with, otherwise a
+      // free batch of forces once enough are in the tanks.
+      let ghola = null;
+      if (me.treacheryHand.includes('ghola')) {
+        if (!me.leaders.available.length && me.leaders.killed.length && !leaderId) {
+          ghola = { leaderId: me.leaders.killed.slice().sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0))[0] };
+        } else if (tanked - forces >= 4) {
+          ghola = { forces: Math.min(5, tanked - forces) };
+        }
+      }
+      return { forces, starred, leaderId, leaderFightingValue, ghola };
     },
 
     // One shipment and one move, each only if it clearly improves things.
@@ -219,6 +233,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
       // never stripping a held stronghold below a small garrison.
       const range = movementEngine.moveRangeFor(state, factionId);
       let bestMove = null;
+      const candidateMoves = [];
       for (const [from, count] of Object.entries(me.forces.onBoard)) {
         const fromType = state.board.territories[from]?.type;
         const garrison = fromType === 'stronghold' ? 4 : 0;
@@ -230,12 +245,21 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
           if (gain < 4) continue;
           if (!movementEngine.canMove(state, factionId, from, to, movable).ok) continue;
           const score = gain + rng();
+          candidateMoves.push({ from, to, amount: movable, score });
           if (!bestMove || score > bestMove.score) bestMove = { from, to, amount: movable, score };
         }
       }
       if (bestMove) movement = { from: bestMove.from, to: bestMove.to, amount: bestMove.amount };
 
-      return { shipment, movement };
+      // Hajr: a second move from a different group, if one is worth making.
+      let hajrMove = null;
+      if (bestMove && me.treacheryHand.includes('hajr')) {
+        const second = candidateMoves.filter(c => c.from !== bestMove.from && c.to !== bestMove.to)
+          .sort((a, b) => b.score - a.score)[0];
+        if (second) hajrMove = { from: second.from, to: second.to, amount: second.amount };
+      }
+
+      return { shipment, movement, hajrMove };
     },
 
     // Commits more for strongholds, backs forces with spice while keeping
