@@ -47,10 +47,17 @@
   </main>
 
   <footer class="controls">
+    <label class="control-select">
+      <span>Opponents</span>
+      <select id="select-ai">
+        <option value="basic" selected>Basic AI</option>
+        <option value="passive">Passive (engine test)</option>
+      </select>
+    </label>
     <button id="btn-new-game" class="btn btn--primary">Start New Game</button>
     <button id="btn-step-phase" class="btn" disabled>Step One Phase</button>
     <button id="btn-run-turn" class="btn" disabled>Run Full Turn</button>
-    <span id="controls-note" class="controls-note">All factions currently play passively (no real decisions), this proves the engine runs correctly. Manual and AI-driven decisions are the next step.</span>
+    <span id="controls-note" class="controls-note">All six factions are computer-controlled for now. Basic AI plays legally but without strategy; human controls come next.</span>
   </footer>
 
   <script type="module" src="./ui/main.js"></script>
