@@ -28,6 +28,7 @@ import * as spiceCollectionEngine from './spiceCollectionEngine.js';
 import * as victoryEngine from './victoryEngine.js';
 import * as allianceEngine from './allianceEngine.js';
 import * as traitorDeckEngine from './traitorDeckEngine.js';
+import * as setupEngine from './setupEngine.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -47,6 +48,11 @@ const passiveDecisionProvider = {
   chooseTraitor(state, factionId, pendingHand) {
     const opponent = pendingHand.find(c => c.factionId !== factionId);
     return (opponent ?? pendingHand[0]).leaderId;
+  },
+  // Bene Gesserit only: predicts the first other faction to win on the last turn.
+  choosePrediction(state, factionId) {
+    const other = Object.keys(state.factions).find(f => f !== factionId);
+    return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
   // Never proposes or breaks alliances.
   chooseAllianceActions(state) {
@@ -84,7 +90,7 @@ const passiveDecisionProvider = {
 
 // --- Individual phase runners --------------------------------------------
 
-function runStormPhase(state, decisionProvider) {
+async function runStormPhase(state, decisionProvider) {
   const isFirstStorm = state.meta.turn === 1;
   // Which two factions dial genuinely needs player-circle sector data for
   // the first storm (nearest either side of Storm Start) and is fully
@@ -94,8 +100,8 @@ function runStormPhase(state, decisionProvider) {
     ? (state.meta.turnOrder ?? []).slice(0, 2) // placeholder pending player-circle sectors, see docs/STORM_TODO.md
     : (state.meta.lastBattleParticipants ?? (state.meta.turnOrder ?? []).slice(0, 2));
 
-  const dialA = decisionProvider.chooseStormDial(state, dialers[0], isFirstStorm);
-  const dialB = decisionProvider.chooseStormDial(state, dialers[1], isFirstStorm);
+  const dialA = await decisionProvider.chooseStormDial(state, dialers[0], isFirstStorm);
+  const dialB = await decisionProvider.chooseStormDial(state, dialers[1], isFirstStorm);
   const sectorsToMove = isFirstStorm
     ? stormEngine.rollFirstStormMovement(dialA, dialB)
     : stormEngine.rollSubsequentStormMovement(dialA, dialB);
@@ -122,7 +128,7 @@ function runStormPhase(state, decisionProvider) {
   return { sectorsToMove, newPosition: state.board.stormPosition, damageApplied: false, firstPlayerDetermined: false };
 }
 
-function runSpiceBlowPhase(state, decisionProvider) {
+async function runSpiceBlowPhase(state, decisionProvider) {
   spiceEngine.resolveSpiceBlowPhase(state);
   // Snapshot what was placed now, later phases (collection, worms) can
   // remove these markers before anything reads the log.
@@ -133,7 +139,7 @@ function runSpiceBlowPhase(state, decisionProvider) {
     nexus: Boolean(state.nexus.active)
   };
   if (state.nexus.active) {
-    const actions = decisionProvider.chooseAllianceActions(state);
+    const actions = await decisionProvider.chooseAllianceActions(state);
     for (const factionId of actions.breakFrom ?? []) {
       if (allianceEngine.canBreakAlliance(state, factionId).ok) {
         allianceEngine.breakAlliance(state, factionId);
@@ -160,7 +166,7 @@ function runCharityPhase(state) {
   return results;
 }
 
-function runBiddingPhase(state, decisionProvider) {
+async function runBiddingPhase(state, decisionProvider) {
   biddingEngine.startBiddingPhase(state);
   const results = [];
 
@@ -180,7 +186,7 @@ function runBiddingPhase(state, decisionProvider) {
       idx++;
       if (state.bidding.passedThisCard.includes(factionId)) continue;
       if (factionId === state.bidding.currentBidder) continue;
-      const bid = decisionProvider.chooseBid(state, factionId, cardId, state.bidding.currentBid);
+      const bid = await decisionProvider.chooseBid(state, factionId, cardId, state.bidding.currentBid);
       if (bid && biddingEngine.canBid(state, factionId, bid).ok) {
         biddingEngine.placeBid(state, factionId, bid);
       } else {
@@ -197,10 +203,10 @@ function runBiddingPhase(state, decisionProvider) {
   return results;
 }
 
-function runRevivalPhase(state, decisionProvider) {
+async function runRevivalPhase(state, decisionProvider) {
   const results = [];
   for (const factionId of Object.keys(state.factions)) {
-    const decision = decisionProvider.chooseRevival(state, factionId);
+    const decision = await decisionProvider.chooseRevival(state, factionId);
     if (decision.forces > 0 && revivalEngine.canReviveForces(state, factionId, decision.forces, decision.starred).ok) {
       results.push(revivalEngine.reviveForces(state, factionId, decision.forces, decision.starred));
     }
@@ -218,12 +224,12 @@ function runRevivalPhase(state, decisionProvider) {
   return results;
 }
 
-function runShipmentMovementPhase(state, decisionProvider) {
+async function runShipmentMovementPhase(state, decisionProvider) {
   const results = [];
   const turnOrder = state.meta.turnOrder ?? Object.keys(state.factions);
 
   for (const factionId of turnOrder) {
-    const decision = decisionProvider.chooseShipmentAndMovement(state, factionId);
+    const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
     if (decision.shipment) {
       const { territoryId, amount } = decision.shipment;
       if (movementEngine.canShip(state, factionId, territoryId, amount).ok) {
@@ -263,7 +269,7 @@ function findBattleTerritories(state) {
   return Object.entries(territories).filter(([, factions]) => factions.length >= 2);
 }
 
-function runBattlePhase(state, decisionProvider, cardLookup) {
+async function runBattlePhase(state, decisionProvider, cardLookup) {
   const results = [];
   battleEngine.resetKwisatzHaderachPhaseLock(state);
   const participants = new Set();
@@ -278,10 +284,17 @@ function runBattlePhase(state, decisionProvider, cardLookup) {
     participants.add(aggressorId);
     participants.add(defenderId);
 
-    const aggressorPlan = decisionProvider.chooseBattlePlan(state, aggressorId, territoryId, defenderId);
-    const defenderPlan = decisionProvider.chooseBattlePlan(state, defenderId, territoryId, aggressorId);
+    const aggressorPlan = await decisionProvider.chooseBattlePlan(state, aggressorId, territoryId, defenderId);
+    const defenderPlan = await decisionProvider.chooseBattlePlan(state, defenderId, territoryId, aggressorId);
     const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, aggressorPlan, defenderPlan, cardLookup ?? {});
-    results.push({ territoryId, ...outcome });
+    // Plans are revealed after a battle in the physical game, so returning
+    // them here leaks nothing that wasn't already public.
+    const reveal = plan => ({
+      forces: plan.forcesCommitted, spice: plan.spiceCommitted, leaderId: plan.leaderId,
+      cheapHero: Boolean(plan.cheapHeroCardId), weapon: plan.weaponCardId, defense: plan.defenseCardId
+    });
+    results.push({ territoryId, aggressorId, defenderId,
+      plans: { [aggressorId]: reveal(aggressorPlan), [defenderId]: reveal(defenderPlan) }, ...outcome });
 
     battleSites = findBattleTerritories(state);
   }
@@ -310,17 +323,32 @@ function runMentatPausePhase(state, territoriesData) {
 // Runs once, straight after initializeGame(). Every faction except
 // Harkonnen (who keeps all four automatically) picks one traitor from its
 // dealt hand; the other three go to the bottom of the traitor deck.
-function runTraitorSelection(state, decisionProvider) {
+async function runTraitorSelection(state, decisionProvider) {
   const results = [];
   for (const factionId of Object.keys(state.factions)) {
     const pending = state.factions[factionId].pendingTraitorHand;
     if (!pending) continue;
-    const choice = decisionProvider.chooseTraitor(state, factionId, pending);
+    const choice = await decisionProvider.chooseTraitor(state, factionId, pending);
     const result = traitorDeckEngine.selectTraitor(state, factionId, choice);
     state.decks.traitorDeck = [...state.decks.traitorDeck, ...result.returnedToDeck];
     results.push({ factionId, kept: result.kept });
   }
   return results;
+}
+
+// Every one-off decision made during setup: traitors, then (if Bene
+// Gesserit is playing) their secret Prediction.
+async function runSetupDecisions(state, decisionProvider) {
+  const traitors = await runTraitorSelection(state, decisionProvider);
+  let prediction = null;
+  if (state.factions.gesserit) {
+    const choice = await decisionProvider.choosePrediction(state, 'gesserit');
+    if (setupEngine.canSetPrediction(state, choice.factionId, choice.turn).ok) {
+      setupEngine.setPrediction(state, choice.factionId, choice.turn);
+      prediction = choice;
+    }
+  }
+  return { traitors, prediction };
 }
 
 // --- Full turn orchestration -----------------------------------------
@@ -329,26 +357,26 @@ function runTraitorSelection(state, decisionProvider) {
 // happened. Used directly by the UI's "step one phase" control, and by
 // runFullTurn() below in a loop, so both share one code path rather than
 // the UI reimplementing phase dispatch separately.
-function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup) {
+async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup) {
   const phase = phaseEngine.currentPhase(state);
   const turn = state.meta.turn; // stamped before anything can advance it
   let result = null;
 
   switch (phase) {
-    case 'storm': result = runStormPhase(state, decisionProvider); break;
-    case 'spiceBlow': result = runSpiceBlowPhase(state, decisionProvider); break;
+    case 'storm': result = await runStormPhase(state, decisionProvider); break;
+    case 'spiceBlow': result = await runSpiceBlowPhase(state, decisionProvider); break;
     case 'nexus': result = null; break; // handled inside runSpiceBlowPhase, this step is a no-op pass-through
     case 'charity': result = runCharityPhase(state); break;
-    case 'bidding': result = runBiddingPhase(state, decisionProvider); break;
-    case 'revival': result = runRevivalPhase(state, decisionProvider); break;
+    case 'bidding': result = await runBiddingPhase(state, decisionProvider); break;
+    case 'revival': result = await runRevivalPhase(state, decisionProvider); break;
     case 'shipment':
     case 'movement':
       // Both phases share one combined runner (ship-then-move per
       // faction, per the rulebook's own phase description), only run
       // it once when we hit 'shipment', 'movement' becomes a no-op pass.
-      result = phase === 'shipment' ? runShipmentMovementPhase(state, decisionProvider) : null;
+      result = phase === 'shipment' ? await runShipmentMovementPhase(state, decisionProvider) : null;
       break;
-    case 'battle': result = runBattlePhase(state, decisionProvider, cardLookup); break;
+    case 'battle': result = await runBattlePhase(state, decisionProvider, cardLookup); break;
     case 'spiceCollection': result = runSpiceCollectionPhase(state); break;
     case 'mentatPause': result = runMentatPausePhase(state, territoriesData); break;
     case 'victoryCheck': result = null; break; // victory already resolved inside mentatPause
@@ -362,19 +390,19 @@ function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup) 
 // Steps exactly one phase forward, including advancing phaseEngine past
 // it, and returns the single log entry. This is the function the UI's
 // "Step One Phase" control calls directly.
-function stepOnePhase(state, decisionProvider, territoriesData, cardLookup) {
-  const entry = runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup);
+async function stepOnePhase(state, decisionProvider, territoriesData, cardLookup) {
+  const entry = await runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup);
   if (!state.victory.achieved) {
     phaseEngine.nextPhase(state);
   }
   return entry;
 }
 
-function runFullTurn(state, decisionProvider, territoriesData, cardLookup) {
+async function runFullTurn(state, decisionProvider, territoriesData, cardLookup) {
   const log = [];
 
   while (true) {
-    const entry = runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup);
+    const entry = await runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup);
     log.push(entry);
 
     if (state.victory.achieved) break;
@@ -400,6 +428,7 @@ export {
   runMentatPausePhase,
   stepOnePhase,
   runTraitorSelection,
+  runSetupDecisions,
   runFullTurn,
   findBattleTerritories
 };
