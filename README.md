@@ -1,41 +1,49 @@
 # My Arrakis
 
-A digital implementation of the Gale Force Nine 2019 edition of Dune, built for
-mobile Safari and hosted on GitHub Pages. Single human player against AI
-opponents, all ten factions (base six plus Ixians, Tleilaxu, CHOAM, Richese).
+A digital implementation of the Gale Force Nine 2019 edition of Dune, built
+for mobile browsers and hosted on GitHub Pages. You play one faction against
+five AI opponents. No backend, no build step, plain JavaScript modules.
 
-No backend, no build step, vanilla JS on static hosting.
+Play: https://accipiter117.github.io/My-Arrakis/ (once GitHub Pages is enabled
+under Settings > Pages, branch `main`, folder `/`).
 
-## Status: Phase 1, engine only
+## How to play
 
-Nothing playable yet. Current focus is the data model and phase state machine,
-with no UI. See `docs/faction-reference.md` for the rules basis, verified
-against the official rulebooks rather than reconstructed from memory.
+1. Choose your faction under **Play as** (or Spectate to watch six AIs).
+2. Choose **Opponents**: Basic AI, or Passive (an engine test stub).
+3. **Start New Game**, then **Run Full Turn** or **Step One Phase**.
+4. Whenever a decision is yours, the game pauses and a panel asks you:
+   traitor, storm dial, bids, revival, shipment and movement, battle plans.
+   Illegal choices are explained before you commit.
+
+Other factions' spice and traitors are hidden from you, as they are behind
+player shields in the physical game.
+
+## Status
+
+- Rules engine: all nine phases, advanced rules always on, six base factions
+- Basic AI: legal, simple-sense play, reads only public information plus
+  its own hand
+- Human play: full decision panels for one faction
+- Not yet: storm damage and First Player (awaiting sector data, see
+  `docs/STORM_TODO.md`), strategic AI, alliances for the human player,
+  Voice, advisors, Karama, expansion factions, an illustrated board
+
+## Running locally
+
+```
+python3 -m http.server 8000     # then open http://localhost:8000
+npm test                         # all engine and simulation tests (Node 18+)
+node tests/aiSimulation.sim.js 200   # AI-vs-AI batch with rule invariants
+```
 
 ## Structure
 
 ```
-data/
-  factions.json      faction identities and special abilities as data
-  leaders.json        leader roster shape (fighting values pending verification)
-  rulesConfig.json    standard/advanced/optional rule toggles
-js/
-  gameState.js         central game state factory
-  phaseEngine.js        turn phase state machine
-docs/
-  faction-reference.md  full faction rules reference with sources
+index.html, ui/        page, styles, main UI, human decision panels
+js/                    rules engine, one module per phase, plus turn engine
+js/ai/                 Basic AI and the human/AI routing provider
+data/                  factions, leaders, territories, decks, rules config
+tests/                 engine tests and the AI-vs-AI simulation harness
+docs/                  faction reference, AI notes, outstanding TODOs
 ```
-
-## Running locally
-
-No build step required. `node --check` any `.js` file to validate syntax.
-Data files are validated JSON, load with any parser.
-
-## Known gaps
-
-- `leaders.json` has no fighting values yet, those are printed on the physical
-  leader discs and not recoverable from rulebook text alone
-- Richese No-Field tokens, the Ixian Hidden Mobile Stronghold, and Tleilaxu
-  Face Dancers need dedicated state shapes, currently unbuilt
-- No map/territory data yet
-- No UI, no rendering, nothing runs end to end
