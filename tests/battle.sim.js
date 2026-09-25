@@ -2,10 +2,10 @@
 // starred units (Sardaukar/Fedaykin) and Kwisatz Haderach.
 // Run with: node battle.sim.js
 
-const {
+import {
   starredUnitValueFor, calculateStrength, resolveBattle,
   kwisatzHaderachBonusFor, recordForceLossForKwisatzHaderach
-} = require('./js/battleEngine.js');
+} from '../js/battleEngine.js';
 
 const cardLookup = {
   maulaPistol: { id: 'maulaPistol', category: 'projectileWeapon' },
