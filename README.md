@@ -24,10 +24,14 @@ player shields in the physical game.
 - Rules engine: all nine phases, advanced rules always on, six base factions
 - Basic AI: legal, simple-sense play, reads only public information plus
   its own hand
-- Human play: full decision panels for one faction
+- Human play: full decision panels for one faction, including Atreides
+  battle Prescience
+- Treachery cards: weapons, defences, Cheap Heroes, Hajr and Ghola work
 - Not yet: storm damage and First Player (awaiting sector data, see
   `docs/STORM_TODO.md`), strategic AI, alliances for the human player,
-  Voice, advisors, Karama, expansion factions, an illustrated board
+  Voice, advisors, Karama, Truthtrance, Weather Control and Family Atomics
+  (the last two need the storm), worm riding, expansion factions, an
+  illustrated board
 
 ## Running locally
 
