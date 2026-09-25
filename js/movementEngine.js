@@ -106,7 +106,10 @@ function canShip(state, factionId, destinationTerritoryId, amount) {
   // once isSectorInStormCheck(destinationTerritoryId) is real.
 
   const costPerForce = shipmentCostPerForce(state, factionId, destinationTerritoryId);
-  const totalCost = costPerForce * amount;
+  // Guild ships at half price, rounded up (rulebook), which is the only
+  // way a fractional per-force rate appears. Rounding the TOTAL keeps
+  // spice a whole number; without it the Guild accumulated half-spice.
+  const totalCost = Math.ceil(costPerForce * amount);
   if (totalCost > state.factions[factionId].spice) {
     return { ok: false, reason: 'Not enough spice for this shipment.' };
   }
