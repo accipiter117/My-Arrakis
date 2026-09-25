@@ -116,7 +116,9 @@ function devourTopOfPile(state, pileKey) {
     const forcesHere = faction.forces.onBoard[topCard.id];
     if (forcesHere) {
       faction.revivalTanks = (faction.revivalTanks ?? 0) + forcesHere;
+      faction.starredRevivalTanks = (faction.starredRevivalTanks ?? 0) + (faction.forces.starredOnBoard?.[topCard.id] ?? 0);
       delete faction.forces.onBoard[topCard.id];
+      if (faction.forces.starredOnBoard) delete faction.forces.starredOnBoard[topCard.id];
     }
   }
 }
