@@ -394,7 +394,7 @@ function resolveExplosion(state, territoryId, factionAId, factionBId) {
   return { winnerFactionId: null, loserFactionId: null, spiceOwedToWinner: 0, explosion: true };
 }
 
-module.exports = {
+export {
   starredUnitValueFor,
   canDeclareBattlePlan,
   calculateStrength,
