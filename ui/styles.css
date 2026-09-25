@@ -301,6 +301,24 @@ table.territories-table {
   font-style: italic;
 }
 
+.control-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.control-select select {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--parchment);
+  color: var(--ink);
+}
+
 /* --- Accessibility baseline --- */
 
 :focus-visible {
