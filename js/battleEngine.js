@@ -311,10 +311,10 @@ function applyBattleOutcome(state, territoryId, outcome) {
   // spice value of every leader killed this battle, including their own.
   let spiceOwedToWinner = 0;
   if (winnerLeaderKilled && winnerPlan.leaderId) {
-    spiceOwedToWinner += killLeader(state, winnerFactionId, winnerPlan.leaderId);
+    spiceOwedToWinner += killLeader(state, winnerFactionId, winnerPlan.leaderId, winnerPlan.leaderFightingValue);
   }
   if (loserLeaderKilled && loserPlan.leaderId) {
-    spiceOwedToWinner += killLeader(state, loserFactionId, loserPlan.leaderId);
+    spiceOwedToWinner += killLeader(state, loserFactionId, loserPlan.leaderId, loserPlan.leaderFightingValue);
   }
   winner.spice += spiceOwedToWinner;
   state.spiceBank.totalInCirculation -= spiceOwedToWinner;
@@ -327,16 +327,15 @@ function applyBattleOutcome(state, territoryId, outcome) {
   return { winnerFactionId, loserFactionId, spiceOwedToWinner };
 }
 
-function killLeader(state, ownerFactionId, leaderId) {
+// Returns the leader's fighting value, which is the spice the battle
+// winner collects for it. The value comes from the battle plan itself
+// (every plan already declares leaderFightingValue), so this module still
+// needs no dependency on leaders.json.
+function killLeader(state, ownerFactionId, leaderId, fightingValue = 0) {
   const faction = state.factions[ownerFactionId];
   faction.leaders.available = faction.leaders.available.filter(id => id !== leaderId);
   faction.leaders.killed.push(leaderId);
-  // Fighting value lookup left to the caller's leader data source, this
-  // function returns 0 here and expects the caller (resolveBattle callers
-  // in the real engine wiring) to look up the actual value from
-  // leaders.json, kept out of this module to avoid a data-file dependency
-  // inside the pure battle-math layer. See TODO in resolveBattle wiring.
-  return 0; // TODO: replace with actual leader fightingValue from leaders.json
+  return fightingValue ?? 0;
 }
 
 function discardPlanCards(state, factionId, plan) {
@@ -358,7 +357,7 @@ function resolveTraitorWin(state, territoryId, revealingFactionId, revealedFacti
   const leaderId = revealedPlan.leaderId;
   let spiceOwed = 0;
   if (leaderId) {
-    spiceOwed = killLeader(state, revealedFactionId, leaderId); // TODO: real fighting value, see killLeader
+    spiceOwed = killLeader(state, revealedFactionId, leaderId, revealedPlan.leaderFightingValue);
   }
   revealer.spice += spiceOwed;
   state.spiceBank.totalInCirculation -= spiceOwed;
