@@ -110,4 +110,31 @@ assert(state.factions.atreides.traitorHand.length === 1, 'atreides holds exactly
 const heldTraitors = allSix.reduce((n, f) => n + state.factions[f].traitorHand.length, 0);
 assert(heldTraitors + state.decks.traitorDeck.length === 30, `30 traitor cards accounted for, got ${heldTraitors + state.decks.traitorDeck.length}`);
 
+console.log('\nTest 11: Atreides Prescience, opponent plans first and Atreides sees exactly the element it asked for');
+state = freshGame();
+state.factions.harkonnen.forces.onBoard.arrakeen = 4;
+const calls = [];
+let receivedIntel = null;
+const recorder = {
+  ...turnEngine.passiveDecisionProvider,
+  choosePrescienceElement(s, f, t, opp) { calls.push(`ask:${f}->${opp}`); return 'number'; },
+  chooseBattlePlan(s, f, t, opp, intel) {
+    calls.push(`plan:${f}`);
+    if (f === 'atreides') receivedIntel = intel;
+    const plan = turnEngine.passiveDecisionProvider.chooseBattlePlan(s, f, t, opp);
+    return f === 'harkonnen' ? { ...plan, forcesCommitted: 3 } : plan;
+  }
+};
+const presResults = await turnEngine.runBattlePhase(state, recorder, {});
+assert(calls.join(',') === 'ask:atreides->harkonnen,plan:harkonnen,plan:atreides', `order should be ask, opponent plan, atreides plan, got ${calls.join(',')}`);
+assert(receivedIntel?.element === 'number' && receivedIntel.value === 3, `atreides should see harkonnen dialing 3, got ${JSON.stringify(receivedIntel)}`);
+assert(presResults[0].prescience?.element === 'number', 'the battle result records what was revealed');
+
+console.log('\nTest 12: no Prescience in a battle without Atreides');
+state = freshGame();
+state.factions.fremen.forces.onBoard.carthag = 3;
+calls.length = 0;
+await turnEngine.runBattlePhase(state, recorder, {});
+assert(!calls.some(c => c.startsWith('ask')), 'nobody is asked a Prescience question');
+
 console.log('\nAll turn engine integration checks passed.');
