@@ -269,6 +269,7 @@ function removeForcesFromTerritory(state, factionId, territoryId, totalToRemove,
   if (faction.forces.onBoard[territoryId] <= 0) delete faction.forces.onBoard[territoryId];
 
   if (starredToRemove > 0) {
+    faction.starredRevivalTanks = (faction.starredRevivalTanks ?? 0) + starredToRemove;
     faction.forces.starredOnBoard[territoryId] = (faction.forces.starredOnBoard[territoryId] ?? 0) - starredToRemove;
     if (faction.forces.starredOnBoard[territoryId] <= 0) delete faction.forces.starredOnBoard[territoryId];
   }
@@ -280,6 +281,7 @@ function wipeAllForcesFromTerritory(state, factionId, territoryId) {
   const faction = state.factions[factionId];
   const total = faction.forces.onBoard[territoryId] ?? 0;
   faction.revivalTanks = (faction.revivalTanks ?? 0) + total;
+  faction.starredRevivalTanks = (faction.starredRevivalTanks ?? 0) + (faction.forces.starredOnBoard?.[territoryId] ?? 0);
   delete faction.forces.onBoard[territoryId];
   delete faction.forces.starredOnBoard[territoryId];
   recordForceLossForKwisatzHaderach(state, factionId, total);
