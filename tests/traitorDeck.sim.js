@@ -1,10 +1,10 @@
 // traitorDeck.sim.js — headless sanity check against real leader data.
 // Run with: node traitorDeck.sim.js
 
-const fs = require('fs');
-const {
+import fs from 'fs';
+import {
   buildTraitorDeck, shuffle, dealTraitorHands, canSelectTraitor, selectTraitor
-} = require('./js/traitorDeckEngine.js');
+} from '../js/traitorDeckEngine.js';
 
 const leadersData = JSON.parse(fs.readFileSync('./data/leaders.json', 'utf8'));
 
