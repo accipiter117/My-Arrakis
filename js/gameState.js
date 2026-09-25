@@ -123,4 +123,4 @@ function createTerritoryMap() {
   return {};
 }
 
-module.exports = { createInitialGameState };
+export { createInitialGameState };
