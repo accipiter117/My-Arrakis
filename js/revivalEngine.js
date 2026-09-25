@@ -41,6 +41,9 @@ function canReviveForces(state, factionId, amount, starredAmount = 0) {
   if (starredAmount > amount) return { ok: false, reason: 'Starred forces revived cannot exceed total forces revived.' };
   if (amount > tankedForces) return { ok: false, reason: 'Not enough forces in the Tleilaxu Tanks.' };
   if (starredAmount > tankedStarred) return { ok: false, reason: 'Not enough starred forces in the Tleilaxu Tanks.' };
+  if (amount - starredAmount > tankedForces - tankedStarred) {
+    return { ok: false, reason: 'Not enough ordinary forces in the Tleilaxu Tanks; the rest there are starred, and only one starred force can be revived per turn.' };
+  }
   if (amount > FORCE_REVIVAL_CAP_PER_TURN) {
     return { ok: false, reason: `Cannot revive more than ${FORCE_REVIVAL_CAP_PER_TURN} forces per turn, regardless of spice.` };
   }
