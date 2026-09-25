@@ -141,7 +141,7 @@ function resetRevivalTurnFlags(state) {
   return state;
 }
 
-module.exports = {
+export {
   freeRevivalAllowance,
   canReviveForces,
   reviveForces,
