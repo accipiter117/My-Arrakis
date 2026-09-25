@@ -24,6 +24,11 @@
   </nav>
 
   <main class="layout">
+    <section class="panel panel--hand" id="hand-panel" aria-labelledby="hand-heading" hidden>
+      <h2 id="hand-heading" class="panel__heading">Your hand</h2>
+      <div id="hand-body"></div>
+    </section>
+
     <section class="panel panel--factions" aria-labelledby="factions-heading">
       <h2 id="factions-heading" class="panel__heading">Factions</h2>
       <div id="factions-grid" class="factions-grid">
@@ -48,6 +53,18 @@
 
   <footer class="controls">
     <label class="control-select">
+      <span>Play as</span>
+      <select id="select-faction">
+        <option value="atreides" selected>Atreides</option>
+        <option value="harkonnen">Harkonnen</option>
+        <option value="emperor">Emperor</option>
+        <option value="fremen">Fremen</option>
+        <option value="guild">Spacing Guild</option>
+        <option value="gesserit">Bene Gesserit</option>
+        <option value="">Spectate (all AI)</option>
+      </select>
+    </label>
+    <label class="control-select">
       <span>Opponents</span>
       <select id="select-ai">
         <option value="basic" selected>Basic AI</option>
@@ -57,8 +74,10 @@
     <button id="btn-new-game" class="btn btn--primary">Start New Game</button>
     <button id="btn-step-phase" class="btn" disabled>Step One Phase</button>
     <button id="btn-run-turn" class="btn" disabled>Run Full Turn</button>
-    <span id="controls-note" class="controls-note">All six factions are computer-controlled for now. Basic AI plays legally but without strategy; human controls come next.</span>
+    <span id="controls-note" class="controls-note">Basic AI plays legally but without real strategy yet. The game pauses whenever it needs a decision from you.</span>
   </footer>
+
+  <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
   <script type="module" src="./ui/main.js"></script>
 </body>
