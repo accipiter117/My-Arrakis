@@ -54,6 +54,10 @@ const passiveDecisionProvider = {
     const other = Object.keys(state.factions).find(f => f !== factionId);
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
+  // Atreides only: always asks about the weapon.
+  choosePrescienceElement() {
+    return 'weapon';
+  },
   // Never proposes or breaks alliances.
   chooseAllianceActions(state) {
     return { form: [], breakFrom: [] };
@@ -257,6 +261,20 @@ async function runShipmentMovementPhase(state, decisionProvider) {
   return results;
 }
 
+// The single element Atreides asked about. The question and answer are
+// spoken aloud at the table, so this is public once revealed.
+const PRESCIENCE_ELEMENTS = ['leader', 'weapon', 'defense', 'number'];
+function revealPlanElement(plan, element) {
+  if (!PRESCIENCE_ELEMENTS.includes(element)) element = 'weapon';
+  const value = {
+    leader: plan.leaderId ?? (plan.cheapHeroCardId ? 'cheapHero' : null),
+    weapon: plan.weaponCardId ?? null,
+    defense: plan.defenseCardId ?? null,
+    number: plan.forcesCommitted
+  }[element];
+  return { element, value };
+}
+
 function findBattleTerritories(state) {
   const territories = {};
   for (const factionId of Object.keys(state.factions)) {
@@ -284,8 +302,25 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     participants.add(aggressorId);
     participants.add(defenderId);
 
-    const aggressorPlan = await decisionProvider.chooseBattlePlan(state, aggressorId, territoryId, defenderId);
-    const defenderPlan = await decisionProvider.chooseBattlePlan(state, defenderId, territoryId, aggressorId);
+    // Atreides Prescience: before plans lock, Atreides names one element of
+    // the opponent's plan and must be shown it. Digital equivalent: the
+    // opponent locks first (they must play what they reveal anyway), then
+    // Atreides sees the named element and plans with it.
+    let aggressorPlan, defenderPlan, prescience = null;
+    const atreidesId = [aggressorId, defenderId].includes('atreides') ? 'atreides' : null;
+    if (atreidesId) {
+      const opponentId = aggressorId === 'atreides' ? defenderId : aggressorId;
+      const element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opponentId);
+      const opponentPlan = await decisionProvider.chooseBattlePlan(state, opponentId, territoryId, 'atreides');
+      prescience = revealPlanElement(opponentPlan, element);
+      prescience.opponentId = opponentId;
+      const atreidesPlan = await decisionProvider.chooseBattlePlan(state, 'atreides', territoryId, opponentId, prescience);
+      aggressorPlan = aggressorId === 'atreides' ? atreidesPlan : opponentPlan;
+      defenderPlan = defenderId === 'atreides' ? atreidesPlan : opponentPlan;
+    } else {
+      aggressorPlan = await decisionProvider.chooseBattlePlan(state, aggressorId, territoryId, defenderId);
+      defenderPlan = await decisionProvider.chooseBattlePlan(state, defenderId, territoryId, aggressorId);
+    }
     const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, aggressorPlan, defenderPlan, cardLookup ?? {});
     // Plans are revealed after a battle in the physical game, so returning
     // them here leaks nothing that wasn't already public.
@@ -293,7 +328,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       forces: plan.forcesCommitted, spice: plan.spiceCommitted, leaderId: plan.leaderId,
       cheapHero: Boolean(plan.cheapHeroCardId), weapon: plan.weaponCardId, defense: plan.defenseCardId
     });
-    results.push({ territoryId, aggressorId, defenderId,
+    results.push({ territoryId, aggressorId, defenderId, prescience,
       plans: { [aggressorId]: reveal(aggressorPlan), [defenderId]: reveal(defenderPlan) }, ...outcome });
 
     battleSites = findBattleTerritories(state);
@@ -430,5 +465,6 @@ export {
   runTraitorSelection,
   runSetupDecisions,
   runFullTurn,
-  findBattleTerritories
+  findBattleTerritories,
+  revealPlanElement
 };
