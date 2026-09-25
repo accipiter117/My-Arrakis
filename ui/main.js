@@ -223,13 +223,15 @@ function describe(entry) {
       return log((parts.join('; ') || 'No auction held') + '.');
     }
     case 'revival':
-      if (result.length) log(result.map(r => r.leaderId
+      if (result.length) log(result.map(r => r.card === 'ghola'
+        ? `${nameOf(r.factionId)} played Ghola, reviving ${r.leaderId ? leaderNameOf(r.leaderId) : `${r.forces} forces`}`
+        : r.leaderId
         ? `${nameOf(r.factionId)} revived ${leaderNameOf(r.leaderId)}`
         : `${nameOf(r.factionId)} revived ${r.amount} force(s)${r.cost ? ` for ${r.cost} spice` : ''}`).join(', ') + '.');
       return;
     case 'shipment':
       if (result.length) log(result.map(r => {
-        if (r.type === 'movement') return `${nameOf(r.factionId)} moved ${r.amount} from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)}`;
+        if (r.type === 'movement') return `${nameOf(r.factionId)} ${r.card === 'hajr' ? 'played Hajr and moved' : 'moved'} ${r.amount} from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)}`;
         if (r.type === 'allyOverlapPenalty') return `${nameOf(r.penalizedFactionId)} lost ${r.forcesLost} forces sharing ${territoryNameOf(r.territoryId)} with an ally`;
         return `${nameOf(r.factionId)} shipped ${r.amount} to ${territoryNameOf(r.territoryId)}`;
       }).join('; ') + '.');
