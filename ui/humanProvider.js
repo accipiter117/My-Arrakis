@@ -140,7 +140,13 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       const starredTanks = me.starredRevivalTanks ?? 0;
       const free = revivalEngine.freeRevivalAllowance(factionId);
       const leaderEligible = revivalEngine.isEligibleForLeaderRevival(state, factionId) && me.leaders.killed.length > 0;
-      if (tanks === 0 && !leaderEligible) return { forces: 0, starred: 0, leaderId: null };
+      const hasGhola = me.treacheryHand.includes('ghola');
+      if (tanks === 0 && !leaderEligible && !(hasGhola && me.leaders.killed.length)) return { forces: 0, starred: 0, leaderId: null };
+      const gholaSelect = !hasGhola ? '' : `<label class="field"><span>Play Ghola (free)</span><select name="ghola">${options([
+          ['', 'Keep the card'],
+          ...me.leaders.killed.map(id => [`leader:${id}`, `Revive ${leaderLabel(id)}`]),
+          ...range(1, Math.min(5, tanks)).map(n => [`forces:${n}`, `Revive ${n} force${n > 1 ? 's' : ''}`])
+        ], '')}</select></label>`;
 
       const leaderSelect = leaderEligible
         ? `<label class="field"><span>Revive a leader</span><select name="leader">${options(
@@ -151,7 +157,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         `<dl class="facts"><dt>In the tanks</dt><dd>${tanks}</dd><dt>Free this turn</dt><dd>${free}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
          <p>Up to 3 forces a turn. Beyond your free allowance, each costs 2 spice.</p>
          <label class="field"><span>Forces</span><select name="forces">${options(range(0, Math.min(3, tanks)).map(n => [n, n]), Math.min(free, tanks))}</select></label>
-         ${starredSelect}${leaderSelect}
+         ${starredSelect}${leaderSelect}${gholaSelect}
          <p class="decision__cost"></p><p class="decision__error" hidden></p>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm revival</button></div>`,
         (p, done) => {
@@ -169,7 +175,10 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           check();
           btn.onclick = () => {
             const leaderId = field(p, 'leader')?.value || null;
+            const g = field(p, 'ghola')?.value || '';
+            const ghola = g.startsWith('leader:') ? { leaderId: g.slice(7) } : g.startsWith('forces:') ? { forces: Number(g.slice(7)) } : null;
             done({
+              ghola,
               forces: num(p, 'forces'), starred: Math.min(num(p, 'starred'), num(p, 'forces')),
               leaderId, leaderFightingValue: leaderId ? (leader[leaderId]?.fightingValue ?? 0) : undefined
             });
@@ -197,6 +206,12 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
            <label class="field"><span>Forces</span><input type="number" name="moveAmount" min="1" value="1"></label>
            <p class="decision__note">Your shipment happens first, then your move.</p>
          </fieldset>
+         ${me.treacheryHand.includes('hajr') ? `<fieldset><legend>Hajr: an extra move (uses the card)</legend>
+           <label class="field"><span>From</span><select name="hajrFrom">${options(fromOptions.map(([v, l]) => [v, v ? l : 'Keep the card']), '')}</select></label>
+           <label class="field"><span>To</span><select name="hajrTo"><option value="">Choose a starting territory</option></select></label>
+           <label class="field"><span>Forces</span><input type="number" name="hajrAmount" min="1" value="1"></label>
+           <p class="decision__note">Made after your normal move. Checked again when it happens.</p>
+         </fieldset>` : ''}
          <p class="decision__error" hidden></p>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => {
@@ -232,14 +247,22 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             btn.disabled = problems.length > 0;
           };
           field(p, 'moveFrom').onchange = () => { refreshDestinations(); check(); };
-          p.querySelectorAll('select, input').forEach(el => { if (el.name !== 'moveFrom') el.oninput = el.onchange = check; });
+          if (field(p, 'hajrFrom')) field(p, 'hajrFrom').onchange = () => {
+            const from = field(p, 'hajrFrom').value;
+            const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, range_) : [];
+            field(p, 'hajrTo').innerHTML = from ? options(reachable.map(id => [id, territoryName(id)]), reachable[0]) : '<option value="">Choose a starting territory</option>';
+            if (from) field(p, 'hajrAmount').value = me.forces.onBoard[from];
+          };
+          p.querySelectorAll('select, input').forEach(el => { if (!['moveFrom', 'hajrFrom'].includes(el.name)) el.oninput = el.onchange = check; });
           check();
           btn.onclick = () => {
             const shipTo = field(p, 'shipTo').value;
             const from = field(p, 'moveFrom').value;
             done({
               shipment: shipTo ? { territoryId: shipTo, amount: num(p, 'shipAmount') } : null,
-              movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount') } : null
+              movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount') } : null,
+              hajrMove: field(p, 'hajrFrom')?.value
+                ? { from: field(p, 'hajrFrom').value, to: field(p, 'hajrTo').value, amount: num(p, 'hajrAmount') } : null
             });
           };
         });
