@@ -139,9 +139,11 @@ body {
   .layout {
     grid-template-columns: 2fr 1.4fr;
     grid-template-areas:
+      "hand log"
       "factions log"
       "territories log";
   }
+  .panel--hand { grid-area: hand; }
   .panel--factions { grid-area: factions; }
   .panel--territories { grid-area: territories; }
   .panel--log { grid-area: log; }
@@ -318,6 +320,124 @@ table.territories-table {
   background: var(--parchment);
   color: var(--ink);
 }
+
+/* --- You --- */
+
+.faction-card--you { border: 2px solid var(--rust); }
+.you-tag {
+  font-family: var(--font-data);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--rust);
+  color: var(--parchment);
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius);
+}
+.row--you td { font-weight: 700; }
+
+.hand-list { margin: 0 0 0.5rem; padding-left: 1.1rem; font-family: var(--font-data); font-size: 0.85rem; }
+.hand-list em { color: var(--ink-soft); font-style: normal; font-size: 0.75rem; }
+.hand-meta { margin: 0.25rem 0 0; font-size: 0.85rem; }
+
+.status-chip--waiting {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+/* --- Decision panel: a bottom sheet, so it works one-handed on a phone --- */
+
+.decision-panel {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  max-height: 75vh;
+  overflow-y: auto;
+  margin: 0 auto;
+  max-width: 640px;
+  background: var(--parchment);
+  border: 2px solid var(--ink);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  box-shadow: 0 -8px 24px rgba(42, 31, 20, 0.25);
+  padding: 1rem 1.2rem 1.4rem;
+}
+
+.decision__title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0 0 0.6rem;
+}
+
+.decision__body p { margin: 0 0 0.75rem; font-size: 0.9rem; }
+.decision__note { color: var(--ink-soft); font-style: italic; }
+.decision__cost { font-family: var(--font-data); font-size: 0.85rem; color: var(--gold); font-weight: 700; }
+.decision__error {
+  font-size: 0.85rem;
+  color: var(--rust);
+  font-weight: 600;
+  border-left: 3px solid var(--rust);
+  padding-left: 0.6rem;
+}
+
+.decision-panel fieldset {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+.decision-panel legend { font-weight: 600; font-size: 0.85rem; padding: 0 0.3rem; }
+
+.field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.9rem;
+}
+.field select, .field input {
+  font-family: var(--font-data);
+  font-size: 0.95rem;
+  min-height: 44px;
+  min-width: 9rem;
+  max-width: 60%;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--parchment-panel);
+  color: var(--ink);
+}
+
+.choices { display: grid; gap: 0.4rem; margin-bottom: 0.75rem; }
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 44px;
+  padding: 0.3rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--parchment-panel);
+  font-size: 0.9rem;
+}
+.choice em { color: var(--ink-soft); font-style: normal; font-size: 0.8rem; margin-left: 0.3rem; }
+
+.facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.8rem;
+  margin: 0 0 0.75rem;
+  font-family: var(--font-data);
+  font-size: 0.82rem;
+}
+.facts dt { color: var(--ink-soft); }
+.facts dd { margin: 0; }
+
+.decision__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
+.decision__actions .btn { min-height: 44px; flex: 1 1 8rem; }
 
 /* --- Accessibility baseline --- */
 
