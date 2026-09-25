@@ -1,8 +1,8 @@
 // victory.sim.js — headless sanity check against real territory data.
 // Run with: node victory.sim.js
 
-const fs = require('fs');
-const { resolveMentatPause, checkFremenSpecialVictory } = require('./js/victoryEngine.js');
+import fs from 'fs';
+import { resolveMentatPause, checkFremenSpecialVictory } from '../js/victoryEngine.js';
 
 const territoriesData = JSON.parse(fs.readFileSync('./data/territories.json', 'utf8'));
 const rulesConfig = JSON.parse(fs.readFileSync('./data/rulesConfig.json', 'utf8'));
