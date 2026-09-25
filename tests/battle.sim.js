@@ -145,4 +145,16 @@ assert(battleResult.winnerFactionId === 'emperor', `emperor should win (9.5 vs 6
 assert(state.factions.emperor.forces.onBoard.imperialBasin === 3, 'emperor (winner) lost only their 3 dialed forces (6-3=3 remain)');
 assert(state.factions.emperor.forces.starredOnBoard.imperialBasin === undefined, 'the single sardaukar committed and lost is correctly removed from starredOnBoard');
 
+console.log('\nTest 8: a traitor reveal pays the revealer the traitor leader\'s fighting value');
+state = makeState();
+state.factions.harkonnen.traitorHand = ['thufirHawat'];
+const harkSpiceBefore = state.factions.harkonnen.spice;
+resolveBattle(state, 'arrakeen', 'atreides', 'harkonnen',
+  { forcesCommitted: 2, starredForcesCommitted: 0, spiceCommitted: 0, supportedStarredCount: 0, supportedOrdinaryCount: 0,
+    leaderId: 'thufirHawat', leaderFightingValue: 5, weaponCardId: null, defenseCardId: null },
+  { forcesCommitted: 1, starredForcesCommitted: 0, spiceCommitted: 0, supportedStarredCount: 0, supportedOrdinaryCount: 0,
+    leaderId: 'piterDeVries', leaderFightingValue: 3, weaponCardId: null, defenseCardId: null },
+  cardLookup);
+assert(state.factions.harkonnen.spice === harkSpiceBefore + 5, `harkonnen collects thufir's value of 5, got ${state.factions.harkonnen.spice - harkSpiceBefore}`);
+
 console.log('\nAll battle engine sanity checks passed.');
