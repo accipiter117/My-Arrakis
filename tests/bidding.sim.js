@@ -1,10 +1,10 @@
 // bidding.sim.js — headless sanity check, not a full test suite yet.
 // Run with: node bidding.sim.js
 
-const {
+import {
   startBiddingPhase, determineOpeningBidder, canBid, placeBid,
   passBid, isAuctionResolved, resolveCurrentCard, isAtHandLimit
-} = require('./js/biddingEngine.js');
+} from '../js/biddingEngine.js';
 
 function makeMinimalState() {
   return {
