@@ -152,7 +152,7 @@ function resolveMentatPause(state, territoriesData) {
   return { gameOver: false, winners: [], method: null };
 }
 
-module.exports = {
+export {
   strongholdIdsFrom,
   strongholdsOccupiedBy,
   checkSoloVictory,
