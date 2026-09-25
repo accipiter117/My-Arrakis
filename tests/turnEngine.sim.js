@@ -1,10 +1,10 @@
 // turnEngine.sim.js — integration test: runs actual turns end to end.
 // Run with: node turnEngine.sim.js
 
-const fs = require('fs');
-const { initializeGame } = require('./js/setupEngine.js');
-const turnEngine = require('./js/turnEngine.js');
-const phaseEngine = require('./js/phaseEngine.js');
+import fs from 'fs';
+import { initializeGame } from '../js/setupEngine.js';
+import * as turnEngine from '../js/turnEngine.js';
+import * as phaseEngine from '../js/phaseEngine.js';
 
 function loadJSON(path) { return JSON.parse(fs.readFileSync(path, 'utf8')); }
 
