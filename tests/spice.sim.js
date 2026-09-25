@@ -1,10 +1,10 @@
 // spice.sim.js — headless sanity check against real spice deck data.
 // Run with: node spice.sim.js
 
-const fs = require('fs');
-const {
+import fs from 'fs';
+import {
   buildSpiceDeck, resolvePile, resolveSpiceBlowPhase, devourTopOfPile
-} = require('./js/spiceEngine.js');
+} from '../js/spiceEngine.js';
 
 const spiceDeckData = JSON.parse(fs.readFileSync('./data/spiceDeck.json', 'utf8'));
 const territoriesData = JSON.parse(fs.readFileSync('./data/territories.json', 'utf8'));
