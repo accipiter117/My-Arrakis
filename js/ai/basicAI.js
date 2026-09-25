@@ -94,6 +94,15 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
       return pool.slice().sort((a, b) => (leaderValue[b.leaderId] ?? 0) - (leaderValue[a.leaderId] ?? 0))[0].leaderId;
     },
 
+    // Bene Gesserit only. Predicts a faction that tends to win through
+    // strongholds (Guild and Fremen special wins don't count for a
+    // prediction), on a mid-to-late turn. A strategic AI would read the board.
+    choosePrediction(state, factionId) {
+      const candidates = Object.keys(state.factions).filter(f => !['gesserit', 'guild', 'fremen'].includes(f));
+      const pool = candidates.length ? candidates : Object.keys(state.factions).filter(f => f !== factionId);
+      return { factionId: pool[randInt(0, pool.length - 1)], turn: randInt(4, state.rulesConfig.victoryVariants.maxTurns) };
+    },
+
     // No diplomacy at this tier.
     chooseAllianceActions() {
       return { form: [], breakFrom: [] };
