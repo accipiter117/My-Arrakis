@@ -44,7 +44,7 @@ function resetCharityFlags(state) {
   return state;
 }
 
-module.exports = {
+export {
   isEligibleForCharity,
   canClaimCharity,
   claimCharity,
