@@ -245,7 +245,20 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         });
     },
 
-    chooseBattlePlan(state, factionId, territoryId, opponentId) {
+    choosePrescienceElement(state, factionId, territoryId, opponentId) {
+      return ask(`Prescience: battle in ${territoryName(territoryId)}`,
+        `<p>Before you plan, ${esc(factionName(opponentId))} must show you one part of their battle plan. Which do you want to see?</p>
+         <div class="choices">
+           ${[['weapon', 'Their weapon', 'protect your leader'], ['defense', 'Their defence', 'pick a weapon that gets through'],
+              ['leader', 'Their leader', 'check it against your traitor'], ['number', 'Forces they dial', 'know what you must beat']]
+             .map(([v, label, why], i) => `<label class="choice"><input type="radio" name="element" value="${v}"${i === 0 ? ' checked' : ''}> <span>${label} <em>${why}</em></span></label>`).join('')}
+         </div>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Ask</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () =>
+          done(p.querySelector('input[name="element"]:checked').value));
+    },
+
+    chooseBattlePlan(state, factionId, territoryId, opponentId, intel) {
       const me = state.factions[factionId];
       const present = me.forces.onBoard[territoryId] ?? 0;
       const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
@@ -262,8 +275,18 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       const defenseOptions = [['', 'No defence'], ...hand.filter(c => DEFENSES.includes(c.category)).map(c => [c.id, cardName(c.id)])];
       const kh = me.specialFactionState?.kwisatzHaderachActive;
 
+      const revealed = !intel ? '' : (() => {
+        const v = intel.value;
+        const what = {
+          leader: v === 'cheapHero' ? 'a Cheap Hero' : v ? leaderLabel(v) + ((me.traitorHand ?? []).includes(v) ? ', who is YOUR TRAITOR' : '') : 'no leader',
+          weapon: v ? cardName(v) : 'no weapon',
+          defense: v ? cardName(v) : 'no defence',
+          number: `${v} forces`
+        }[intel.element];
+        return `<p class="decision__intel">Prescience: ${esc(factionName(opponentId))} is playing <strong>${esc(what)}</strong>.</p>`;
+      })();
       return ask(`Battle in ${territoryName(territoryId)}`,
-        `<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
+        `${revealed}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
          <dt>Your forces here</dt><dd>${present}${starredPresent ? ` (${starredPresent} starred)` : ''}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
          <p>The side with the higher total wins; ties go to the aggressor. Forces you dial are lost even if you win. If you lose, you lose every force here. Each dialed force counts fully only if backed by 1 spice.</p>
          <label class="field"><span>Forces to dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
