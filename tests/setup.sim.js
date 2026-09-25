@@ -1,10 +1,10 @@
 // setup.sim.js — headless sanity check for full game initialization.
 // Run with: node setup.sim.js
 
-const fs = require('fs');
-const { initializeGame, canSetPrediction, setPrediction } = require('./js/setupEngine.js');
-const { canShip, executeShipment } = require('./js/movementEngine.js');
-const { resolveBattle } = require('./js/battleEngine.js');
+import fs from 'fs';
+import { initializeGame, canSetPrediction, setPrediction } from '../js/setupEngine.js';
+import { canShip, executeShipment } from '../js/movementEngine.js';
+import { resolveBattle } from '../js/battleEngine.js';
 
 function loadJSON(path) { return JSON.parse(fs.readFileSync(path, 'utf8')); }
 
