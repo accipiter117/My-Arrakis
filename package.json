@@ -1,0 +1,10 @@
+{
+  "name": "my-arrakis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A digital implementation of the Gale Force Nine 2019 edition of Dune.",
+  "scripts": {
+    "test": "for f in tests/*.sim.js; do echo \"=== $f ===\"; node \"$f\" || exit 1; done"
+  }
+}
