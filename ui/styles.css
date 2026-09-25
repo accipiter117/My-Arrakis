@@ -1,0 +1,313 @@
+/*
+  Design tokens
+  -------------
+  Colour: warm sand/parchment ground, near-black ink, muted gold for spice
+  and emphasis, deep rust as the single accent used for the active phase
+  marker. Faction colours are heraldic rather than literal, used only as
+  small identity chips, never as full section backgrounds, so the page
+  stays legible.
+
+  Type: Cinzel (inscriptional serif) carries the "ancient political
+  dynasty" feel for headings, Inter for prose, JetBrains Mono for
+  anything that's actually data (spice counts, force numbers, the phase
+  track) so numbers read like a readout rather than body copy.
+
+  Signature element: the phase track along the top, styled after the
+  physical game's own Turn Track, a row of phase names with the current
+  one marked, rather than a generic progress bar.
+*/
+
+:root {
+  --ink: #2a1f14;
+  --ink-soft: #4a3826;
+  --parchment: #ecdfc4;
+  --parchment-panel: #e2d2ac;
+  --parchment-panel-alt: #d9c495;
+  --line: #8a7350;
+  --gold: #a8791f;
+  --rust: #9c3b24;
+  --rust-soft: #c9714f;
+
+  --faction-atreides: #2f5233;
+  --faction-harkonnen: #7a1f1f;
+  --faction-emperor: #221c14;
+  --faction-fremen: #8c6a3f;
+  --faction-guild: #b5561f;
+  --faction-gesserit: #4b2e5a;
+
+  --font-display: 'Cinzel', serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius: 3px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--parchment);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.5;
+}
+
+/* --- Masthead --- */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.masthead__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.9rem;
+  letter-spacing: 0.04em;
+  margin: 0;
+  color: var(--ink);
+}
+
+.masthead__status {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.status-chip {
+  font-family: var(--font-data);
+  font-size: 0.8rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--parchment-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.status-chip--accent {
+  background: var(--rust);
+  color: var(--parchment);
+  border-color: var(--rust);
+}
+
+/* --- Phase track (signature element) --- */
+
+.phase-track {
+  display: flex;
+  overflow-x: auto;
+  gap: 0;
+  padding: 0.6rem 1.5rem;
+  background: var(--parchment-panel-alt);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-data);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.phase-track__step {
+  padding: 0.35rem 0.75rem;
+  white-space: nowrap;
+  color: var(--ink-soft);
+  border-bottom: 3px solid transparent;
+}
+
+.phase-track__step--active {
+  color: var(--ink);
+  font-weight: 700;
+  border-bottom-color: var(--rust);
+}
+
+.phase-track__step--done {
+  color: var(--line);
+}
+
+/* --- Layout --- */
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+}
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 2fr 1.4fr;
+    grid-template-areas:
+      "factions log"
+      "territories log";
+  }
+  .panel--factions { grid-area: factions; }
+  .panel--territories { grid-area: territories; }
+  .panel--log { grid-area: log; }
+}
+
+.panel {
+  background: var(--parchment-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+
+.panel__heading {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  margin: 0 0 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.empty-note {
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0;
+}
+
+/* --- Factions --- */
+
+.factions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.faction-card {
+  background: var(--parchment);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.8rem;
+}
+
+.faction-card__name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.faction-chip {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  display: inline-block;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+
+.faction-card__stats {
+  font-family: var(--font-data);
+  font-size: 0.8rem;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.15rem 0.6rem;
+  color: var(--ink-soft);
+}
+
+.faction-card__stats dt { grid-column: 1; }
+.faction-card__stats dd { grid-column: 2; margin: 0; color: var(--ink); text-align: right; }
+
+/* --- Territories --- */
+
+table.territories-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-data);
+  font-size: 0.82rem;
+}
+
+.territories-table th,
+.territories-table td {
+  text-align: left;
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.territories-table th {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+/* --- Log --- */
+
+.turn-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  font-family: var(--font-data);
+  font-size: 0.78rem;
+}
+
+.turn-log li {
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.turn-log li:last-child { border-bottom: none; }
+
+.log-phase {
+  color: var(--gold);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 0.5rem;
+}
+
+/* --- Controls --- */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--ink);
+  background: var(--parchment-panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.btn:hover:not(:disabled) { background: var(--parchment-panel-alt); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn--primary {
+  background: var(--rust);
+  border-color: var(--rust);
+  color: var(--parchment);
+}
+
+.btn--primary:hover:not(:disabled) { background: var(--rust-soft); }
+
+.controls-note {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+
+/* --- Accessibility baseline --- */
+
+:focus-visible {
+  outline: 2px solid var(--rust);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+}
