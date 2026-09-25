@@ -130,7 +130,7 @@ function resolveSpiceBlowPhase(state) {
   return state;
 }
 
-module.exports = {
+export {
   buildSpiceDeck,
   drawSpiceCard,
   resolvePile,
