@@ -1,10 +1,10 @@
 // alliance.sim.js — headless sanity check.
 // Run with: node alliance.sim.js
 
-const {
+import {
   isFactionAllied, canFormAlliance, formAlliance,
   canBreakAlliance, breakAlliance, findAllyOverlapViolations, enforceAllyOverlapPenalty
-} = require('./js/allianceEngine.js');
+} from '../js/allianceEngine.js';
 
 function makeState(nexusActive = true, turn = 3) {
   return {
