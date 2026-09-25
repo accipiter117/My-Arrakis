@@ -58,4 +58,4 @@ function currentPhase(state) {
   return state.meta.phase;
 }
 
-module.exports = { nextPhase, currentPhase, PHASE_ORDER };
+export { nextPhase, currentPhase, PHASE_ORDER };
