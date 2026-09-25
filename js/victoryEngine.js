@@ -120,7 +120,24 @@ function occupantsOf(state, territoryId) {
 
 // --- Full Mentat Pause resolution -----------------------------------------
 
+// Bene Gesserit Prediction (rulebook): if the predicted faction wins on
+// exactly the predicted turn, alone or as part of an alliance (even with
+// Bene Gesserit), Bene Gesserit wins alone instead. It does not apply
+// when that faction wins through the Guild or Fremen special condition.
+function applyPrediction(state, outcome) {
+  if (!outcome.gameOver || !state.factions.gesserit) return outcome;
+  const prediction = state.factions.gesserit.specialFactionState?.prediction;
+  if (!prediction || prediction.turn !== state.meta.turn) return outcome;
+  if (!outcome.winners.includes(prediction.factionId)) return outcome;
+  if (outcome.method === 'fremen-special' || outcome.method === 'guild-special') return outcome;
+  return { gameOver: true, winners: ['gesserit'], method: 'gesserit-prediction', overridden: outcome };
+}
+
 function resolveMentatPause(state, territoriesData) {
+  return applyPrediction(state, resolveMentatPauseBeforePrediction(state, territoriesData));
+}
+
+function resolveMentatPauseBeforePrediction(state, territoriesData) {
   const strongholdIds = strongholdIdsFrom(territoriesData);
   const requiredCount = state.rulesConfig.victoryVariants.soloStrongholdCount;
   const allianceRequiredCount = state.rulesConfig.victoryVariants.allianceStrongholdCount;
@@ -160,5 +177,6 @@ export {
   checkFremenSpecialVictory,
   checkGuildSpecialVictory,
   checkFallbackVictory,
+  applyPrediction,
   resolveMentatPause
 };
