@@ -16,8 +16,10 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseBid: (state, factionId, cardId, bid) => pick(factionId).chooseBid(state, factionId, cardId, bid),
     chooseRevival: (state, factionId) => pick(factionId).chooseRevival(state, factionId),
     chooseShipmentAndMovement: (state, factionId) => pick(factionId).chooseShipmentAndMovement(state, factionId),
-    chooseBattlePlan: (state, factionId, territoryId, opponentId) =>
-      pick(factionId).chooseBattlePlan(state, factionId, territoryId, opponentId),
+    choosePrescienceElement: (state, factionId, territoryId, opponentId) =>
+      pick(factionId).choosePrescienceElement(state, factionId, territoryId, opponentId),
+    chooseBattlePlan: (state, factionId, territoryId, opponentId, intel) =>
+      pick(factionId).chooseBattlePlan(state, factionId, territoryId, opponentId, intel),
 
     // Alliance decisions are made table-wide at a Nexus. Human diplomacy
     // isn't built yet, so the AI decides for the AI factions only, and any
