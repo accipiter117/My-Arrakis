@@ -78,6 +78,47 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
     return value;
   }
 
+  // Adjusts a battle plan using one revealed element of the opponent's plan
+  // (Atreides Prescience). Only ever called with legitimately revealed info.
+  function applyIntel(plan, intel, me, hand, present, starredPresent) {
+    const categoryOf = id => cardLookup[id]?.category;
+    const find = cats => hand.find(c => cats.includes(c.category))?.id ?? null;
+
+    if (intel.element === 'leader' && intel.value && (me.traitorHand ?? []).includes(intel.value)) {
+      // Their leader is our traitor: the reveal wins outright, so risk nothing.
+      return { ...plan, forcesCommitted: 0, starredForcesCommitted: 0, spiceCommitted: 0,
+               supportedStarredCount: 0, supportedOrdinaryCount: 0, weaponCardId: null, defenseCardId: null };
+    }
+    if (intel.element === 'weapon') {
+      const incoming = categoryOf(intel.value);
+      let defenseCardId = null;
+      if (incoming === 'poisonWeapon') defenseCardId = find(['poisonDefense']);
+      if (incoming === 'projectileWeapon') defenseCardId = find(['projectileDefense']);
+      // Lasgun: nothing defends against it, and our own shield would
+      // explode the territory, so defenseCardId stays null.
+      return { ...plan, defenseCardId };
+    }
+    if (intel.element === 'defense') {
+      const theirs = categoryOf(intel.value);
+      let weaponCardId;
+      if (theirs === 'poisonDefense') weaponCardId = find(['projectileWeapon', 'specialWeapon']);
+      else if (theirs === 'projectileDefense') weaponCardId = find(['poisonWeapon']); // a lasgun into their shield explodes
+      else weaponCardId = find(['poisonWeapon', 'projectileWeapon']) ?? find(['specialWeapon']);
+      const usingLasgun = categoryOf(weaponCardId) === 'specialWeapon';
+      const defenseCardId = usingLasgun && categoryOf(plan.defenseCardId) === 'projectileDefense' ? null : plan.defenseCardId;
+      return { ...plan, weaponCardId, defenseCardId };
+    }
+    if (intel.element === 'number') {
+      const forcesCommitted = Math.min(present, Math.max(plan.forcesCommitted, intel.value + 1));
+      const starredForcesCommitted = Math.min(starredPresent, forcesCommitted);
+      const spiceCommitted = Math.max(0, Math.min(forcesCommitted, me.spice - 2));
+      const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
+      return { ...plan, forcesCommitted, starredForcesCommitted, spiceCommitted,
+               supportedStarredCount, supportedOrdinaryCount: spiceCommitted - supportedStarredCount };
+    }
+    return plan;
+  }
+
   // --- Decisions --------------------------------------------------------
 
   return {
@@ -200,7 +241,12 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
     // Commits more for strongholds, backs forces with spice while keeping
     // a little in reserve, plays its strongest leader and whatever weapon
     // and defence it holds. Never pairs its own lasgun with its own shield.
-    chooseBattlePlan(state, factionId, territoryId) {
+    // Atreides only: protect the leader by learning the weapon.
+    choosePrescienceElement() {
+      return 'weapon';
+    },
+
+    chooseBattlePlan(state, factionId, territoryId, opponentId, intel) {
       const me = own(state, factionId);
       const present = me.forces.onBoard[territoryId] ?? 0;
       const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
@@ -225,13 +271,14 @@ export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
         !(usingLasgun && c.category === 'projectileDefense'));
       const defenseCardId = defense?.id ?? null;
 
-      return {
+      const plan = {
         forcesCommitted, starredForcesCommitted, spiceCommitted,
         supportedStarredCount, supportedOrdinaryCount,
         leaderId, leaderFightingValue: leaderId ? (leaderValue[leaderId] ?? 0) : 0,
         cheapHeroCardId, weaponCardId, defenseCardId,
         useKwisatzHaderach: Boolean(me.specialFactionState?.kwisatzHaderachActive && (leaderId || cheapHeroCardId))
       };
+      return intel ? applyIntel(plan, intel, me, hand, present, starredPresent) : plan;
     }
   };
 }
