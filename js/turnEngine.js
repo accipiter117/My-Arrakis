@@ -29,6 +29,7 @@ import * as victoryEngine from './victoryEngine.js';
 import * as allianceEngine from './allianceEngine.js';
 import * as traitorDeckEngine from './traitorDeckEngine.js';
 import * as setupEngine from './setupEngine.js';
+import * as cardEffects from './cardEffects.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -214,6 +215,11 @@ async function runRevivalPhase(state, decisionProvider) {
     if (decision.forces > 0 && revivalEngine.canReviveForces(state, factionId, decision.forces, decision.starred).ok) {
       results.push(revivalEngine.reviveForces(state, factionId, decision.forces, decision.starred));
     }
+    // Ghola: free revival of a leader or up to 5 forces, after normal revival.
+    if (decision.ghola && cardEffects.canPlayGhola(state, factionId, decision.ghola).ok) {
+      cardEffects.playGhola(state, factionId, decision.ghola);
+      results.push({ factionId, card: 'ghola', ...decision.ghola });
+    }
     if (decision.leaderId) {
       // Caller-supplied fighting value expected on the decision itself,
       // this runner deliberately doesn't reach into leaders.json, same
@@ -247,6 +253,12 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         movementEngine.executeMove(state, factionId, from, to, amount);
         results.push({ factionId, type: 'movement', from, to, amount });
       }
+    }
+    // Hajr: one extra move, played after the normal one.
+    if (decision.hajrMove && cardEffects.canPlayHajr(state, factionId, decision.hajrMove).ok) {
+      const { from, to, amount } = decision.hajrMove;
+      cardEffects.playHajr(state, factionId, decision.hajrMove);
+      results.push({ factionId, type: 'movement', from, to, amount, card: 'hajr' });
     }
   }
 
