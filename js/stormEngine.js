@@ -96,7 +96,7 @@ function determineFirstPlayer(state, currentStormSector, playerCircleSectorMap) 
   );
 }
 
-module.exports = {
+export {
   TOTAL_SECTORS,
   rollFirstStormMovement,
   rollSubsequentStormMovement,
