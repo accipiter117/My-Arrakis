@@ -237,10 +237,11 @@ function describe(entry) {
     case 'battle':
       for (const r of result) {
         const place = territoryNameOf(r.territoryId);
+        const saw = r.prescience ? ` Prescience: Atreides saw ${nameOf(r.prescience.opponentId)}'s ${r.prescience.element === 'number' ? 'force count' : r.prescience.element}.` : '';
         const plans = r.plans ? ` [${describePlan(r.aggressorId, r.plans[r.aggressorId])} | ${describePlan(r.defenderId, r.plans[r.defenderId])}]` : '';
         if (r.explosion) log(`Lasgun/shield explosion in ${place}: everything there is destroyed.${plans}`);
         else if (r.mutualTraitors) log(`Both leaders were traitors in ${place}; both sides lose everything.${plans}`);
-        else log(`${nameOf(r.winnerFactionId)} beat ${nameOf(r.loserFactionId)} in ${place}${r.traitor ? ' (traitor revealed)' : ''}.${plans}`);
+        else log(`${nameOf(r.winnerFactionId)} beat ${nameOf(r.loserFactionId)} in ${place}${r.traitor ? ' (traitor revealed)' : ''}.${saw}${plans}`);
       }
       return;
     case 'spiceCollection': {
