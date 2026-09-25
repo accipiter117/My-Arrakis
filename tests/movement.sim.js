@@ -1,11 +1,11 @@
 // movement.sim.js — headless sanity check against real territory data.
 // Run with: node movement.sim.js
 
-const fs = require('fs');
-const {
+import fs from 'fs';
+import {
   hasOrnithopterAccess, moveRangeFor, reachableTerritories,
   shipmentCostPerForce, canShip, executeShipment, canMove, executeMove
-} = require('./js/movementEngine.js');
+} from '../js/movementEngine.js';
 
 const territoriesData = JSON.parse(fs.readFileSync('./data/territories.json', 'utf8'));
 const rulesConfig = JSON.parse(fs.readFileSync('./data/rulesConfig.json', 'utf8'));
