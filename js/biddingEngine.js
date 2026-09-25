@@ -255,7 +255,7 @@ function returnRemainingCardsToDeck(state) {
   state.decks.treacheryDeck = remaining.concat(state.decks.treacheryDeck);
 }
 
-module.exports = {
+export {
   handLimitFor,
   isAtHandLimit,
   startBiddingPhase,
