@@ -16,17 +16,17 @@
 //   `passiveDecisionProvider` below is a minimal, always-legal stub used
 //   to prove the turn loop mechanically works, not a real opponent.
 
-const phaseEngine = require('./phaseEngine.js');
-const stormEngine = require('./stormEngine.js');
-const spiceEngine = require('./spiceEngine.js');
-const choamCharityEngine = require('./choamCharityEngine.js');
-const biddingEngine = require('./biddingEngine.js');
-const revivalEngine = require('./revivalEngine.js');
-const movementEngine = require('./movementEngine.js');
-const battleEngine = require('./battleEngine.js');
-const spiceCollectionEngine = require('./spiceCollectionEngine.js');
-const victoryEngine = require('./victoryEngine.js');
-const allianceEngine = require('./allianceEngine.js');
+import * as phaseEngine from './phaseEngine.js';
+import * as stormEngine from './stormEngine.js';
+import * as spiceEngine from './spiceEngine.js';
+import * as choamCharityEngine from './choamCharityEngine.js';
+import * as biddingEngine from './biddingEngine.js';
+import * as revivalEngine from './revivalEngine.js';
+import * as movementEngine from './movementEngine.js';
+import * as battleEngine from './battleEngine.js';
+import * as spiceCollectionEngine from './spiceCollectionEngine.js';
+import * as victoryEngine from './victoryEngine.js';
+import * as allianceEngine from './allianceEngine.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -288,36 +288,56 @@ function runMentatPausePhase(state, territoriesData) {
 
 // --- Full turn orchestration -----------------------------------------
 
+// Runs exactly one phase's logic (not advancing past it), returns what
+// happened. Used directly by the UI's "step one phase" control, and by
+// runFullTurn() below in a loop, so both share one code path rather than
+// the UI reimplementing phase dispatch separately.
+function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup) {
+  const phase = phaseEngine.currentPhase(state);
+  let result = null;
+
+  switch (phase) {
+    case 'storm': result = runStormPhase(state, decisionProvider); break;
+    case 'spiceBlow': result = runSpiceBlowPhase(state, decisionProvider); break;
+    case 'nexus': result = null; break; // handled inside runSpiceBlowPhase, this step is a no-op pass-through
+    case 'charity': result = runCharityPhase(state); break;
+    case 'bidding': result = runBiddingPhase(state, decisionProvider); break;
+    case 'revival': result = runRevivalPhase(state, decisionProvider); break;
+    case 'shipment':
+    case 'movement':
+      // Both phases share one combined runner (ship-then-move per
+      // faction, per the rulebook's own phase description), only run
+      // it once when we hit 'shipment', 'movement' becomes a no-op pass.
+      result = phase === 'shipment' ? runShipmentMovementPhase(state, decisionProvider) : null;
+      break;
+    case 'battle': result = runBattlePhase(state, decisionProvider, cardLookup); break;
+    case 'spiceCollection': result = runSpiceCollectionPhase(state); break;
+    case 'mentatPause': result = runMentatPausePhase(state, territoriesData); break;
+    case 'victoryCheck': result = null; break; // victory already resolved inside mentatPause
+    default:
+      throw new Error(`turnEngine has no runner for phase "${phase}"`);
+  }
+
+  return { phase, result };
+}
+
+// Steps exactly one phase forward, including advancing phaseEngine past
+// it, and returns the single log entry. This is the function the UI's
+// "Step One Phase" control calls directly.
+function stepOnePhase(state, decisionProvider, territoriesData, cardLookup) {
+  const entry = runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup);
+  if (!state.victory.achieved) {
+    phaseEngine.nextPhase(state);
+  }
+  return entry;
+}
+
 function runFullTurn(state, decisionProvider, territoriesData, cardLookup) {
   const log = [];
 
   while (true) {
-    const phase = phaseEngine.currentPhase(state);
-    let result = null;
-
-    switch (phase) {
-      case 'storm': result = runStormPhase(state, decisionProvider); break;
-      case 'spiceBlow': result = runSpiceBlowPhase(state, decisionProvider); break;
-      case 'nexus': result = null; break; // handled inside runSpiceBlowPhase, this step is a no-op pass-through
-      case 'charity': result = runCharityPhase(state); break;
-      case 'bidding': result = runBiddingPhase(state, decisionProvider); break;
-      case 'revival': result = runRevivalPhase(state, decisionProvider); break;
-      case 'shipment':
-      case 'movement':
-        // Both phases share one combined runner (ship-then-move per
-        // faction, per the rulebook's own phase description), only run
-        // it once when we hit 'shipment', 'movement' becomes a no-op pass.
-        result = phase === 'shipment' ? runShipmentMovementPhase(state, decisionProvider) : null;
-        break;
-      case 'battle': result = runBattlePhase(state, decisionProvider, cardLookup); break;
-      case 'spiceCollection': result = runSpiceCollectionPhase(state); break;
-      case 'mentatPause': result = runMentatPausePhase(state, territoriesData); break;
-      case 'victoryCheck': result = null; break; // victory already resolved inside mentatPause
-      default:
-        throw new Error(`turnEngine has no runner for phase "${phase}"`);
-    }
-
-    log.push({ phase, result });
+    const entry = runOnePhaseLogic(state, decisionProvider, territoriesData, cardLookup);
+    log.push(entry);
 
     if (state.victory.achieved) break;
 
@@ -329,7 +349,7 @@ function runFullTurn(state, decisionProvider, territoriesData, cardLookup) {
   return log;
 }
 
-module.exports = {
+export {
   passiveDecisionProvider,
   runStormPhase,
   runSpiceBlowPhase,
@@ -340,6 +360,7 @@ module.exports = {
   runBattlePhase,
   runSpiceCollectionPhase,
   runMentatPausePhase,
+  stepOnePhase,
   runFullTurn,
   findBattleTerritories
 };
