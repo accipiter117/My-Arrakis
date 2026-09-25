@@ -36,8 +36,29 @@ const shuffleWith = rng => arr => {
 
 const TOTAL_TREACHERY = treacheryDeckData.cards.length;
 
+// Forces are never created or destroyed, only moved between reserve,
+// board and tanks. Totals are recorded at setup and checked every phase.
+const sum = obj => Object.values(obj ?? {}).reduce((a, b) => a + b, 0);
+function forceTotals(f) {
+  return {
+    all: f.forces.reserve + (f.revivalTanks ?? 0) + sum(f.forces.onBoard),
+    starred: (f.forces.starredReserve ?? 0) + (f.starredRevivalTanks ?? 0) + sum(f.forces.starredOnBoard)
+  };
+}
+let initialTotals = {};
+
 function checkInvariants(state, where) {
   const problems = [];
+  for (const [id, f] of Object.entries(state.factions)) {
+    const now = forceTotals(f);
+    if (now.all !== initialTotals[id].all) problems.push(`${id} total forces ${now.all}, expected ${initialTotals[id].all}`);
+    if (now.starred !== initialTotals[id].starred) problems.push(`${id} starred forces ${now.starred}, expected ${initialTotals[id].starred}`);
+    if ((f.forces.starredReserve ?? 0) > f.forces.reserve) problems.push(`${id} has more starred than total in reserve`);
+    if ((f.starredRevivalTanks ?? 0) > (f.revivalTanks ?? 0)) problems.push(`${id} has more starred than total in the tanks`);
+    for (const [t, n] of Object.entries(f.forces.starredOnBoard ?? {})) {
+      if (n > (f.forces.onBoard[t] ?? 0)) problems.push(`${id} has ${n} starred but ${f.forces.onBoard[t] ?? 0} total in ${t}`);
+    }
+  }
   for (const [id, f] of Object.entries(state.factions)) {
     if (!Number.isInteger(f.spice) || f.spice < 0) problems.push(`${id} spice is ${f.spice}`);
     if (!Number.isFinite(f.forces.reserve) || f.forces.reserve < 0) problems.push(`${id} reserve is ${f.forces.reserve}`);
@@ -54,7 +75,7 @@ function checkInvariants(state, where) {
   if (problems.length) throw new Error(`Invariant broken after ${where}: ${problems.join('; ')}`);
 }
 
-const stats = { wins: {}, methods: {}, endTurns: [], battles: 0, cardsBought: 0, shipments: 0, moves: 0 };
+const stats = { starredInBattle: 0, wins: {}, methods: {}, endTurns: [], battles: 0, cardsBought: 0, shipments: 0, moves: 0 };
 let failures = 0;
 
 for (let g = 0; g < GAMES; g++) {
@@ -66,6 +87,7 @@ for (let g = 0; g < GAMES; g++) {
       spiceDeckData, territoriesData, treacheryDeckData, leadersData,
       rngShuffle: shuffleWith(rng)
     });
+    initialTotals = Object.fromEntries(Object.entries(state.factions).map(([id, f]) => [id, forceTotals(f)]));
     const ai = createBasicAI({ leadersData, cardLookup, rng });
     await turnEngine.runSetupDecisions(state, ai);
     phaseEngine.nextPhase(state);
@@ -75,7 +97,10 @@ for (let g = 0; g < GAMES; g++) {
     while (!state.victory.achieved && guard++ < 400) {
       const entry = await turnEngine.stepOnePhase(state, ai, territoriesData, cardLookup);
       checkInvariants(state, `turn ${entry.turn} ${entry.phase}`);
-      if (entry.phase === 'battle') stats.battles += entry.result.length;
+      if (entry.phase === 'battle') {
+        stats.battles += entry.result.length;
+        stats.starredInBattle += entry.result.filter(r => r.aggressorId && (state.factions.emperor || state.factions.fremen)).length && 0;
+      }
       if (entry.phase === 'bidding') stats.cardsBought += entry.result.filter(r => r.winner).length;
       if (entry.phase === 'shipment') {
         stats.shipments += entry.result.filter(r => r.type === 'shipment').length;
