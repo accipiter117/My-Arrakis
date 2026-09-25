@@ -1,10 +1,10 @@
 // storm.sim.js — headless sanity check.
 // Run with: node storm.sim.js
 
-const {
+import {
   rollFirstStormMovement, rollSubsequentStormMovement, advanceStormPosition,
   sectorsSwept, applyStormDamage, isTerritoryPartiallyInStorm, determineFirstPlayer
-} = require('./js/stormEngine.js');
+} from '../js/stormEngine.js';
 
 function assert(condition, message) {
   if (!condition) throw new Error('FAILED: ' + message);
