@@ -99,4 +99,15 @@ assert(state.meta.turn >= 10 || state.victory.achieved, `game should reach turn 
 const spiceCardsTotal = state.decks.spiceDeck.length + state.decks.spiceDiscardA.length + state.decks.spiceDiscardB.length;
 assert(spiceCardsTotal === 21, `all 21 spice cards accounted for after reshuffling, got ${spiceCardsTotal}`);
 
+console.log('\nTest 10: traitor selection resolves every pending hand and conserves the traitor deck');
+state = freshGame();
+const picks = turnEngine.runTraitorSelection(state, turnEngine.passiveDecisionProvider);
+assert(picks.length === 5, `five factions pick (harkonnen keeps all four automatically), got ${picks.length}`);
+for (const f of allSix) {
+  assert(!state.factions[f].pendingTraitorHand, `${f} has no pending hand left`);
+}
+assert(state.factions.atreides.traitorHand.length === 1, 'atreides holds exactly one traitor');
+const heldTraitors = allSix.reduce((n, f) => n + state.factions[f].traitorHand.length, 0);
+assert(heldTraitors + state.decks.traitorDeck.length === 30, `30 traitor cards accounted for, got ${heldTraitors + state.decks.traitorDeck.length}`);
+
 console.log('\nAll turn engine integration checks passed.');
