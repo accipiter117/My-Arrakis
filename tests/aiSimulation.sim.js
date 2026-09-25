@@ -67,13 +67,13 @@ for (let g = 0; g < GAMES; g++) {
       rngShuffle: shuffleWith(rng)
     });
     const ai = createBasicAI({ leadersData, cardLookup, rng });
-    turnEngine.runTraitorSelection(state, ai);
+    await turnEngine.runSetupDecisions(state, ai);
     phaseEngine.nextPhase(state);
     checkInvariants(state, 'setup');
 
     let guard = 0;
     while (!state.victory.achieved && guard++ < 400) {
-      const entry = turnEngine.stepOnePhase(state, ai, territoriesData, cardLookup);
+      const entry = await turnEngine.stepOnePhase(state, ai, territoriesData, cardLookup);
       checkInvariants(state, `turn ${entry.turn} ${entry.phase}`);
       if (entry.phase === 'battle') stats.battles += entry.result.length;
       if (entry.phase === 'bidding') stats.cardsBought += entry.result.filter(r => r.winner).length;
