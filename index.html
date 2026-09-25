@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Arrakis</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./ui/styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <h1 class="masthead__title">My Arrakis</h1>
+    <div class="masthead__status">
+      <span id="status-turn" class="status-chip">—</span>
+      <span id="status-phase" class="status-chip status-chip--accent">No game started</span>
+      <span id="status-storm" class="status-chip">Storm: —</span>
+    </div>
+  </header>
+
+  <nav class="phase-track" id="phase-track" aria-label="Turn phase progress">
+    <!-- populated by ui/main.js -->
+  </nav>
+
+  <main class="layout">
+    <section class="panel panel--factions" aria-labelledby="factions-heading">
+      <h2 id="factions-heading" class="panel__heading">Factions</h2>
+      <div id="factions-grid" class="factions-grid">
+        <p class="empty-note">Start a game to see faction status here.</p>
+      </div>
+    </section>
+
+    <section class="panel panel--territories" aria-labelledby="territories-heading">
+      <h2 id="territories-heading" class="panel__heading">Occupied Territories</h2>
+      <div id="territories-table-wrap">
+        <p class="empty-note">Start a game to see the board here.</p>
+      </div>
+    </section>
+
+    <section class="panel panel--log" aria-labelledby="log-heading">
+      <h2 id="log-heading" class="panel__heading">Turn Log</h2>
+      <ol id="turn-log" class="turn-log" reversed>
+        <li class="empty-note">Nothing has happened yet.</li>
+      </ol>
+    </section>
+  </main>
+
+  <footer class="controls">
+    <button id="btn-new-game" class="btn btn--primary">Start New Game</button>
+    <button id="btn-step-phase" class="btn" disabled>Step One Phase</button>
+    <button id="btn-run-turn" class="btn" disabled>Run Full Turn</button>
+    <span id="controls-note" class="controls-note">All factions currently play passively (no real decisions), this proves the engine runs correctly. Manual and AI-driven decisions are the next step.</span>
+  </footer>
+
+  <script type="module" src="./ui/main.js"></script>
+</body>
+</html>
