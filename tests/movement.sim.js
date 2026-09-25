@@ -98,4 +98,9 @@ state.factions.atreides.forces.onBoard.windPass = 2;
 const polarSinkCheck = canMove(state, 'atreides', 'windPass', 'polarSink', 2);
 assert(polarSinkCheck.ok === true, 'moving into the polar sink alongside an ally is always fine');
 
+console.log('\nTest 10: Guild half-price shipping rounds the total up, spice stays whole');
+state = makeMinimalState();
+const guildShip = canShip(state, 'guild', 'arrakeen', 3); // stronghold rate 1, half = 0.5 x 3 = 1.5
+assert(guildShip.ok && guildShip.totalCost === 2, `3 forces to a stronghold should cost the Guild 2 (1.5 rounded up), got ${guildShip.totalCost}`);
+
 console.log('\nAll movement engine sanity checks passed.');
