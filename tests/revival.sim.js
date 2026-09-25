@@ -1,13 +1,13 @@
 // revival.sim.js — headless sanity check for charity + revival.
 // Run with: node revival.sim.js
 
-const {
+import {
   isEligibleForCharity, canClaimCharity, claimCharity
-} = require('./js/choamCharityEngine.js');
-const {
+} from '../js/choamCharityEngine.js';
+import {
   freeRevivalAllowance, canReviveForces, reviveForces,
   isEligibleForLeaderRevival, canReviveLeader, reviveLeader
-} = require('./js/revivalEngine.js');
+} from '../js/revivalEngine.js';
 
 function makeState() {
   return {
