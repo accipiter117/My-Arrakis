@@ -122,7 +122,7 @@ function enforceAllyOverlapPenalty(state, turnOrder, violation) {
   return { penalizedFactionId: secondToAct, territoryId, forcesLost: lost };
 }
 
-module.exports = {
+export {
   getAllianceFor,
   isFactionAllied,
   canFormAlliance,
