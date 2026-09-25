@@ -116,14 +116,22 @@ function canShip(state, factionId, destinationTerritoryId, amount) {
   return { ok: true, totalCost };
 }
 
-function executeShipment(state, factionId, destinationTerritoryId, amount) {
+// Starred forces (Sardaukar, Fedaykin) ship first unless the caller asks
+// for fewer: they are the strongest units, and an earlier version never
+// shipped them at all, leaving them stranded in reserve all game.
+function executeShipment(state, factionId, destinationTerritoryId, amount, starredRequested) {
   const check = canShip(state, factionId, destinationTerritoryId, amount);
   if (!check.ok) throw new Error(check.reason);
 
+  const forces = state.factions[factionId].forces;
+  const starred = Math.min(amount, forces.starredReserve ?? 0, starredRequested ?? amount);
   state.factions[factionId].spice -= check.totalCost;
-  state.factions[factionId].forces.reserve -= amount;
-  state.factions[factionId].forces.onBoard[destinationTerritoryId] =
-    (state.factions[factionId].forces.onBoard[destinationTerritoryId] ?? 0) + amount;
+  forces.reserve -= amount;
+  forces.onBoard[destinationTerritoryId] = (forces.onBoard[destinationTerritoryId] ?? 0) + amount;
+  if (starred > 0) {
+    forces.starredReserve -= starred;
+    forces.starredOnBoard[destinationTerritoryId] = (forces.starredOnBoard[destinationTerritoryId] ?? 0) + starred;
+  }
 
   // Guild collects payment directly rather than the bank, per their ability.
   if (factionId !== 'guild' && state.factions.guild && check.totalCost > 0) {
@@ -176,9 +184,21 @@ function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount) {
   return { ok: true };
 }
 
-function executeMove(state, factionId, fromTerritoryId, toTerritoryId, amount) {
+function executeMove(state, factionId, fromTerritoryId, toTerritoryId, amount, starredRequested) {
   const check = canMove(state, factionId, fromTerritoryId, toTerritoryId, amount);
   if (!check.ok) throw new Error(check.reason);
+
+  // Starred forces travel with the group (starred first by default), and
+  // never more starred can stay behind than the forces that remain.
+  const forces = state.factions[factionId].forces;
+  const starredHere = forces.starredOnBoard?.[fromTerritoryId] ?? 0;
+  const remaining = forces.onBoard[fromTerritoryId] - amount;
+  const starred = Math.max(starredHere - remaining, Math.min(amount, starredHere, starredRequested ?? amount));
+  if (starred > 0) {
+    forces.starredOnBoard[fromTerritoryId] -= starred;
+    if (forces.starredOnBoard[fromTerritoryId] <= 0) delete forces.starredOnBoard[fromTerritoryId];
+    forces.starredOnBoard[toTerritoryId] = (forces.starredOnBoard[toTerritoryId] ?? 0) + starred;
+  }
 
   state.factions[factionId].forces.onBoard[fromTerritoryId] -= amount;
   if (state.factions[factionId].forces.onBoard[fromTerritoryId] === 0) {
