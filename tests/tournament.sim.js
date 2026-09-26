@@ -29,7 +29,7 @@ function seats(bySeat, fallback) {
   const route = name => (state, f, ...rest) => pick(f)[name](state, f, ...rest);
   const methods = ['chooseStormDial', 'chooseTraitor', 'choosePrediction', 'chooseBid', 'chooseRevival',
     'chooseShipmentAndMovement', 'chooseBattlePlan', 'choosePrescienceElement', 'chooseVoice', 'chooseCardsToDiscard',
-    'chooseCaptureAction', 'chooseWormRide', 'chooseRevealTraitor', 'chooseBreakAlliance', 'chooseAllianceProposal', 'chooseAllianceResponse'];
+    'chooseCaptureAction', 'chooseWormRide', 'chooseRevealTraitor', 'chooseBreakAlliance', 'chooseAllianceProposal', 'chooseAllianceResponse', 'chooseTruthtrance', 'chooseKaramaCancel', 'chooseAllyPledge', 'chooseEmperorAllyRevival', 'chooseDiscards'];
   return Object.fromEntries(methods.map(m => [m, route(m)]));
 }
 
