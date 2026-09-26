@@ -357,6 +357,12 @@ strong { color: var(--gold); }
 .music-now { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.6rem; font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.06em; color: var(--sand-dim); }
 .music-now .icon-btn { width: 30px; height: 30px; font-size: 12px; }
 
+/* Credits */
+.credits { margin-top: 0.8rem; font-size: 11px; color: var(--sand-dim); }
+.credits summary { cursor: pointer; font-family: var(--font-data); letter-spacing: 0.12em; text-transform: uppercase; font-size: 10px; color: var(--sand-soft); }
+.credits p { margin: 0.35rem 0; }
+.credits a { color: var(--gold); }
+
 /* Title block in the menu */
 .title-block { text-align: center; padding: 0.4rem 0 0.8rem; border-bottom: 1px solid #3a2b1c; margin-bottom: 0.8rem; }
 .title-block__name {
