@@ -51,7 +51,7 @@ assert(state.decks.spiceDeck.length === 21, `expected 21 spice deck cards, got $
 console.log('\nTest 5: treachery deck dealt correctly, Harkonnen gets 2 starting cards, everyone else gets 1');
 assert(state.factions.harkonnen.treacheryHand.length === 2, 'harkonnen starts with 2 treachery cards');
 assert(state.factions.atreides.treacheryHand.length === 1, 'atreides starts with the standard 1');
-const totalTreacheryCards = treacheryDeckData.cards.length;
+const totalTreacheryCards = treacheryDeckData.cards.filter(c => !(rulesConfig.houseRules?.removeWorthlessCards && c.category === 'worthless')).length; // cards actually in play
 const dealtCount = allSix.reduce((sum, f) => sum + state.factions[f].treacheryHand.length, 0);
 assert(state.decks.treacheryDeck.length + dealtCount === totalTreacheryCards, `treachery deck (${state.decks.treacheryDeck.length}) + dealt (${dealtCount}) should equal the original ${totalTreacheryCards}`);
 
