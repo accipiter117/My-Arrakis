@@ -68,6 +68,10 @@ function checkInvariants(state, where) {
     }
     if (f.treacheryHand.length > (id === 'harkonnen' ? 8 : 4)) problems.push(`${id} over hand limit (${f.treacheryHand.length})`);
   }
+  // Leader conservation: all 30 leaders are always somewhere (alive with
+  // someone, captured, or dead), never lost or duplicated.
+  const leaderIds = Object.values(state.factions).flatMap(f => [...f.leaders.available, ...f.leaders.killed]);
+  if (leaderIds.length !== 30 || new Set(leaderIds).size !== 30) problems.push(`leaders: ${leaderIds.length} listed, ${new Set(leaderIds).size} unique, expected 30`);
   // Treachery card conservation: every card is in the deck, a discard pile or a hand.
   const held = Object.values(state.factions).reduce((n, f) => n + f.treacheryHand.length, 0);
   const cards = state.decks.treacheryDeck.length + state.decks.treacheryDiscard.length + held;
