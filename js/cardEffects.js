@@ -137,13 +137,21 @@ export function playTruthtrance(state, askerId, targetId, question, cardLookup) 
 // each faction's once-per-game advanced Karama power.
 const KARAMA_CARDS = ['karama1', 'karama2'];
 
+const WORTHLESS_IDS = ['baliset', 'jubbaCloak', 'kulon', 'laLaLa', 'tripToGamont'];
+function worthlessHeld(state, factionId) {
+  return (state.factions[factionId]?.treacheryHand ?? []).filter(id => WORTHLESS_IDS.includes(id));
+}
+
+// Bene Gesserit (advanced) may use any worthless card as a Karama.
 export function holdsKarama(state, factionId) {
-  return KARAMA_CARDS.some(id => holds(state, factionId, id));
+  return KARAMA_CARDS.some(id => holds(state, factionId, id))
+    || (factionId === 'gesserit' && worthlessHeld(state, factionId).length > 0);
 }
 
 export function playKarama(state, factionId, purpose) {
   if (!holdsKarama(state, factionId)) throw new Error('You do not hold a Karama.');
-  discard(state, factionId, KARAMA_CARDS.find(id => holds(state, factionId, id)));
+  // A real Karama first; Bene Gesserit may spend a worthless card instead.
+  discard(state, factionId, KARAMA_CARDS.find(id => holds(state, factionId, id)) ?? worthlessHeld(state, factionId)[0]);
   const record = { turn: state.meta.turn, factionId, purpose };
   state.meta.karamas = [...(state.meta.karamas ?? []), record];
   return record;
