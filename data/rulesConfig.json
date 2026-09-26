@@ -121,6 +121,10 @@
       {
         "id": "removeWorthlessCards",
         "justification": "House rule at the project owner's request: the five worthless cards (Baliset, Jubba Cloak, Kulon, La La La, Trip to Gamont) are left out of the Treachery Deck, making 28 cards instead of 33. Their rules remain in the code (bluffing in battle, Bene Gesserit using them as Karama); set houseRules.removeWorthlessCards to false to restore them. Games already in progress keep their deck."
+      },
+      {
+        "id": "stormDamageBySector",
+        "justification": "Standing in for the board's printed sectors (project owner's rule): each territory lies mostly in one storm sector, computed from this game's own map with the storm wedge's angles (tools/computeSectors.py, stormSector in data/territories.json). The storm destroys all forces and spice in every SAND territory whose sector it passes over or stops in. Stone territories and strongholds are immune; Imperial Basin is sheltered by the Shield Wall (rulebook); the Polar Sink is never in the storm; the Fremen lose half their forces, rounded up (advanced)."
       }
     ]
   },
