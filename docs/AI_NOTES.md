@@ -1,5 +1,22 @@
 # AI Notes
 
+## Difficulty levels (js/ai/difficulty.js), step 8
+
+Easy = Basic AI; Normal = Strategic AI without the battle brain; Hard =
+full Strategic AI. One seat at each level against a table of Normal AIs,
+25 seeds per seat: Easy 18, Normal 43, Hard 59 wins. Hard >= Normal >= Easy
+from every seat (brief section 6 requirement).
+
+## Bidding brain (js/ai/biddingBrain.js), step 4: NOT adopted yet
+
+Values cards by what they add to the hand (a first weapon far more than a
+third), averages over the unknown pool, adds denial value and faction
+economics. Head to head it lost narrowly (43 vs 45 wins, 30 seeds per
+seat) and badly for Harkonnen (3 vs 8): Harkonnen thrive on card VOLUME
+(bluffs, several battles, bonus draws), which diminishing returns per
+weapon undervalue. Kept opt-in (biddingBrain: true). Next attempt:
+faction-specific valuation and 100+ seeds per seat to beat the noise.
+
 ## Battle brain (js/ai/battleBrain.js), step 3 of AI_PLAN.md
 
 Samples 150 plausible opponent hands and battle plans from honest knowledge
