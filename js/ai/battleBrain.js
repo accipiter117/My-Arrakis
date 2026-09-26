@@ -124,7 +124,8 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     for (const cmd of commanders) for (const weaponCardId of uniq(weaponOpts)) for (const defenseCardId of uniq(defenseOpts)) {
       if (weaponCardId && weaponCardId === defenseCardId) continue;
       if (cat(weaponCardId) === 'specialWeapon' && cat(defenseCardId) === 'projectileDefense') continue; // own explosion
-      for (const dial of dials) for (const backed of uniq([0, Math.min(dial, Math.max(0, faction.spice - 2))])) {
+      // Fremen fight at full strength without spice (advanced): never back with spice.
+      for (const dial of dials) for (const backed of uniq([0, me === 'fremen' ? 0 : Math.min(dial, Math.max(0, faction.spice - 2))])) {
         const starred = Math.min(starredPresent, dial);
         const supportedStarredCount = Math.min(starred, backed);
         plans.push({
@@ -153,8 +154,8 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     if (wd.explosion) return -myForces - myLeaderValue - mine.spiceCommitted * 0.5;
     const myKilled = isAggressor ? wd.aggressorLeaderKilled : wd.defenderLeaderKilled;
     const theirKilled = isAggressor ? wd.defenderLeaderKilled : wd.aggressorLeaderKilled;
-    const myS = battleEngine.calculateStrength({ ...mine, leaderWasKilled: myKilled, kwisatzHaderachBonus: mine.useKwisatzHaderach ? 2 : 0 });
-    const theirS = battleEngine.calculateStrength({ ...theirs, leaderWasKilled: theirKilled, starredUnitValue: battleEngine.starredUnitValueFor(opp, me) });
+    const myS = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(me, mine), leaderWasKilled: myKilled, kwisatzHaderachBonus: mine.useKwisatzHaderach ? 2 : 0 });
+    const theirS = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(opp, theirs), leaderWasKilled: theirKilled, starredUnitValue: battleEngine.starredUnitValueFor(opp, me) });
     const iWin = isAggressor ? myS >= theirS : myS > theirS;
     // Played cards the loser discards; a small nudge to shed worthless cards.
     const shed = cat(mine.weaponCardId) === 'worthless' ? 0.3 : 0;
