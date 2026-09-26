@@ -21,6 +21,10 @@ function getAllianceFor(state, factionId) {
   return (state.alliances ?? []).find(a => a.factions.includes(factionId)) ?? null;
 }
 
+function allyOf(state, factionId) {
+  return getAllianceFor(state, factionId)?.factions.find(f => f !== factionId) ?? null;
+}
+
 function isFactionAllied(state, factionId) {
   return getAllianceFor(state, factionId) !== null;
 }
@@ -72,6 +76,8 @@ function breakAlliance(state, factionId) {
 
   const alliance = getAllianceFor(state, factionId);
   state.alliances = state.alliances.filter(a => a !== alliance);
+  // Breaking an alliance is public, and remembered.
+  state.meta.betrayals = [...(state.meta.betrayals ?? []), { by: factionId, of: alliance.factions.find(f => f !== factionId), turn: state.meta.turn }];
   // Per the rulebook, a faction that just broke off may immediately form
   // or join a new alliance in the same Nexus, canFormAlliance() already
   // permits this since the faction is no longer flagged as allied.
@@ -124,6 +130,7 @@ function enforceAllyOverlapPenalty(state, turnOrder, violation) {
 }
 
 export {
+  allyOf,
   getAllianceFor,
   isFactionAllied,
   canFormAlliance,
