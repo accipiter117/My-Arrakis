@@ -33,7 +33,7 @@ sector data. NOT YET = not built (reason given).
 - LIVE (advanced): 3 Fedaykin, worth 2
 - LIVE (advanced): forces fight at full strength without spice
 - LIVE (alliance): the ally revives 3 forces free
-- BLOCKED (advanced): storm losses halved
+- LIVE (advanced): storm losses halved (rounded up)
 
 ## Spacing Guild
 - LIVE: receives other factions' shipping payments
@@ -44,7 +44,7 @@ sector data. NOT YET = not built (reason given).
 
 ## Bene Gesserit
 - LIVE: secret Prediction (faction and turn; not the Fremen or Guild special wins)
-- LIVE: Spiritual Advisors: 1 free force to the Polar Sink whenever another faction ships from off-planet
+- LIVE: Spiritual Advisors: 1 free force to the Polar Sink whenever another faction ships from off-planet (not the Fremen, who ship from the deep desert)
 - LIVE: the Voice (play / don't play a card category), also in an ally's battles
 - LIVE (advanced): always receives CHOAM Charity
 - LIVE (advanced): any worthless card can be used as a Karama
@@ -55,7 +55,8 @@ sector data. NOT YET = not built (reason given).
 ## All factions
 - LIVE: Karama cancels the Voice, Prescience, or a Harkonnen capture
 - NOT YET (advanced): each faction's once-per-game Karama power (GF9 wording disputed)
-- BLOCKED: storm damage, Weather Control, Family Atomics
+- LIVE: storm damage on sand territories the storm passes over (see rulesConfig stormDamageBySector)
+- NOT YET: storm blocking movement and shipment, Weather Control, Family Atomics
 
 ## Advanced game rules (always on)
 - LIVE: spice-backed battle strength (unbacked forces count half)
