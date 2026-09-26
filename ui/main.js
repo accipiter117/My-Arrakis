@@ -468,7 +468,7 @@ function ensureBoard(data) {
     onZoom: zoomed => { $('zoom-reset').hidden = !zoomed; }
   });
   presenter = createPresenter({
-    board, layer: $('event-layer'), factionColors: FACTION_COLORS, getSpeed: () => speed,
+    board, layer: $('event-layer'), banner: $('turn-banner'), factionColors: FACTION_COLORS, getSpeed: () => speed,
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
     renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds }),
     renderReal: renderBoard,
