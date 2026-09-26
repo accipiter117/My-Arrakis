@@ -10,6 +10,8 @@
 
 import * as battleEngine from '../js/battleEngine.js';
 
+const CATEGORY_TEXT = { poisonWeapon: 'a poison weapon', projectileWeapon: 'a projectile weapon', specialWeapon: 'a Lasgun', poisonDefense: 'a poison defence', projectileDefense: 'a projectile defence', specialLeaderSubstitute: 'a Cheap Hero', worthless: 'a worthless card' };
+
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export function createPresenter({ board, layer, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null, cardLookup = null }) {
@@ -161,6 +163,18 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
       await board.animateToken({ color: factionColors.fremen, count: e.amount,
         points: [board.labelPoint(e.from), board.labelPoint(e.to)], msPerHop: scaled(1200), hop: 60 });
       renderReal();
+    },
+
+    async truthtrance(e) {
+      const q = e.question;
+      const text = q.kind === 'holdsCategory' ? `Do you hold ${CATEGORY_TEXT[q.category] ?? 'that kind of card'}?`
+        : q.kind === 'isTraitor' ? `Is ${names.leader(q.leaderId)} your traitor?` : `Do you have at least ${q.amount} spice?`;
+      await showCard('truth', card(`Truthtrance · ${names.faction(e.asker)} asks ${names.faction(e.target)}`, e.answer ? 'Yes' : 'No', esc(text)), 2800);
+    },
+
+    async karama(e) {
+      const what = { voice: 'cancels the Voice', prescience: 'cancels Atreides Prescience', capture: 'stops the Harkonnen capture' }[e.purpose] ?? 'plays Karama';
+      await showCard('karama', card('Karama', names.faction(e.factionId), `${esc(what)}.`), 2600);
     },
 
     async traitor(e) {
