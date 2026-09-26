@@ -24,7 +24,9 @@
 ## Faction counters
 - `assets/counters/*.png`: commissioned by the project owner (generated with ChatGPT to a brief based on the novels' heraldry: the Atreides red hawk, Harkonnen blue griffin and Corrino golden lion; the Fremen crysknife, Guild Heighliner and Bene Gesserit eye and gom jabbar). Cut out and resized for the game.
 
-## Ships and sandworm
+## Ships, ornithopters and sandworm
+- `assets/thopters/*.png`: commissioned by the project owner (generated with ChatGPT to a brief based on Herbert's descriptions). Cut out and resized for the game.
+- `assets/sfx/worm-delivery.mp3`: Shai-Hulud delivering the Fremen, supplied by the project owner. Levelled.
 - `assets/ships/*.png`: commissioned by the project owner (generated with ChatGPT to a brief based on the novels). Cut out and resized for the game.
 
 ## Turn announcements
