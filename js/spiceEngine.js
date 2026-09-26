@@ -33,10 +33,15 @@ function drawSpiceCard(state) {
     // reshuffled a single 'spiceDiscard' pile that no longer exists, which
     // crashed the first time the deck ran dry (around turn 8). Only caught
     // by running a long game in a real browser.
-    const discards = [...(state.decks.spiceDiscardA ?? []), ...(state.decks.spiceDiscardB ?? [])];
-    state.decks.spiceDeck = reshuffle(discards);
-    state.decks.spiceDiscardA = [];
-    state.decks.spiceDiscardB = [];
+    // The face-up top card of each discard pile stays on the table: it
+    // marks where that pile's spice lies and what the next worm devours.
+    // Reshuffling it too let the other pile draw the same card in the same
+    // Spice Blow (seen in a real game: Cielago South twice, 24 spice).
+    const a = state.decks.spiceDiscardA ?? [], b = state.decks.spiceDiscardB ?? [];
+    const keepA = a.length ? [a[a.length - 1]] : [], keepB = b.length ? [b[b.length - 1]] : [];
+    state.decks.spiceDeck = reshuffle([...a.slice(0, -1), ...b.slice(0, -1)]);
+    state.decks.spiceDiscardA = keepA;
+    state.decks.spiceDiscardB = keepB;
   }
   return state.decks.spiceDeck.pop();
 }
