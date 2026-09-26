@@ -22,7 +22,34 @@ function starredUnitValueFor(factionId, opponentFactionId) {
 
 // --- Battle Plan validation ------------------------------------------
 
-function canDeclareBattlePlan(state, territoryId, factionId, plan) {
+const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
+const DEFENSES = ['poisonDefense', 'projectileDefense'];
+
+function checkPlanCards(state, factionId, plan, cardLookup) {
+  const hand = state.factions[factionId].treacheryHand ?? [];
+  const slots = [
+    ['weaponCardId', [...WEAPONS, 'worthless'], 'weapon'],
+    ['defenseCardId', [...DEFENSES, 'worthless'], 'defence'],
+    ['cheapHeroCardId', ['specialLeaderSubstitute'], 'Cheap Hero']
+  ];
+  const used = [];
+  for (const [key, allowed, label] of slots) {
+    const id = plan[key];
+    if (!id) continue;
+    if (!hand.includes(id)) return { ok: false, reason: `The ${label} card played is not in your hand.` };
+    if (!allowed.includes(cardLookup[id]?.category)) return { ok: false, reason: `That card cannot be played as a ${label}.` };
+    if (used.includes(id)) return { ok: false, reason: 'The same card cannot fill two slots.' };
+    used.push(id);
+  }
+  if (plan.cheapHeroCardId && plan.leaderId) return { ok: false, reason: 'A Cheap Hero is played instead of a leader, not as well as one.' };
+  return { ok: true };
+}
+
+function canDeclareBattlePlan(state, territoryId, factionId, plan, cardLookup) {
+  if (cardLookup) {
+    const cardCheck = checkPlanCards(state, factionId, plan, cardLookup);
+    if (!cardCheck.ok) return cardCheck;
+  }
   const {
     forcesCommitted, starredForcesCommitted = 0, spiceCommitted,
     supportedStarredCount = 0, supportedOrdinaryCount = 0,
@@ -58,10 +85,10 @@ function canDeclareBattlePlan(state, territoryId, factionId, plan) {
   }
 
   const hasUsableLeader = leaderId
-    ? isLeaderAvailable(state, factionId, leaderId)
+    ? isLeaderAvailable(state, factionId, leaderId, territoryId)
     : false;
   if (!leaderId && !cheapHeroCardId) {
-    const anyLeaderAvailable = (faction.leaders.available ?? []).some(id => isLeaderAvailable(state, factionId, id));
+    const anyLeaderAvailable = (faction.leaders.available ?? []).some(id => isLeaderAvailable(state, factionId, id, territoryId));
     if (anyLeaderAvailable) {
       return { ok: false, reason: 'A leader or cheap hero must be played if one is available. If genuinely none are available, that must be explicitly declared instead of silently omitted.' };
     }
@@ -88,16 +115,13 @@ function canDeclareBattlePlan(state, territoryId, factionId, plan) {
   return { ok: true };
 }
 
-function isLeaderAvailable(state, factionId, leaderId) {
+// A leader may fight more than once in the SAME territory in a Battle
+// phase, but not in two different territories.
+function isLeaderAvailable(state, factionId, leaderId, territoryId) {
   const faction = state.factions[factionId];
   if (!(faction.leaders.available ?? []).includes(leaderId)) return false;
-  if ((state.battle?.leadersUsedThisPhase ?? []).includes(leaderId)) {
-    // A leader may fight more than once in the SAME territory this phase,
-    // but not in a different one, so this check is territory-scoped by
-    // the caller passing the right leadersUsedThisPhase slice.
-    return false;
-  }
-  return true;
+  const usedIn = state.battle?.leaderTerritory?.[leaderId];
+  return !usedIn || usedIn === territoryId;
 }
 
 // --- Strength calculation ------------------------------------------------
@@ -183,7 +207,7 @@ function resolveWeaponDefense(aggressorPlan, defenderPlan, cardLookup) {
 }
 
 function killsLeader(incomingWeapon, ownDefense) {
-  if (!incomingWeapon) return false;
+  if (!incomingWeapon || !WEAPONS.includes(incomingWeapon.category)) return false; // worthless: a bluff
   if (incomingWeapon.category === 'specialWeapon') return true; // lasgun without a shield-triggered explosion still kills outright
   const matchingDefenseCategory = incomingWeapon.category === 'poisonWeapon' ? 'poisonDefense' : 'projectileDefense';
   return ownDefense?.category !== matchingDefenseCategory;
@@ -200,10 +224,8 @@ function checkTraitor(revealingFactionState, opponentLeaderId) {
 function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId, aggressorPlanInput, defenderPlanInput, cardLookup) {
   // Traitor check first: either side may hold a traitor card matching the
   // OTHER side's leader. Cheap heroes can't be traitors (no leaderId).
-  const aggressorHoldsTraitor = aggressorPlanInput.leaderId &&
-    checkTraitor(state.factions[aggressorFactionId], defenderPlanInput.leaderId);
-  const defenderHoldsTraitor = defenderPlanInput.leaderId &&
-    checkTraitor(state.factions[defenderFactionId], aggressorPlanInput.leaderId);
+  const aggressorHoldsTraitor = isTraitorAgainst(state, aggressorFactionId, defenderPlanInput.leaderId);
+  const defenderHoldsTraitor = isTraitorAgainst(state, defenderFactionId, aggressorPlanInput.leaderId);
 
   if (aggressorHoldsTraitor && defenderHoldsTraitor) {
     return resolveMutualTraitors(state, territoryId, aggressorFactionId, defenderFactionId, aggressorPlanInput, defenderPlanInput);
@@ -333,11 +355,126 @@ function applyBattleOutcome(state, territoryId, outcome) {
 // winner collects for it. The value comes from the battle plan itself
 // (every plan already declares leaderFightingValue), so this module still
 // needs no dependency on leaders.json.
-function killLeader(state, ownerFactionId, leaderId, fightingValue = 0) {
-  const faction = state.factions[ownerFactionId];
-  faction.leaders.available = faction.leaders.available.filter(id => id !== leaderId);
-  faction.leaders.killed.push(leaderId);
+function killLeader(state, holderFactionId, leaderId, fightingValue = 0) {
+  const holder = state.factions[holderFactionId];
+  holder.leaders.available = holder.leaders.available.filter(id => id !== leaderId);
+  const captured = capturedLeaders(state);
+  const originalOwner = holderFactionId === 'harkonnen' ? captured[leaderId] : null;
+  (originalOwner ? state.factions[originalOwner] : holder).leaders.killed.push(leaderId);
+  if (originalOwner) delete captured[leaderId];
   return fightingValue ?? 0;
+}
+
+// --- Traitors and Harkonnen captured leaders -------------------------------
+
+function capturedLeaders(state) {
+  const h = state.factions.harkonnen;
+  if (!h) return {};
+  h.specialFactionState = h.specialFactionState ?? {};
+  h.specialFactionState.captured = h.specialFactionState.captured ?? {};
+  return h.specialFactionState.captured; // leaderId -> original owner
+}
+
+// A leader is a traitor to `revealerId` if they hold its traitor card, or
+// if Harkonnen is playing a leader captured from them: a captured leader
+// always stays loyal to its original owner.
+function isTraitorAgainst(state, revealerId, leaderId) {
+  if (!leaderId) return false;
+  if ((state.factions[revealerId].traitorHand ?? []).includes(leaderId)) return true;
+  return state.factions.harkonnen ? capturedLeaders(state)[leaderId] === revealerId : false;
+}
+
+// Loser's leaders Harkonnen may capture: any still alive, including the one
+// used in this battle, but not one that fought elsewhere this turn.
+function captureCandidates(state, loserId, territoryId) {
+  const captured = capturedLeaders(state);
+  return state.factions[loserId].leaders.available.filter(id => {
+    const usedIn = state.battle?.leaderTerritory?.[id];
+    return (!usedIn || usedIn === territoryId) && !captured[id];
+  });
+}
+
+function applyCapture(state, loserId, leaderId, action) {
+  const loser = state.factions[loserId];
+  const harkonnen = state.factions.harkonnen;
+  loser.leaders.available = loser.leaders.available.filter(id => id !== leaderId);
+  if (action === 'keep') {
+    harkonnen.leaders.available.push(leaderId);
+    capturedLeaders(state)[leaderId] = loserId;
+  } else {
+    loser.leaders.killed.push(leaderId); // to the tanks; the owner may revive it later
+    harkonnen.spice += 2;
+    state.spiceBank.totalInCirculation -= 2;
+  }
+}
+
+// A captured leader is used once, then returns to its owner if it lived.
+function returnCapturedLeader(state, leaderId) {
+  const captured = capturedLeaders(state);
+  const owner = captured[leaderId];
+  if (!owner) return;
+  const harkonnen = state.factions.harkonnen;
+  if (harkonnen.leaders.available.includes(leaderId)) {
+    harkonnen.leaders.available = harkonnen.leaders.available.filter(id => id !== leaderId);
+    state.factions[owner].leaders.available.push(leaderId);
+  }
+  delete captured[leaderId];
+}
+
+// If every Harkonnen leader of their own is dead, captured ones go home.
+function returnAllCapturedIfNeeded(state) {
+  if (!state.factions.harkonnen) return;
+  const captured = capturedLeaders(state);
+  const ownAlive = state.factions.harkonnen.leaders.available.filter(id => !captured[id]);
+  if (ownAlive.length === 0) for (const id of Object.keys(captured)) returnCapturedLeader(state, id);
+}
+
+// --- Bene Gesserit Voice -----------------------------------------------------
+
+const VOICE_CATEGORIES = [...WEAPONS, ...DEFENSES, 'worthless', 'specialLeaderSubstitute'];
+
+// Makes a plan obey a Voice command where the player is able to; if they
+// can't comply (no such card), they may play as they wish.
+function enforceVoice(state, factionId, plan, voice, cardLookup) {
+  if (!voice) return plan;
+  const cat = id => cardLookup[id]?.category;
+  const p = { ...plan };
+  const slotsFor = category => category === 'specialLeaderSubstitute' ? ['cheapHeroCardId']
+    : WEAPONS.includes(category) ? ['weaponCardId'] : DEFENSES.includes(category) ? ['defenseCardId']
+    : ['weaponCardId', 'defenseCardId'];
+  if (voice.command === 'notPlay') {
+    for (const key of ['weaponCardId', 'defenseCardId', 'cheapHeroCardId']) {
+      if (p[key] && cat(p[key]) === voice.category) p[key] = null;
+    }
+    if (voice.category === 'specialLeaderSubstitute' && !p.leaderId) {
+      const leader = state.factions[factionId].leaders.available.find(id => isLeaderAvailable(state, factionId, id, plan.territoryId));
+      if (leader) p.leaderId = leader;
+    }
+    return p;
+  }
+  const already = ['weaponCardId', 'defenseCardId', 'cheapHeroCardId'].some(k => p[k] && cat(p[k]) === voice.category);
+  if (already) return p;
+  const inPlan = new Set([p.weaponCardId, p.defenseCardId, p.cheapHeroCardId]);
+  const card = state.factions[factionId].treacheryHand.find(id => cat(id) === voice.category && !inPlan.has(id));
+  if (!card) return p; // cannot comply
+  const slots = slotsFor(voice.category);
+  const slot = slots.find(k => !p[k]) ?? slots[0];
+  p[slot] = card;
+  if (slot === 'cheapHeroCardId') { p.leaderId = null; p.leaderFightingValue = 0; p.useKwisatzHaderach = false; }
+  return p;
+}
+
+// A minimal legal plan, used when a submitted plan breaks the rules.
+function fallbackPlan(state, territoryId, factionId, cardLookup) {
+  const faction = state.factions[factionId];
+  const leaderId = faction.leaders.available.find(id => isLeaderAvailable(state, factionId, id, territoryId)) ?? null;
+  const hero = leaderId ? null : faction.treacheryHand.find(id => cardLookup[id]?.category === 'specialLeaderSubstitute') ?? null;
+  return {
+    forcesCommitted: 0, starredForcesCommitted: 0, spiceCommitted: 0,
+    supportedStarredCount: 0, supportedOrdinaryCount: 0,
+    leaderId, leaderFightingValue: 0, cheapHeroCardId: hero,
+    weaponCardId: null, defenseCardId: null, useKwisatzHaderach: false
+  };
 }
 
 function discardPlanCards(state, factionId, plan) {
@@ -396,6 +533,18 @@ function resolveExplosion(state, territoryId, factionAId, factionBId) {
 }
 
 export {
+  WEAPONS,
+  DEFENSES,
+  VOICE_CATEGORIES,
+  isLeaderAvailable,
+  checkPlanCards,
+  isTraitorAgainst,
+  captureCandidates,
+  applyCapture,
+  returnCapturedLeader,
+  returnAllCapturedIfNeeded,
+  enforceVoice,
+  fallbackPlan,
   starredUnitValueFor,
   canDeclareBattlePlan,
   calculateStrength,
