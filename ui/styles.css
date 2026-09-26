@@ -433,6 +433,18 @@ code { font-family: var(--font-data); font-size: 0.9em; }
   border-color: var(--faction-gesserit);
 }
 .event-card--nexus .event-card__title { font-size: 20px; }
+/* Auction: a card face with the bids going round the table */
+.event-card--auction {
+  color: var(--ink);
+  background: linear-gradient(170deg, #f4ead2, #e2d2ac);
+  width: min(82%, 300px);
+  align-self: flex-start;
+  margin-top: 0.6rem;
+}
+.auction-bids { list-style: none; margin: 0.45rem 0 0; padding: 0; max-height: 9.5rem; overflow-y: auto; text-align: left; font-size: 12px; }
+.auction-bids li { padding: 0.18rem 0.2rem; border-top: 1px dashed rgba(138, 115, 80, 0.45); }
+.auction-bids li.is-pass { opacity: 0.55; }
+.auction-bids li.is-won { font-weight: 700; border-top: 1px solid var(--ink); }
 /* Battle: parchment with both revealed plans */
 .event-card--battle { color: var(--ink); background: var(--parchment); width: min(88%, 330px); text-align: left; }
 .event-card--battle .event-card__eyebrow { text-align: center; }
