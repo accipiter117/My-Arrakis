@@ -10,6 +10,7 @@
 // a real isSectorInStorm(territoryId, sector) implementation is a one-line
 // change at each of the two TODO markers below, not a redesign.
 
+import { spendingPower, paySpice } from './allySupport.js';
 const ORNITHOPTER_STRONGHOLDS = ['arrakeen', 'carthag'];
 
 // --- Shared helpers --------------------------------------------------------
@@ -125,7 +126,7 @@ function canShip(state, factionId, destinationTerritoryId, amount) {
   // way a fractional per-force rate appears. Rounding the TOTAL keeps
   // spice a whole number; without it the Guild accumulated half-spice.
   const totalCost = Math.ceil(costPerForce * amount);
-  if (totalCost > state.factions[factionId].spice) {
+  if (totalCost > spendingPower(state, factionId)) {
     return { ok: false, reason: 'Not enough spice for this shipment.' };
   }
   return { ok: true, totalCost };
@@ -140,7 +141,7 @@ function executeShipment(state, factionId, destinationTerritoryId, amount, starr
 
   const forces = state.factions[factionId].forces;
   const starred = Math.min(amount, forces.starredReserve ?? 0, starredRequested ?? amount);
-  state.factions[factionId].spice -= check.totalCost;
+  paySpice(state, factionId, check.totalCost); // own spice first, then any ally pledge
   forces.reserve -= amount;
   forces.onBoard[destinationTerritoryId] = (forces.onBoard[destinationTerritoryId] ?? 0) + amount;
   if (starred > 0) {
