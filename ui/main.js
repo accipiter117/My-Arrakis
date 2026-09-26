@@ -148,16 +148,20 @@ function buildProvider(data) {
   return { ...provider, observe: (event, state) => { logEvent(event); return presenter?.observe(event, state); } };
 }
 
-// Phase ambiences: the Tleilaxu tanks through Revival, the auction hall
-// through Bidding. Each loops for its whole phase, then fades out.
-const PHASE_AMBIENCE = { revival: 'revivalTanks', bidding: 'bidding' };
+// Phase ambiences: the auction through Bidding, the Tleilaxu tanks through
+// Revival, and one continuous ambience across Shipment and Movement. Each
+// loops for as long as its phases last, carrying straight on when the next
+// phase uses the same ambience, and fades out when the phase moves on to
+// something else.
+const PHASE_AMBIENCE = { bidding: 'bidding', revival: 'revivalTanks', shipment: 'shipping', movement: 'shipping' };
 async function withPhaseAmbience(runPhase) {
   const loop = PHASE_AMBIENCE[phaseEngine.currentPhase(gameState)];
-  if (loop) sfx.startLoop(loop);
+  if (loop) sfx.startLoop(loop); // does nothing if it is already playing
   try {
     return await runPhase();
   } finally {
-    if (loop) sfx.stopLoop(loop);
+    const next = gameState ? PHASE_AMBIENCE[phaseEngine.currentPhase(gameState)] : null;
+    if (loop && next !== loop) sfx.stopLoop(loop);
   }
 }
 
