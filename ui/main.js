@@ -145,7 +145,18 @@ async function startNewGame() {
 // before the engine carries on.
 function buildProvider(data) {
   const provider = buildDecisionMaker(data);
-  return { ...provider, observe: (event, state) => presenter?.observe(event, state) };
+  return { ...provider, observe: (event, state) => { logEvent(event); return presenter?.observe(event, state); } };
+}
+
+function logEvent(e) {
+  const turn = gameState?.meta.turn;
+  if (e.type === 'truthtrance') {
+    const q = e.question.kind === 'isTraitor' ? `Is ${leaderNameOf(e.question.leaderId)} your traitor?`
+      : e.question.kind === 'spiceAtLeast' ? `Do you have at least ${e.question.amount} spice?` : `Do you hold a ${e.question.category.replace(/([A-Z])/g, ' $1').toLowerCase()}?`;
+    addLog('battle', turn, `Truthtrance: ${nameOf(e.asker)} asked ${nameOf(e.target)} "${q}" Answer: ${e.answer ? 'yes' : 'no'}.`);
+  }
+  if (e.type === 'karama') addLog('battle', turn, `${nameOf(e.factionId)} played Karama to cancel ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[e.purpose]}.`);
+  if (e.type === 'pledge') addLog('bidding', turn, `${nameOf(e.from)} pledged ${e.amount} spice to ally ${nameOf(e.to)} for this turn.`);
 }
 
 function buildDecisionMaker(data) {
@@ -439,7 +450,7 @@ function ensureBoard(data) {
     cardLookup
   });
   // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
-  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, sfx, get state() { return gameState; } };
+  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, sfx, get state() { return gameState; }, get provider() { return decisionProvider; } };
 }
 
 function tapTerritory(id) {
@@ -474,6 +485,8 @@ function cardHelp(id) {
     worthless: 'Worthless. Its only use is as a bluff: play it in a battle plan as your weapon or defence, and it is discarded afterwards. That is how you get rid of it.'
   }[c];
   if (help) return { text: help };
+  if (id.startsWith('truthtrance')) return { text: 'Truthtrance. Ask another player one yes/no question about the game. They must answer truthfully, and everyone hears the answer.', truth: true };
+  if (id.startsWith('karama')) return { text: 'Karama. Cancels an enemy faction advantage as it is used against you: the Voice, Atreides Prescience, or a Harkonnen capture. You will be offered it at that moment. (Each faction\'s once-per-game Karama power is not in this version yet.)' };
   if (id === 'hajr') return { text: 'Hajr. One extra move in the Movement phase: it is offered in your Shipment and movement panel.' };
   if (id === 'ghola') return { text: 'Ghola. Revive a leader, or up to 5 troops, for free: it is offered in your Revival panel.' };
   return { text: 'A special card.' };
@@ -485,6 +498,41 @@ function discardFromHand(id) {
   addLog(phaseEngine.currentPhase(gameState), gameState.meta.turn, `You discarded ${cardNameOf(id)}.`);
   saveGame();
   render();
+}
+
+// --- Truthtrance: ask a factual question, answered truthfully by the game ------
+const TRUTH_CATEGORIES = [['poisonWeapon', 'poison weapon'], ['projectileWeapon', 'projectile weapon'], ['specialWeapon', 'Lasgun'],
+  ['poisonDefense', 'poison defence (Snooper)'], ['projectileDefense', 'projectile defence (Shield)'], ['specialLeaderSubstitute', 'Cheap Hero'], ['worthless', 'worthless card']];
+function fillTruthDetail() {
+  const kind = $('truth-kind').value;
+  const me = gameState.factions[humanFactionId];
+  const opts = kind === 'holdsCategory' ? TRUTH_CATEGORIES
+    : kind === 'isTraitor' ? me.leaders.available.map(id => [id, leaderNameOf(id)])
+    : [5, 10, 15, 20, 30].map(n => [n, `${n} spice`]);
+  $('truth-detail-label').textContent = { holdsCategory: 'Card', isTraitor: 'Leader', spiceAtLeast: 'Amount' }[kind];
+  $('truth-detail').innerHTML = opts.map(([v, l]) => `<option value="${v}">${escapeHTML(l)}</option>`).join('');
+}
+function openTruthtrance() {
+  $('truth-target').innerHTML = Object.keys(gameState.factions).filter(f => f !== humanFactionId)
+    .map(f => `<option value="${f}">${FACTION_NAMES[f]}</option>`).join('');
+  $('truth-answer').hidden = true;
+  $('truth-ask').disabled = false;
+  fillTruthDetail();
+  openSheet('truth');
+}
+function askTruthtrance() {
+  const kind = $('truth-kind').value, detail = $('truth-detail').value, target = $('truth-target').value;
+  const question = kind === 'holdsCategory' ? { kind, category: detail } : kind === 'isTraitor' ? { kind, leaderId: detail } : { kind, amount: Number(detail) };
+  if (!cardEffects.canPlayTruthtrance(gameState, humanFactionId, target).ok) return;
+  const r = cardEffects.playTruthtrance(gameState, humanFactionId, target, question, cardLookup);
+  const label = TRUTH_CATEGORIES.find(([c]) => c === detail)?.[1];
+  const text = kind === 'holdsCategory' ? `Do you hold a ${label}?` : kind === 'isTraitor' ? `Is ${leaderNameOf(detail)} your traitor?` : `Do you have at least ${detail} spice?`;
+  $('truth-answer').innerHTML = `${FACTION_NAMES[target]} answers: <strong>${r.answer ? 'Yes' : 'No'}</strong>`;
+  $('truth-answer').hidden = false;
+  $('truth-ask').disabled = true;
+  addLog(phaseEngine.currentPhase(gameState), gameState.meta.turn, `Truthtrance: you asked ${FACTION_NAMES[target]} "${text}" Answer: ${r.answer ? 'yes' : 'no'}.`);
+  saveGame();
+  renderHand();
 }
 
 function renderBoard() {
@@ -616,7 +664,7 @@ function renderHand() {
         const help = cardHelp(id);
         return `<li class="hand-card">
           <button class="hand-card__face" data-card="${id}">${cardNameOf(id)} <em>${(cardLookup[id]?.category ?? '').replace(/([A-Z])/g, ' $1').toLowerCase()}</em></button>
-          <div class="hand-card__info" hidden>${escapeHTML(help.text)}${help.discard ? ` <button class="btn hand-card__discard" data-discard="${id}">Discard</button>` : ''}</div>
+          <div class="hand-card__info" hidden>${escapeHTML(help.text)}${help.discard ? ` <button class="btn hand-card__discard" data-discard="${id}">Discard</button>` : ''}${help.truth ? ` <button class="btn hand-card__discard" data-truth>Ask a question</button>` : ''}</div>
         </li>`;
       }).join('')
     : '<li class="empty-note">No treachery cards.</li>';
@@ -731,6 +779,8 @@ $('btn-step-phase').addEventListener('click', stepPhase);
 // The Hand is always one tap away, even mid-decision (it opens above the panel).
 $('topbar-hand').addEventListener('click', () => { const open = !$('sheet-hand').hidden; if (open) closeSheets(); else openSheet('hand'); });
 $('victory-watch').addEventListener('click', () => openSheet('factions'));
+$('truth-kind').addEventListener('change', fillTruthDetail);
+$('truth-ask').addEventListener('click', askTruthtrance);
 document.querySelectorAll('[data-open-guide]').forEach(b => b.addEventListener('click', () => { renderGuide(); openSheet('guide'); }));
 // Hand: tap a card for what it does; discard cards whose effects aren't built yet.
 $('hand-body').addEventListener('click', e => {
@@ -738,6 +788,7 @@ $('hand-body').addEventListener('click', e => {
   if (face) { const info = face.nextElementSibling; info.hidden = !info.hidden; return; }
   const discard = e.target.closest('[data-discard]');
   if (discard) discardFromHand(discard.dataset.discard);
+  if (e.target.closest('[data-truth]')) openTruthtrance();
 });
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
