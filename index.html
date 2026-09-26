@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#2a1f14">
+  <meta name="theme-color" content="#0b0705">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>My Arrakis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26l">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26m">
 </head>
 <body>
   <div class="app">
@@ -30,6 +30,7 @@
     <nav class="phase-track" id="phase-track" aria-label="Turn phases"></nav>
 
     <main class="stage">
+      <div class="motes" id="motes" aria-hidden="true"></div>
       <div id="board" class="board-wrap"></div>
       <div class="map-controls" aria-label="Map zoom">
         <button class="icon-btn" id="zoom-in" aria-label="Zoom in">+</button>
@@ -43,19 +44,24 @@
     <button id="ticker" class="ticker" aria-label="Latest event, tap for the full log">Open the menu to start a game.</button>
 
     <nav class="dock" aria-label="Game controls">
-      <button class="dock__btn" id="dock-hand" data-sheet="hand" hidden><span class="dock__icon">🂠</span>Hand</button>
-      <button class="dock__btn" data-sheet="factions"><span class="dock__icon">⚑</span>Factions</button>
-      <button class="dock__btn" data-sheet="log"><span class="dock__icon">☰</span>Log</button>
-      <button class="dock__btn" id="btn-step-phase" disabled><span class="dock__icon">›</span>Step</button>
-      <button class="dock__btn dock__btn--primary" id="btn-run-turn" disabled><span class="dock__icon">»</span>Run turn</button>
+      <button class="dock__btn" id="dock-hand" data-sheet="hand" hidden><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="11" height="15" rx="1.5" transform="rotate(-8 9 12)"/><rect x="9" y="4" width="11" height="15" rx="1.5" transform="rotate(8 14 11)"/></svg></span>Hand</button>
+      <button class="dock__btn" data-sheet="factions"><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4"/><path d="M6 5h11l-2.5 4L17 13H6"/></svg></span>Factions</button>
+      <button class="dock__btn" data-sheet="log"><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7"/><path d="M7 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2"/><path d="M9 9h7M9 13h7M9 17h4"/></svg></span>Log</button>
+      <button class="dock__btn" id="btn-step-phase" disabled><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></span>Step</button>
+      <button class="dock__btn dock__btn--primary" id="btn-run-turn" disabled><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l7 7-7 7"/><path d="M12 5l7 7-7 7"/></svg></span>Run turn</button>
     </nav>
   </div>
 
   <div class="scrim" id="scrim" hidden></div>
 
   <section class="sheet" id="sheet-menu" data-name="menu" hidden aria-labelledby="menu-title">
-    <header class="sheet__head"><h2 id="menu-title">My Arrakis</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <header class="sheet__head"><h2 id="menu-title">Menu</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
     <div class="sheet__body">
+      <div class="title-block">
+        <p class="title-block__name">ARRAKIS</p>
+        <div class="title-block__rule"></div>
+        <p class="title-block__epigraph">Five strongholds. Six great powers. One desert that forgives nothing.</p>
+      </div>
       <label class="row-field"><span>Play as</span>
         <select id="select-faction">
           <option value="atreides" selected>Atreides</option>
@@ -92,7 +98,7 @@
       </div>
       <p class="sheet__note" id="save-note">Games save automatically after every phase.</p>
       <p class="sheet__note">The game pauses whenever a decision is yours. Tap any territory for details. Add <code>?seed=N</code> to the address to replay a game.</p>
-      <p class="build-version">Version 2026-09-26l</p>
+      <p class="build-version">Version 2026-09-26m</p>
     </div>
   </section>
 
@@ -117,6 +123,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-26l"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-26m"></script>
 </body>
 </html>
