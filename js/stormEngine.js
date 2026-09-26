@@ -16,6 +16,17 @@
 
 const TOTAL_SECTORS = 18;
 
+// The 6 Storm cards of the GF9 2019 edition, one of each value (advanced
+// rules: the Fremen control the storm with them). If a physical deck turns
+// out to differ, this list is the only thing to change.
+const STORM_DECK = [1, 2, 3, 4, 5, 6];
+
+// All cards are shuffled back before each preview, so every draw is from
+// the full deck.
+function drawStormCard(randomFn) {
+  return STORM_DECK[Math.floor(randomFn() * STORM_DECK.length)];
+}
+
 // --- Storm movement distance (fully implementable now) -------------------
 
 function rollFirstStormMovement(dialA, dialB) {
@@ -97,6 +108,8 @@ function determineFirstPlayer(state, currentStormSector, playerCircleSectorMap) 
 }
 
 export {
+  STORM_DECK,
+  drawStormCard,
   TOTAL_SECTORS,
   rollFirstStormMovement,
   rollSubsequentStormMovement,
