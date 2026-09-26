@@ -19,6 +19,7 @@ import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
 import { createPresenter } from './presenter.js';
 import { createMusic } from './music.js';
+import { createSfx } from './sfx.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
@@ -430,10 +431,11 @@ function ensureBoard(data) {
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
     renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds }),
     renderReal: renderBoard,
-    getViewer: () => humanFactionId
+    getViewer: () => humanFactionId,
+    sfx
   });
   // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
-  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, get state() { return gameState; } };
+  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, sfx, get state() { return gameState; } };
 }
 
 function tapTerritory(id) {
@@ -651,12 +653,17 @@ const music = createMusic({
     $('music-now').textContent = !m.enabled ? 'Music is off.' : m.playing ? `Now playing: ${m.title}` : 'Music starts with your first tap.';
   }
 });
+const sfx = createSfx({ onPlay: name => { if (name === 'wormRoar') music.duck(3.2); } });
+$('select-sfx').value = sfx.settings.enabled ? 'on' : 'off';
+$('sfx-volume').value = String(sfx.settings.volume);
+$('select-sfx').addEventListener('change', e => sfx.setEnabled(e.target.value === 'on'));
+$('sfx-volume').addEventListener('input', e => sfx.setVolume(Number(e.target.value)));
 $('select-music').value = music.settings.enabled ? 'on' : 'off';
 $('music-volume').value = String(music.settings.volume);
 $('select-music').addEventListener('change', e => music.setEnabled(e.target.value === 'on'));
 $('music-volume').addEventListener('input', e => music.setVolume(Number(e.target.value)));
 $('music-skip').addEventListener('click', () => music.skip());
-document.addEventListener('pointerdown', () => { if (music.settings.enabled) music.start(); }, { once: true });
+document.addEventListener('pointerdown', () => { sfx.unlock(); if (music.settings.enabled) music.start(); }, { once: true });
 
 // Drifting spice motes over the desert (skipped if the device asks for reduced motion).
 if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
