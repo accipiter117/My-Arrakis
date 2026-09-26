@@ -219,7 +219,7 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
       const killed = { [agg]: wd.aggressorLeaderKilled, [def]: wd.defenderLeaderKilled };
       const leaderName = f => P[f].leaderId ? names.leader(P[f].leaderId) : P[f].cheapHero ? 'a Cheap Hero' : 'no leader';
       const strength = f => {
-        const p = P[f];
+        const p = f === 'fremen' ? { ...P[f], supportedStarred: P[f].starred, supportedOrdinary: P[f].forces - P[f].starred } : P[f];
         const starV = battleEngine.starredUnitValueFor(f, opp(f));
         const ordinary = p.forces - p.starred;
         const troops = p.supportedStarred * starV + (p.starred - p.supportedStarred) * starV / 2
@@ -295,6 +295,7 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
       row('Troops dialled', sides.map(f => `<span class="br-num">${P[f].forces}</span> <em>of ${P[f].forcesPresent}${P[f].starred ? `, ${P[f].starred}★` : ''}</em>`));
       await step(1300);
       row('Spice committed', sides.map(f => {
+        if (f === 'fremen') return '<em>not needed: Fremen fight at full strength</em>';
         const full = P[f].supportedStarred + P[f].supportedOrdinary, half = P[f].forces - full;
         return `<span class="br-num">${P[f].spice}</span> <em>${P[f].forces ? `${full} at full strength${half ? `, ${half} at half` : ''}` : ''}</em>`;
       }));
