@@ -602,6 +602,11 @@ strong { color: var(--gold); }
 .auction-bids li strong { color: var(--spice); }
 .auction-bids li.is-pass { opacity: 0.5; }
 .auction-bids li.is-won { font-weight: 700; border-top: 1px solid var(--gold); color: var(--gold); }
+/* Truthtrance: Ibad blue. Karama: gold. */
+.event-card--truth { color: #e3f3fc; background: radial-gradient(circle at 50% 0%, rgba(79, 159, 204, 0.45), transparent 65%), linear-gradient(170deg, #1d3140, #0a1117); border-color: var(--ibad); }
+.event-card--truth .event-card__title { font-size: 34px; color: #fff; text-shadow: 0 0 16px rgba(79, 159, 204, 0.8); }
+.event-card--karama { color: #1c0d04; background: radial-gradient(circle at 50% 20%, #fbe3a3, var(--gold) 60%, #8a6320); }
+.truth-answer { font-size: 15px; text-align: center; padding: 0.6rem; border: 1px solid var(--ibad); background: rgba(79, 159, 204, 0.15); }
 .event-card--battle { color: var(--sand); background: linear-gradient(170deg, var(--slab-3), #0f0a06); border-color: var(--bronze-bright); width: min(90%, 340px); text-align: left; }
 .event-card--battle .event-card__eyebrow { text-align: center; }
 .battle-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.45rem; margin: 0.55rem 0 0.25rem; }
