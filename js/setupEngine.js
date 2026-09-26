@@ -19,6 +19,7 @@
 //     exposed as separate functions rather than automated inside
 //     initializeGame() itself.
 
+import { shuffle, setSeed, newSeed } from './random.js';
 import { createInitialGameState } from './gameState.js';
 import { buildSpiceDeck } from './spiceEngine.js';
 import { buildTraitorDeck, shuffle as shuffleTraitors, dealTraitorHands } from './traitorDeckEngine.js';
@@ -171,7 +172,8 @@ function initializeGame(config) {
     playerCircleOrder,      // seating order, counterclockwise, same faction ids
     rulesConfig,
     spiceDeckData, territoriesData, treacheryDeckData, leadersData,
-    rngShuffle = arr => arr.slice().sort(() => Math.random() - 0.5),
+    rngShuffle = shuffle, // unbiased and seeded; the old sort-based default was neither
+    seed,
     resourceOverrides = {}  // optional per-faction overrides, e.g. custom Fremen starting split
   } = config;
 
@@ -182,7 +184,11 @@ function initializeGame(config) {
     throw new Error('playerCircleOrder must contain exactly the same factions as activeFactionIds.');
   }
 
+  // Seed first, so every shuffle below (and the rest of the game) replays exactly.
+  const gameSeed = seed ?? newSeed();
+  setSeed(gameSeed);
   const state = createInitialGameState({ factionIds: activeFactionIds, rulesConfig });
+  state.meta.seed = gameSeed;
   state.rulesConfig = rulesConfig;
 
   // createInitialGameState() leaves board.territories as an empty
