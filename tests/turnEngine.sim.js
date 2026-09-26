@@ -57,10 +57,16 @@ assert(state.decks.treacheryDeck.length === deckSizeBeforeBidding, `no cards wer
 console.log('\nTest 4: Storm position stays put on turn 1 (passive dial is 0-0 for the first storm, which is legal)');
 assert(state.board.stormPosition === 0, `storm should not have moved on turn 1 with passive 0-0 dials, got position ${state.board.stormPosition}`);
 
-console.log('\nTest 5: a second full turn advances the storm using the subsequent-turn dial range (1-3)');
-const log2 = await turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
+console.log('\nTest 5: after turn 1 the storm moves by the Storm card the Fremen previewed (advanced rules)');
+const previewed = state.board.nextStormCard;
+assert([1, 2, 3, 4, 5, 6].includes(previewed), `the Fremen previewed a Storm card of 1-6 during turn 1, got ${previewed}`);
+let dialled = 0;
+const noDialProvider = { ...turnEngine.passiveDecisionProvider, chooseStormDial: (...a) => { dialled++; return turnEngine.passiveDecisionProvider.chooseStormDial(...a); } };
+const log2 = await turnEngine.runFullTurn(state, noDialProvider, territoriesData, {});
 assert(state.meta.turn === 3, `turn counter should now be 3, got ${state.meta.turn}`);
-assert(state.board.stormPosition === 2, `passive dials of 1+1=2 sectors should move the storm from 0 to 2, got ${state.board.stormPosition}`);
+assert(state.board.stormPosition === previewed % 18, `storm moved exactly the previewed ${previewed} sectors, now at ${state.board.stormPosition}`);
+assert(dialled === 0, 'nobody was asked to dial after the first storm');
+assert([1, 2, 3, 4, 5, 6].includes(state.board.nextStormCard), 'a new card was previewed for next turn');
 
 console.log('\nTest 6: five full turns run with no throw and no spice bank corruption (basic stability check)');
 state = freshGame();
