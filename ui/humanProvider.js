@@ -314,6 +314,80 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         });
     },
 
+    chooseRevealTraitor(state, holder, leaderId, territoryId, againstId, forFaction) {
+      const forAlly = forFaction !== holder;
+      return ask('Traitor!',
+        `<p class="decision__traitor"><strong>${esc(leaderLabel(leaderId))}</strong>, leading ${esc(factionName(againstId))} in ${esc(territoryName(territoryId))}, is secretly in your pay.</p>
+         <p>Reveal them and ${forAlly ? `your ally ${esc(factionName(forFaction))}` : 'you'} win outright, losing nothing, while ${esc(factionName(againstId))} loses everything there. Or keep the secret and let the battle play out, saving the traitor for a bigger moment.</p>
+         <div class="decision__actions">
+           <button class="btn" data-action="keep">Keep the secret</button>
+           <button class="btn btn--primary" data-default-action>Reveal the traitor</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="keep"]').onclick = () => done(false);
+          p.querySelector('[data-default-action]').onclick = () => done(true);
+        });
+    },
+
+    chooseAllianceProposal(state, me) {
+      const allyOf = f => (state.alliances ?? []).find(a => a.factions.includes(f));
+      const strongholdsOf = f => Object.keys(state.board.territories)
+        .filter(t => state.board.territories[t].type === 'stronghold' && (state.factions[f].forces.onBoard[t] ?? 0) > 0);
+      const candidates = Object.keys(state.factions).filter(f => f !== me && !allyOf(f));
+      if (!candidates.length) return null;
+      const betrayed = f => (state.meta.betrayals ?? []).some(b => b.by === f);
+      const rows = candidates.map(f => {
+        const held = strongholdsOf(f).map(territoryName);
+        return `<label class="choice"><input type="radio" name="partner" value="${f}"> <span>${esc(factionName(f))}
+          <em>${held.length ? held.join(', ') : 'no strongholds'}${betrayed(f) ? ' · has broken an alliance before' : ''}</em></span></label>`;
+      }).join('');
+      return ask('Nexus: propose an alliance?',
+        `<p>Allies win together with <strong>4 strongholds</strong> between them, share their special victories, and gain each other's alliance advantages. Allies can't enter each other's territories, except the Polar Sink.</p>
+         <div class="choices">${rows}</div>
+         <div class="decision__actions">
+           <button class="btn" data-action="propose">Propose</button>
+           <button class="btn btn--primary" data-default-action>No proposal</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="propose"]').onclick = () => done(p.querySelector('input[name="partner"]:checked')?.value ?? null);
+          p.querySelector('[data-default-action]').onclick = () => done(null);
+        });
+    },
+
+    chooseAllianceResponse(state, me, proposer) {
+      const strongholdsOf = f => Object.keys(state.board.territories)
+        .filter(t => state.board.territories[t].type === 'stronghold' && (state.factions[f].forces.onBoard[t] ?? 0) > 0);
+      const theirs = strongholdsOf(proposer), mine = strongholdsOf(me);
+      const combined = new Set([...theirs, ...mine]).size;
+      const betrayed = (state.meta.betrayals ?? []).filter(b => b.by === proposer).length;
+      return ask(`${factionName(proposer)} proposes an alliance`,
+        `<dl class="facts"><dt>They hold</dt><dd>${theirs.length ? esc(theirs.map(territoryName).join(', ')) : 'no strongholds'}</dd>
+         <dt>Together</dt><dd>${combined} of the 4 strongholds an alliance needs</dd>
+         ${betrayed ? `<dt>Warning</dt><dd>They have broken ${betrayed} alliance${betrayed > 1 ? 's' : ''} before</dd>` : ''}</dl>
+         <p>Allied, you win together, and neither of you may enter the other's territories (except the Polar Sink).</p>
+         <div class="decision__actions">
+           <button class="btn" data-action="accept">Accept</button>
+           <button class="btn btn--primary" data-default-action>Reject</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="accept"]').onclick = () => done(true);
+          p.querySelector('[data-default-action]').onclick = () => done(false);
+        });
+    },
+
+    chooseBreakAlliance(state, me, ally) {
+      return ask('Nexus: your alliance',
+        `<p>You are allied with <strong>${esc(factionName(ally))}</strong>. Breaking it is public, and the other factions will remember it when you next seek an ally.</p>
+         <div class="decision__actions">
+           <button class="btn" data-action="break">Break the alliance</button>
+           <button class="btn btn--primary" data-default-action>Keep it</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="break"]').onclick = () => done(true);
+          p.querySelector('[data-default-action]').onclick = () => done(false);
+        });
+    },
+
     chooseVoice(state, factionId, territoryId, targetId) {
       const categories = Object.entries(CATEGORY_NAMES);
       return ask(`The Voice: battle in ${territoryName(territoryId)}`,
@@ -413,8 +487,11 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         }[intel.element];
         return `<p class="decision__intel">Prescience: ${esc(factionName(opponentId))} is playing <strong>${esc(what)}</strong>.</p>`;
       })();
+      const myTraitors = (me.traitorHand ?? []).map(id => `${leaderLabel(id)}, ${factionName(leader[id]?.faction)}`);
+      const traitorNote = myTraitors.length
+        ? `<p class="decision__note">Your traitor${myTraitors.length > 1 ? 's' : ''}: ${esc(myTraitors.join('; '))}. If ${esc(factionName(opponentId))} plays ${myTraitors.length > 1 ? 'one of them' : 'them'}, you'll be offered the reveal.</p>` : '';
       return ask(`Battle in ${territoryName(territoryId)}`,
-        `${voiceNote}${revealed}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
+        `${voiceNote}${revealed}${traitorNote}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
          <dt>Your forces here</dt><dd>${present}${starredPresent ? ` (${starredPresent} starred)` : ''}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
          <p>The side with the higher total wins; ties go to the aggressor. Forces you dial are lost even if you win. If you lose, you lose every force here. Each dialed force counts fully only if backed by 1 spice.</p>
          <label class="field"><span>Forces to dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
