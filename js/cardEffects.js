@@ -79,3 +79,23 @@ export function playGhola(state, factionId, choice) {
   discard(state, factionId, 'ghola');
   return { factionId, card: 'ghola', ...choice };
 }
+
+// --- Cards whose effects aren't built yet ------------------------------------
+// Karama and Truthtrance (effects not yet implemented), Weather Control and
+// Family Atomics (need the storm's sector data). Until they work, their holder
+// may discard them so they don't sit dead in a hand. A temporary
+// implementation decision (data/rulesConfig.json: unbuiltCardDiscard).
+export const UNBUILT_CARDS = ['karama1', 'karama2', 'truthtrance1', 'truthtrance2', 'weatherControl', 'familyAtomics'];
+
+export function canDiscardUnbuilt(state, factionId, cardId) {
+  if (!UNBUILT_CARDS.includes(cardId)) return { ok: false, reason: 'Only cards whose effects are not in the game yet can be discarded freely.' };
+  if (!holds(state, factionId, cardId)) return { ok: false, reason: 'You do not hold that card.' };
+  return { ok: true };
+}
+
+export function discardUnbuilt(state, factionId, cardId) {
+  const check = canDiscardUnbuilt(state, factionId, cardId);
+  if (!check.ok) throw new Error(check.reason);
+  discard(state, factionId, cardId);
+  return { factionId, cardId };
+}
