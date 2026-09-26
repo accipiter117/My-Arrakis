@@ -147,8 +147,21 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
 
     // No diplomacy at this tier.
-    chooseAllianceActions() {
-      return { form: [], breakFrom: [] };
+    // The Basic AI stays unaligned (the easier opponent); the Strategic AI
+    // adds diplomacy (js/ai/diplomacy.js).
+    chooseBreakAlliance() {
+      return false;
+    },
+    chooseAllianceProposal() {
+      return null;
+    },
+    chooseAllianceResponse() {
+      return false;
+    },
+
+    // Always spring a traitor: the battle is won outright at no cost.
+    chooseRevealTraitor() {
+      return true;
     },
 
     // Bids on unknown cards up to a small personal valuation, keeping a
