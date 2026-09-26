@@ -138,12 +138,18 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
 
     async shipment(e, state) {
       if (!speed()) return;
-      // Troops arriving from off-world. The Fremen are already on Arrakis:
-      // their "shipment" is a march from the deep desert, so no ship.
-      if (e.factionId !== 'fremen') sfx?.play('shipArrival');
       renderDisplay(displayWithout(state, e.factionId, e.territoryId, e.amount));
-      await board.animateToken({ color: factionColors[e.factionId], count: e.amount,
-        points: [board.offBoardPoint(e.territoryId), board.labelPoint(e.territoryId)], msPerHop: scaled(950), hop: 30 });
+      const [lx, ly] = board.labelPoint(e.territoryId);
+      const at = [lx, ly + 14]; // where the counter sits in the territory
+      if (e.factionId === 'fremen') {
+        // The Fremen come from the deep desert: Shai-Hulud brings them.
+        sfx?.play('wormRoar');
+        await board.wormDelivers({ count: e.amount, at, ms: scaled(1800) });
+      } else {
+        // Everyone else ships in from off-world: their ship flies in and lands.
+        sfx?.play('shipArrival');
+        await board.flyShip({ faction: e.factionId, count: e.amount, from: board.offBoardPoint(e.territoryId), to: at, ms: scaled(1250), landMs: scaled(450) });
+      }
       renderReal();
     },
 
