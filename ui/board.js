@@ -217,15 +217,13 @@ export function createBoard({ container, geometry, territoriesData, factionColor
         .filter(([, n]) => n > 0);
       const items = [...present.map(([f, n, s]) => ({ kind: 'force', f, n, s }))];
       if (spice[id]) items.push({ kind: 'spice', n: spice[id] });
-      const step = 38;
+      const step = 50;
       let x = lx - ((items.length - 1) * step) / 2;
       for (const item of items) {
         const g = el('g', { class: `token token--${item.kind}`, transform: `translate(${x},${ly + 14})` }, tokenLayer);
         if (item.kind === 'force') {
-          el('circle', { r: 17, fill: factionColors[item.f] ?? '#333', class: 'token__disc' }, g);
-          const t = el('text', { class: 'token__count', y: 6 }, g);
-          t.textContent = item.n;
-          if (item.s) el('circle', { r: 5, cx: 12, cy: -12, class: 'token__star' }, g);
+          drawCounter(g, item.f, item.n);
+          if (item.s) el('circle', { r: 6, cx: 17, cy: -17, class: 'token__star' }, g);
         } else {
           el('rect', { x: -15, y: -15, width: 30, height: 30, rx: 6, transform: 'rotate(45)', class: 'token__spice-bg' }, g);
           const t = el('text', { class: 'token__count token__count--spice', y: 6 }, g);
@@ -234,6 +232,22 @@ export function createBoard({ container, geometry, territoriesData, factionColor
         x += step;
       }
     }
+  }
+
+  // --- Faction counters ----------------------------------------------------------
+  // Illustrated counters (assets/counters/<faction>.png) with the number in the
+  // clear centre. A plain disc in the faction colour sits underneath, so a
+  // counter shows instantly even before its image has loaded.
+  const COUNTER_R = 24;
+  const counterUrl = f => new URL(`../assets/counters/${f}.png`, import.meta.url).href;
+  const factionByColor = Object.fromEntries(Object.entries(factionColors).map(([f, c]) => [c, f]));
+  function drawCounter(g, faction, count, color) {
+    el('circle', { r: COUNTER_R - 1, fill: color ?? factionColors[faction] ?? '#333', class: 'token__disc' }, g);
+    if (faction) {
+      el('image', { href: counterUrl(faction), x: -COUNTER_R, y: -COUNTER_R, width: COUNTER_R * 2, height: COUNTER_R * 2, class: 'token__counter' }, g);
+    }
+    const t = el('text', { class: 'token__count token__count--counter', y: 6 }, g);
+    t.textContent = count;
   }
 
   // --- Animation tools (used by ui/presenter.js) ----------------------------
@@ -280,9 +294,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
 
   function makeGhost(color, count) {
     const g = el('g', { class: 'token token--ghost' }, fxLayer);
-    el('circle', { r: 19, fill: color, class: 'token__disc' }, g);
-    const t = el('text', { class: 'token__count', y: 6 }, g);
-    t.textContent = count;
+    drawCounter(g, factionByColor[color], count, color);
     return g;
   }
 
