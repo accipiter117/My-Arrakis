@@ -74,4 +74,21 @@ resolveSpiceBlowPhase(state);
 assert(state.board.spiceBlowMarkers.length === 2, 'both piles placed exactly one spice blow each in a clean run');
 assert(typeof state.nexus.active === 'boolean', 'nexus.active is set to a real boolean after phase resolution');
 
+console.log('\nTest R: a reshuffle never lets both piles draw the same card in one Spice Blow');
+{
+  const territoryCards = buildSpiceDeck(spiceDeckData, territoriesData, identityShuffle).filter(c => c.type === 'territory');
+  let duplicates = 0;
+  for (let trial = 0; trial < 200; trial++) {
+    const st = makeMinimalState(5);
+    // Pile A is about to draw the last card in the deck; pile B must reshuffle.
+    st.decks.spiceDeck = [territoryCards[trial % territoryCards.length]];
+    st.decks.spiceDiscardA = territoryCards.filter((_, i) => i !== trial % territoryCards.length).slice(0, 6);
+    st.decks.spiceDiscardB = territoryCards.filter((_, i) => i !== trial % territoryCards.length).slice(6, 12);
+    resolveSpiceBlowPhase(st);
+    const placed = st.nexus.draws.filter(d => d.kind === 'territory').map(d => d.territoryId);
+    if (new Set(placed).size !== placed.length) duplicates++;
+  }
+  assert(duplicates === 0, `no territory drawn twice in one phase across 200 reshuffles (got ${duplicates})`);
+}
+
 console.log('\nAll spice engine sanity checks passed.');
