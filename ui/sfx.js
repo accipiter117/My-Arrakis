@@ -14,7 +14,10 @@
 const SOUNDS = {
   wormRoar: '../assets/sfx/worm-roar.mp3',
   shipArrival: '../assets/sfx/ship-arrival.mp3',
-  ornithopter: '../assets/sfx/ornithopter.mp3?v=2'
+  ornithopter: '../assets/sfx/ornithopter.mp3?v=2',
+  // Phase ambiences: seamless loops (WAV, since MP3 padding leaves a gap on every loop).
+  revivalTanks: '../assets/sfx/revival-tanks.wav',
+  bidding: '../assets/sfx/bidding.wav'
 };
 const KEY = 'my-arrakis-sfx';
 const MIN_GAP_MS = 700;
@@ -25,6 +28,7 @@ export function createSfx({ onPlay } = {}) {
   let ctx = null, gain = null;
   const buffers = {};
   const lastPlayed = {};
+  const loops = {};
   const save = () => localStorage.setItem(KEY, JSON.stringify(settings));
 
   async function loadAll() {
@@ -63,7 +67,34 @@ export function createSfx({ onPlay } = {}) {
       onPlay?.(name, buffers[name].duration);
       return true;
     },
-    setEnabled(enabled) { settings.enabled = enabled; save(); },
+    // A phase ambience: loops from the start of its phase, fading in, until
+    // stopLoop fades it out. Starting one that is already playing does nothing.
+    startLoop(name, fadeIn = 0.8) {
+      if (!settings.enabled || !ctx || !buffers[name] || loops[name]) return false;
+      if (ctx.state === 'suspended') ctx.resume();
+      const source = ctx.createBufferSource();
+      source.buffer = buffers[name];
+      source.loop = true;
+      const fader = ctx.createGain();
+      fader.gain.setValueAtTime(0, ctx.currentTime);
+      fader.gain.linearRampToValueAtTime(1, ctx.currentTime + fadeIn);
+      source.connect(fader).connect(gain);
+      source.start();
+      loops[name] = { source, fader };
+      return true;
+    },
+    stopLoop(name, fadeOut = 1.5) {
+      const loop = loops[name];
+      if (!loop) return;
+      delete loops[name];
+      const now = ctx.currentTime;
+      loop.fader.gain.cancelScheduledValues(now);
+      loop.fader.gain.setValueAtTime(loop.fader.gain.value, now);
+      loop.fader.gain.linearRampToValueAtTime(0, now + fadeOut);
+      loop.source.stop(now + fadeOut + 0.05);
+    },
+    stopAllLoops() { Object.keys(loops).forEach(n => this.stopLoop(n, 0.4)); },
+    setEnabled(enabled) { settings.enabled = enabled; save(); if (!enabled) Object.keys(loops).forEach(n => this.stopLoop(n, 0.4)); },
     setVolume(volume) { settings.volume = volume; save(); if (gain) gain.gain.setTargetAtTime(volume, ctx.currentTime, 0.05); },
     get settings() { return { ...settings }; },
     get loaded() { return Object.keys(buffers); }
