@@ -51,7 +51,8 @@ console.log('\nTest 3: save mid-game, restore, and the rest of the game is ident
   await turnEngine.runSetupDecisions(state, ai);
   phaseEngine.nextPhase(state);
   const log = [];
-  while (state.meta.turn < 4) log.push(...await turnEngine.runFullTurn(state, ai, territories, cardLookup));
+  // Save on turn 3, or earlier if the game is already won (a finished game must not be played on).
+  while (state.meta.turn < 3 && !state.victory.achieved) log.push(...await turnEngine.runFullTurn(state, ai, territories, cardLookup));
   const saved = JSON.stringify({ state, rng: getRandomState(), log });
   setRandomState(12345); // scramble, as a page reload would
   const loaded = JSON.parse(saved);
@@ -59,7 +60,7 @@ console.log('\nTest 3: save mid-game, restore, and the rest of the game is ident
   const resumed = loaded.state;
   const ai2 = createStrategicAI({ leadersData: leaders, cardLookup });
   while (!resumed.victory.achieved) loaded.log.push(...await turnEngine.runFullTurn(resumed, ai2, territories, cardLookup));
-  assert(JSON.stringify({ state: resumed, log: loaded.log }) === reference, 'a game saved on turn 4 and resumed finishes exactly like the uninterrupted game');
+  assert(JSON.stringify({ state: resumed, log: loaded.log }) === reference, 'a game saved mid-game and resumed finishes exactly like the uninterrupted game');
 }
 
 console.log('\nAll determinism checks passed.');
