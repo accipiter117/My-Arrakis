@@ -8,6 +8,7 @@
 // call the exact same canBid()/placeBid()/passBid() functions, so there is
 // no separate "AI cheats a little" code path.
 
+import { random } from './random.js';
 const DEFAULT_HAND_LIMIT = 4;
 
 const HAND_LIMIT_OVERRIDES = {
@@ -99,7 +100,7 @@ function shuffle(array) {
   // whatever wraps this engine, this just does a standard Fisher-Yates.
   const result = array.slice();
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
