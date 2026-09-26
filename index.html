@@ -2,92 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#2a1f14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>My Arrakis</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26d">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26e">
 </head>
 <body>
-  <header class="masthead">
-    <h1 class="masthead__title">My Arrakis</h1>
-    <div class="masthead__status">
-      <span id="status-turn" class="status-chip">—</span>
-      <span id="status-phase" class="status-chip status-chip--accent">No game started</span>
-      <span id="status-storm" class="status-chip">Storm: —</span>
-    </div>
-  </header>
+  <div class="app">
+    <header class="topbar">
+      <button id="btn-menu" class="icon-btn" aria-label="Menu and new game">☰</button>
+      <div class="topbar__status">
+        <span id="status-turn" class="topbar__turn">—</span>
+        <span id="status-phase" class="topbar__phase">No game</span>
+      </div>
+      <div class="topbar__pills">
+        <span id="status-spice" class="pill pill--spice" hidden>—</span>
+        <span id="status-storm" class="pill">Storm —</span>
+      </div>
+    </header>
 
-  <nav class="phase-track" id="phase-track" aria-label="Turn phase progress">
-    <!-- populated by ui/main.js -->
-  </nav>
+    <nav class="phase-track" id="phase-track" aria-label="Turn phases"></nav>
 
-  <main class="layout">
-    <section class="panel panel--map" aria-labelledby="map-heading">
-      <h2 id="map-heading" class="panel__heading">Arrakis</h2>
+    <main class="stage">
       <div id="board" class="board-wrap"></div>
-      <div id="territory-info" class="territory-info">Tap a territory to see who holds it.</div>
-    </section>
+      <div id="territory-info" class="territory-card" hidden></div>
+    </main>
 
-    <section class="panel panel--hand" id="hand-panel" aria-labelledby="hand-heading" hidden>
-      <h2 id="hand-heading" class="panel__heading">Your hand</h2>
-      <div id="hand-body"></div>
-    </section>
+    <button id="ticker" class="ticker" aria-label="Latest event, tap for the full log">Open the menu to start a game.</button>
 
-    <section class="panel panel--factions" aria-labelledby="factions-heading">
-      <h2 id="factions-heading" class="panel__heading">Factions</h2>
-      <div id="factions-grid" class="factions-grid">
-        <p class="empty-note">Start a game to see faction status here.</p>
-      </div>
-    </section>
+    <nav class="dock" aria-label="Game controls">
+      <button class="dock__btn" id="dock-hand" data-sheet="hand" hidden><span class="dock__icon">🂠</span>Hand</button>
+      <button class="dock__btn" data-sheet="factions"><span class="dock__icon">⚑</span>Factions</button>
+      <button class="dock__btn" data-sheet="log"><span class="dock__icon">☰</span>Log</button>
+      <button class="dock__btn" id="btn-step-phase" disabled><span class="dock__icon">›</span>Step</button>
+      <button class="dock__btn dock__btn--primary" id="btn-run-turn" disabled><span class="dock__icon">»</span>Run turn</button>
+    </nav>
+  </div>
 
-    <section class="panel panel--territories" aria-labelledby="territories-heading">
-      <h2 id="territories-heading" class="panel__heading">Occupied Territories</h2>
-      <div id="territories-table-wrap">
-        <p class="empty-note">Start a game to see the board here.</p>
-      </div>
-    </section>
+  <div class="scrim" id="scrim" hidden></div>
 
-    <section class="panel panel--log" aria-labelledby="log-heading">
-      <h2 id="log-heading" class="panel__heading">Turn Log</h2>
-      <ol id="turn-log" class="turn-log" reversed>
-        <li class="empty-note">Nothing has happened yet.</li>
-      </ol>
-    </section>
-  </main>
+  <section class="sheet" id="sheet-menu" data-name="menu" hidden aria-labelledby="menu-title">
+    <header class="sheet__head"><h2 id="menu-title">My Arrakis</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <div class="sheet__body">
+      <label class="row-field"><span>Play as</span>
+        <select id="select-faction">
+          <option value="atreides" selected>Atreides</option>
+          <option value="harkonnen">Harkonnen</option>
+          <option value="emperor">Emperor</option>
+          <option value="fremen">Fremen</option>
+          <option value="guild">Spacing Guild</option>
+          <option value="gesserit">Bene Gesserit</option>
+          <option value="">Spectate (all AI)</option>
+        </select>
+      </label>
+      <label class="row-field"><span>Opponents</span>
+        <select id="select-ai">
+          <option value="strategic" selected>Strategic AI</option>
+          <option value="basic">Basic AI</option>
+          <option value="passive">Passive (engine test)</option>
+        </select>
+      </label>
+      <button id="btn-new-game" class="btn btn--primary btn--block">Start new game</button>
+      <p class="sheet__note">The game pauses whenever a decision is yours. Tap any territory for details. Add <code>?seed=N</code> to the address to replay a game.</p>
+      <p class="build-version">Version 2026-09-26e</p>
+    </div>
+  </section>
 
-  <footer class="controls">
-    <label class="control-select">
-      <span>Play as</span>
-      <select id="select-faction">
-        <option value="atreides" selected>Atreides</option>
-        <option value="harkonnen">Harkonnen</option>
-        <option value="emperor">Emperor</option>
-        <option value="fremen">Fremen</option>
-        <option value="guild">Spacing Guild</option>
-        <option value="gesserit">Bene Gesserit</option>
-        <option value="">Spectate (all AI)</option>
-      </select>
-    </label>
-    <label class="control-select">
-      <span>Opponents</span>
-      <select id="select-ai">
-        <option value="strategic" selected>Strategic AI</option>
-        <option value="basic">Basic AI</option>
-        <option value="passive">Passive (engine test)</option>
-      </select>
-    </label>
-    <button id="btn-new-game" class="btn btn--primary">Start New Game</button>
-    <button id="btn-step-phase" class="btn" disabled>Step One Phase</button>
-    <button id="btn-run-turn" class="btn" disabled>Run Full Turn</button>
-    <span id="controls-note" class="controls-note">Strategic AI spots who is close to winning and moves to stop them; deeper tactics are coming. The game pauses whenever it needs a decision from you.</span>
-  </footer>
+  <section class="sheet" id="sheet-hand" data-name="hand" hidden aria-labelledby="hand-heading">
+    <header class="sheet__head"><h2 id="hand-heading">Your hand</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <div class="sheet__body" id="hand-body"></div>
+  </section>
 
-  <p class="build-version">Version 2026-09-26d</p>
+  <section class="sheet" id="sheet-factions" data-name="factions" hidden aria-labelledby="factions-heading">
+    <header class="sheet__head"><h2 id="factions-heading">Factions</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <div class="sheet__body">
+      <div id="factions-grid"><p class="empty-note">No game yet.</p></div>
+      <h3 class="sheet__sub">Forces on the board</h3>
+      <div id="territories-table-wrap"><p class="empty-note">No game yet.</p></div>
+    </div>
+  </section>
+
+  <section class="sheet" id="sheet-log" data-name="log" hidden aria-labelledby="log-heading">
+    <header class="sheet__head"><h2 id="log-heading">Turn log</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <div class="sheet__body"><ol id="turn-log" class="turn-log"><li class="empty-note">Nothing has happened yet.</li></ol></div>
+  </section>
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-26d"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-26e"></script>
 </body>
 </html>
