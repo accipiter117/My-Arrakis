@@ -35,7 +35,7 @@ const shuffleWith = rng => arr => {
   return a;
 };
 
-const TOTAL_TREACHERY = treacheryDeckData.cards.length;
+const TOTAL_TREACHERY = treacheryDeckData.cards.filter(c => !(rulesConfig.houseRules?.removeWorthlessCards && c.category === 'worthless')).length; // cards actually in play (house rules may leave some out)
 
 // Forces are never created or destroyed, only moved between reserve,
 // board and tanks. Totals are recorded at setup and checked every phase.
