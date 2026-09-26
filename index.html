@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26e">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26f">
 </head>
 <body>
   <div class="app">
@@ -30,6 +30,11 @@
 
     <main class="stage">
       <div id="board" class="board-wrap"></div>
+      <div class="map-controls" aria-label="Map zoom">
+        <button class="icon-btn" id="zoom-in" aria-label="Zoom in">+</button>
+        <button class="icon-btn" id="zoom-out" aria-label="Zoom out">−</button>
+        <button class="icon-btn" id="zoom-reset" aria-label="Show the whole map" hidden>⤢</button>
+      </div>
       <div id="territory-info" class="territory-card" hidden></div>
     </main>
 
@@ -67,9 +72,16 @@
           <option value="passive">Passive (engine test)</option>
         </select>
       </label>
+      <button id="btn-continue" class="btn btn--primary btn--block" hidden>Continue</button>
       <button id="btn-new-game" class="btn btn--primary btn--block">Start new game</button>
+      <div class="save-actions">
+        <button id="btn-export" class="btn" disabled>Export save</button>
+        <label class="btn" for="input-import">Import save</label>
+        <input type="file" id="input-import" accept="application/json,.json" hidden>
+      </div>
+      <p class="sheet__note" id="save-note">Games save automatically after every phase.</p>
       <p class="sheet__note">The game pauses whenever a decision is yours. Tap any territory for details. Add <code>?seed=N</code> to the address to replay a game.</p>
-      <p class="build-version">Version 2026-09-26e</p>
+      <p class="build-version">Version 2026-09-26f</p>
     </div>
   </section>
 
@@ -94,6 +106,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-26e"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-26f"></script>
 </body>
 </html>
