@@ -121,6 +121,13 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     return plan;
   }
 
+  // A Truthtrance this faction asked earlier: true/false, or undefined if never asked.
+  function confirmedTraitor(state, me, opp, leaderId) {
+    const truth = (state.meta.truths ?? []).filter(t => t.asker === me && t.target === opp
+      && t.question.kind === 'isTraitor' && t.question.leaderId === leaderId).pop();
+    return truth ? truth.answer : undefined;
+  }
+
   // --- Decisions --------------------------------------------------------
 
   return {
@@ -159,6 +166,34 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return false;
     },
 
+    // Truthtrance before a battle: is my strongest available leader your traitor?
+    chooseTruthtrance(state, factionId, territoryId, opponentId) {
+      const best = own(state, factionId).leaders.available
+        .filter(id => battleEngine.isLeaderAvailable(state, factionId, id, territoryId) && confirmedTraitor(state, factionId, opponentId, id) === undefined)
+        .sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0))[0];
+      return best ? { kind: 'isTraitor', leaderId: best } : null;
+    },
+
+    // Karama: always save a leader from capture; cancel the Voice or
+    // Prescience when the battle is for a stronghold.
+    chooseKaramaCancel(state, factionId, purpose, { territoryId }) {
+      if (purpose === 'capture') return true;
+      return state.board.territories[territoryId]?.type === 'stronghold';
+    },
+
+    // Alliance: a well-off faction pledges about a third of its spice to its ally.
+    chooseAllyPledge(state, factionId) {
+      const spice = own(state, factionId).spice;
+      return spice >= 12 ? Math.floor(spice / 3) : 0;
+    },
+
+    // The Emperor pays for extra revivals for its ally when it can spare it.
+    chooseEmperorAllyRevival(state, factionId, allyId) {
+      const ally = own(state, allyId);
+      const spare = Math.floor((own(state, 'emperor').spice - 6) / 2);
+      return Math.max(0, Math.min(3, spare, (ally.revivalTanks ?? 0) - (ally.starredRevivalTanks ?? 0)));
+    },
+
     // Shed cards whose effects aren't in the game yet: they only block bidding.
     chooseDiscards(state, factionId, dead) {
       return dead;
@@ -193,7 +228,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     chooseRevival(state, factionId) {
       const me = own(state, factionId);
       const tanked = me.revivalTanks ?? 0;
-      const free = revivalEngine.freeRevivalAllowance(factionId);
+      const free = revivalEngine.freeRevivalAllowance(factionId, state);
       let forces = Math.min(free, tanked);
       if (me.spice >= 12) forces = Math.min(3, tanked);
       // At most one starred force per turn; the rest must be ordinary ones
@@ -343,8 +378,10 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
       const supportedOrdinaryCount = spiceCommitted - supportedStarredCount;
 
-      // Only leaders who haven't fought in another territory this turn.
-      const leaders = me.leaders.available.filter(id => battleEngine.isLeaderAvailable(state, factionId, id, territoryId))
+      // Only leaders who haven't fought in another territory this turn, and
+      // never one a Truthtrance has confirmed is this opponent's traitor.
+      const leaders = me.leaders.available.filter(id => battleEngine.isLeaderAvailable(state, factionId, id, territoryId)
+          && !confirmedTraitor(state, factionId, opponentId, id))
         .sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0));
       const leaderId = leaders[0] ?? null;
       const hand = me.treacheryHand.map(id => ({ id, category: cardLookup[id]?.category }));
