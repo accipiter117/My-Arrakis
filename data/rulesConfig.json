@@ -117,6 +117,10 @@
       {
         "id": "allyPledge",
         "justification": "Allies may pay for each other's treachery cards and shipments. Digitally, at the start of Bidding each allied faction may pledge an amount for that turn; the ally spends its own spice first, then the pledge."
+      },
+      {
+        "id": "removeWorthlessCards",
+        "justification": "House rule at the project owner's request: the five worthless cards (Baliset, Jubba Cloak, Kulon, La La La, Trip to Gamont) are left out of the Treachery Deck, making 28 cards instead of 33. Their rules remain in the code (bluffing in battle, Bene Gesserit using them as Karama); set houseRules.removeWorthlessCards to false to restore them. Games already in progress keep their deck."
       }
     ]
   },
@@ -149,5 +153,8 @@
     ],
     "maxTurns": 10,
     "notes": "Confirmed directly from the base rulebook text. Solo win is 3 strongholds (or all 3 Tech Tokens if Ixian/Tleilaxu expansion is active, per that expansion's rulebook), alliance win is 4 (first player) held jointly. Two-player games use 4 regardless of alliance status."
+  },
+  "houseRules": {
+    "removeWorthlessCards": true
   }
 }
