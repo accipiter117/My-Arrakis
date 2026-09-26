@@ -426,7 +426,8 @@ function ensureBoard(data) {
     board, layer: $('event-layer'), factionColors: FACTION_COLORS, getSpeed: () => speed,
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
     renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds }),
-    renderReal: renderBoard
+    renderReal: renderBoard,
+    getViewer: () => humanFactionId
   });
   // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
   if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, get state() { return gameState; } };
