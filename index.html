@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26c">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26d">
 </head>
 <body>
   <header class="masthead">
@@ -24,6 +24,12 @@
   </nav>
 
   <main class="layout">
+    <section class="panel panel--map" aria-labelledby="map-heading">
+      <h2 id="map-heading" class="panel__heading">Arrakis</h2>
+      <div id="board" class="board-wrap"></div>
+      <div id="territory-info" class="territory-info">Tap a territory to see who holds it.</div>
+    </section>
+
     <section class="panel panel--hand" id="hand-panel" aria-labelledby="hand-heading" hidden>
       <h2 id="hand-heading" class="panel__heading">Your hand</h2>
       <div id="hand-body"></div>
@@ -78,10 +84,10 @@
     <span id="controls-note" class="controls-note">Strategic AI spots who is close to winning and moves to stop them; deeper tactics are coming. The game pauses whenever it needs a decision from you.</span>
   </footer>
 
-  <p class="build-version">Version 2026-09-26c</p>
+  <p class="build-version">Version 2026-09-26d</p>
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-26c"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-26d"></script>
 </body>
 </html>
