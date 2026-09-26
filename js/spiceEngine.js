@@ -111,8 +111,12 @@ function devourTopOfPile(state, pileKey) {
   // EXCEPT Fremen forces, which are protected and may ride the worm.
   // TODO: implement the actual "ride the worm" relocation choice, this
   // just protects Fremen forces from removal for now rather than moving them.
+  // Record where the worm struck: Fremen there may ride it after the Nexus.
+  state.nexus.wormTerritories = [...(state.nexus.wormTerritories ?? []), topCard.id];
+  // Fremen are never eaten, and neither is the Fremen's ally (who can't ride).
+  const fremenAlly = (state.alliances ?? []).find(a => a.factions.includes('fremen'))?.factions.find(f => f !== 'fremen');
   for (const factionId of Object.keys(state.factions)) {
-    if (factionId === 'fremen') continue;
+    if (factionId === 'fremen' || factionId === fremenAlly) continue;
     const faction = state.factions[factionId];
     const forcesHere = faction.forces.onBoard[topCard.id];
     if (forcesHere) {
@@ -125,6 +129,7 @@ function devourTopOfPile(state, pileKey) {
 }
 
 function resolveSpiceBlowPhase(state) {
+  state.nexus.wormTerritories = [];
   const resultA = resolvePile(state, 'A');
   const resultB = resolvePile(state, 'B');
 
