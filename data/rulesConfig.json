@@ -101,6 +101,10 @@
       {
         "id": "unbuiltCardDiscard",
         "justification": "The official rules allow no voluntary discards. But Karama and Truthtrance (effects not yet built) and Weather Control and Family Atomics (need sector data) have no use in this version yet, so their holders may discard them: the human any time from the Hand sheet, the AI at the start of Bidding. Remove once those cards work."
+      },
+      {
+        "id": "atreidesForesightTiming",
+        "justification": "House rule at the project owner's request. Officially Atreides look at the top Spice card during Shipment and Movement; here they see it from the end of the Spice Blow. The card cannot change in between (nothing is drawn until the next Spice Blow), so Atreides simply know it earlier, during Bidding and Revival."
       }
     ]
   },
