@@ -25,6 +25,8 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseCaptureAction: (state, factionId, leaderId, fromId) => pick(factionId).chooseCaptureAction(state, factionId, leaderId, fromId),
     chooseWormRide: (state, factionId, from) => pick(factionId).chooseWormRide(state, factionId, from),
 
+    // The human discards from their Hand sheet whenever they like; only the AI is asked here.
+    chooseDiscards: (state, factionId, dead) => (factionId === humanFactionId ? [] : ai.chooseDiscards?.(state, factionId, dead) ?? []),
     // Diplomacy: each faction decides for itself, human or AI.
     chooseBreakAlliance: (state, factionId, ally) => pick(factionId).chooseBreakAlliance(state, factionId, ally),
     chooseAllianceProposal: (state, factionId) => pick(factionId).chooseAllianceProposal(state, factionId),
