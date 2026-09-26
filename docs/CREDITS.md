@@ -27,6 +27,9 @@
 ## Ships and sandworm
 - `assets/ships/*.png`: commissioned by the project owner (generated with ChatGPT to a brief based on the novels). Cut out and resized for the game.
 
+## Turn announcements
+- `assets/sfx/turn-atreides.mp3`: supplied by the project owner. Levelled.
+
 ## Game
 Based on the board game Dune (Gale Force Nine, 2019). A personal fan
 project; the map, interface and artwork are original.
