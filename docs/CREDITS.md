@@ -15,6 +15,10 @@
 - **Ornithopter flight** (`assets/sfx/ornithopter.mp3`): supplied by the
   project owner. Loudness levelled, then raised 80% at the project owner’s request.
 
+- **Revival ambience** (`assets/sfx/revival-tanks.wav`, the Tleilaxu tanks) and
+  **Bidding ambience** (`assets/sfx/bidding.wav`): supplied by the project
+  owner. Made into seamless loops (half-second crossfade), levelled, mono.
+
 ## Game
 Based on the board game Dune (Gale Force Nine, 2019). A personal fan
 project; the map, interface and artwork are original.
