@@ -417,6 +417,8 @@ strong { color: var(--gold); }
 .ftable th:first-child, .ftable td:first-child { text-align: left; }
 .ftable td { text-align: right; padding: 0.35rem 0.25rem; border-top: 1px solid #2f2217; color: var(--sand); }
 .ftable td small { color: var(--sand-dim); }
+.ftable td small.known { color: var(--spice); }
+.decision__known { border-left: 3px solid var(--spice); background: rgba(227, 123, 44, 0.12); padding: 0.4rem 0.55rem; color: var(--sand) !important; }
 .ftable tr.is-you td { color: var(--gold); font-weight: 700; }
 .faction-chip { width: 9px; height: 9px; display: inline-block; margin-right: 0.35rem; vertical-align: 0; border: 1px solid rgba(236, 217, 178, 0.35); transform: rotate(45deg); }
 
