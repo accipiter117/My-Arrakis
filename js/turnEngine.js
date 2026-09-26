@@ -165,9 +165,10 @@ async function runStormPhase(state, decisionProvider) {
 
   const previousPosition = state.board.stormPosition ?? 0;
   state.board.stormPosition = stormEngine.advanceStormPosition(previousPosition, sectorsToMove);
+  const damage = stormEngine.applyStormDamage(state, previousPosition, sectorsToMove);
   // The Fremen shuffle every Storm card back and secretly preview next turn's.
   if (state.factions.fremen) state.board.nextStormCard = stormEngine.drawStormCard(random);
-  await observe(decisionProvider, { type: 'storm', from: previousPosition, to: state.board.stormPosition, sectors: sectorsToMove, dials, stormCard, first: isFirstStorm }, state);
+  await observe(decisionProvider, { type: 'storm', from: previousPosition, to: state.board.stormPosition, sectors: sectorsToMove, dials, stormCard, first: isFirstStorm, damage }, state);
 
   // First Player is genuinely blocked on player-circle sector data (see
   // docs/STORM_TODO.md), but leaving state.meta.firstPlayer as null broke
@@ -185,7 +186,7 @@ async function runStormPhase(state, decisionProvider) {
   // Damage and First Player determination are genuinely blocked on sector
   // data, see docs/STORM_TODO.md, not silently skipped, explicitly noted
   // on the result so nothing downstream mistakes this for a complete Storm phase.
-  return { sectorsToMove, newPosition: state.board.stormPosition, damageApplied: false, firstPlayerDetermined: false };
+  return { sectorsToMove, newPosition: state.board.stormPosition, damage, damageApplied: true, firstPlayerDetermined: false };
 }
 
 async function runSpiceBlowPhase(state, decisionProvider) {
@@ -362,7 +363,8 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount }, state);
         // Bene Gesserit Spiritual Advisors: whenever another faction ships in
         // from off-planet, Bene Gesserit may place 1 force in the Polar Sink free.
-        if (factionId !== 'gesserit' && state.factions.gesserit?.forces.reserve > 0 && decisionProvider.chooseAdvisor
+        // (Not for the Fremen: their forces come from the deep desert, not off-planet.)
+        if (factionId !== 'gesserit' && factionId !== 'fremen' && state.factions.gesserit?.forces.reserve > 0 && decisionProvider.chooseAdvisor
             && await decisionProvider.chooseAdvisor(state, 'gesserit', factionId)) {
           state.factions.gesserit.forces.reserve -= 1;
           state.factions.gesserit.forces.onBoard.polarSink = (state.factions.gesserit.forces.onBoard.polarSink ?? 0) + 1;
