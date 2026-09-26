@@ -10,7 +10,7 @@
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export function createPresenter({ board, layer, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null }) {
+export function createPresenter({ board, layer, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null }) {
   const speed = () => getSpeed();
   const scaled = ms => ms * speed();
   const wait = ms => new Promise(resolve => setTimeout(resolve, scaled(ms)));
@@ -112,6 +112,7 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
         if (speed()) await board.pulse(e.territoryId, 'spice', scaled(900));
         await shown;
       } else if (e.kind === 'worm') {
+        if (speed()) sfx?.play('wormRoar');
         const shown = showCard('worm', card('Shai-Hulud', 'A worm rises',
           `${e.devoured ? `It devours <strong>${esc(names.territory(e.devoured))}</strong>: spice and troops there are lost (Fremen are spared). ` : ''}A Nexus follows.`), 2000);
         if (speed() && e.devoured) await board.worm(e.devoured, scaled(1300));
@@ -123,6 +124,9 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
 
     async shipment(e, state) {
       if (!speed()) return;
+      // Troops arriving from off-world. The Fremen are already on Arrakis:
+      // their "shipment" is a march from the deep desert, so no ship.
+      if (e.factionId !== 'fremen') sfx?.play('shipArrival');
       renderDisplay(displayWithout(state, e.factionId, e.territoryId, e.amount));
       await board.animateToken({ color: factionColors[e.factionId], count: e.amount,
         points: [board.offBoardPoint(e.territoryId), board.labelPoint(e.territoryId)], msPerHop: scaled(950), hop: 30 });
