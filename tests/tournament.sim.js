@@ -28,8 +28,9 @@ function seats(bySeat, fallback) {
   const pick = f => bySeat[f] ?? fallback;
   const route = name => (state, f, ...rest) => pick(f)[name](state, f, ...rest);
   const methods = ['chooseStormDial', 'chooseTraitor', 'choosePrediction', 'chooseBid', 'chooseRevival',
-    'chooseShipmentAndMovement', 'chooseBattlePlan', 'choosePrescienceElement'];
-  return { ...Object.fromEntries(methods.map(m => [m, route(m)])), chooseAllianceActions: s => fallback.chooseAllianceActions(s) };
+    'chooseShipmentAndMovement', 'chooseBattlePlan', 'choosePrescienceElement', 'chooseVoice', 'chooseCardsToDiscard',
+    'chooseCaptureAction', 'chooseWormRide', 'chooseRevealTraitor', 'chooseBreakAlliance', 'chooseAllianceProposal', 'chooseAllianceResponse'];
+  return Object.fromEntries(methods.map(m => [m, route(m)]));
 }
 
 async function play(seed, makeProvider) {
