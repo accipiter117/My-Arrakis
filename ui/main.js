@@ -209,6 +209,12 @@ async function resumeGame(save) {
     territoriesData = data.territories;
     ensureBoard(data);
     gameState = save.state;
+    // Saved games carry their own copy of the map data: refresh borders and
+    // storm sectors so continued games use the current (corrected) map.
+    for (const [id, t] of Object.entries(gameState.board.territories ?? {})) {
+      const fresh = data.territories.territories[id];
+      if (fresh) Object.assign(t, { adjacentDraft: fresh.adjacentDraft, stormSector: fresh.stormSector, stormShare: fresh.stormShare });
+    }
     setRandomState(save.rng);
     logEntries = save.log ?? [];
     humanFactionId = save.humanFactionId ?? null;
