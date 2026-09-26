@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26u">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26v">
 </head>
 <body>
   <div class="app">
@@ -24,8 +24,11 @@
         <span id="status-ally" class="pill pill--ally" hidden>—</span>
         <span id="status-spice" class="pill pill--spice" hidden>—</span>
         <span id="status-storm" class="pill">Storm —</span>
+        <button id="topbar-hand" class="pill pill--hand" hidden aria-label="Your hand">Hand</button>
       </div>
     </header>
+
+    <button id="victory-watch" class="watch" hidden aria-live="polite"></button>
 
     <nav class="phase-track" id="phase-track" aria-label="Turn phases"></nav>
 
@@ -102,6 +105,7 @@
         <input type="range" id="sfx-volume" min="0" max="1" step="0.05" aria-label="Sound effects volume">
       </label>
       <div class="music-now"><span id="music-now">Music starts with your first tap.</span><button class="icon-btn" id="music-skip" aria-label="Next track">⏭</button></div>
+      <button class="btn btn--block" data-open-guide>Faction guide</button>
       <button id="btn-continue" class="btn btn--primary btn--block" hidden>Continue</button>
       <button id="btn-new-game" class="btn btn--primary btn--block">Start new game</button>
       <div class="save-actions">
@@ -119,7 +123,7 @@
         <p>Ornithopter flight: supplied for the game by its creator.</p>
         <p>Based on the board game Dune (Gale Force Nine, 2019). A personal fan project; map and art are original.</p>
       </details>
-      <p class="build-version">Version 2026-09-26u</p>
+      <p class="build-version">Version 2026-09-26v</p>
     </div>
   </section>
 
@@ -131,10 +135,17 @@
   <section class="sheet" id="sheet-factions" data-name="factions" hidden aria-labelledby="factions-heading">
     <header class="sheet__head"><h2 id="factions-heading">Factions</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
     <div class="sheet__body">
+      <div id="watch-list"></div>
       <div id="factions-grid"><p class="empty-note">No game yet.</p></div>
+      <button class="btn btn--block" data-open-guide>Faction guide: strengths and counters</button>
       <h3 class="sheet__sub">Forces on the board</h3>
       <div id="territories-table-wrap"><p class="empty-note">No game yet.</p></div>
     </div>
+  </section>
+
+  <section class="sheet" id="sheet-guide" data-name="guide" hidden aria-labelledby="guide-heading">
+    <header class="sheet__head"><h2 id="guide-heading">Faction guide</h2><button class="icon-btn" data-close aria-label="Close">✕</button></header>
+    <div class="sheet__body" id="guide-body"></div>
   </section>
 
   <section class="sheet" id="sheet-log" data-name="log" hidden aria-labelledby="log-heading">
@@ -144,6 +155,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-26u"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-26v"></script>
 </body>
 </html>
