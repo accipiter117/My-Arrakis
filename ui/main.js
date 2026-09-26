@@ -12,6 +12,7 @@ import { initializeGame } from '../js/setupEngine.js';
 import * as turnEngine from '../js/turnEngine.js';
 import * as phaseEngine from '../js/phaseEngine.js';
 import { createBasicAI } from '../js/ai/basicAI.js';
+import { createStrategicAI } from '../js/ai/strategicAI.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 
@@ -89,12 +90,13 @@ async function startNewGame() {
       territoriesData: data.territories,
       treacheryDeckData: data.treacheryDeck,
       leadersData: data.leaders,
-      rngShuffle: shuffleArray
+      // ?seed=123 in the address replays a specific game exactly.
+      seed: Number(new URLSearchParams(location.search).get('seed')) || undefined
     });
 
     const aiChoice = $('select-ai').value;
-    const ai = aiChoice === 'basic'
-      ? createBasicAI({ leadersData: data.leaders, cardLookup })
+    const ai = aiChoice === 'strategic' ? createStrategicAI({ leadersData: data.leaders, cardLookup })
+      : aiChoice === 'basic' ? createBasicAI({ leadersData: data.leaders, cardLookup })
       : turnEngine.passiveDecisionProvider;
     decisionProvider = humanFactionId
       ? createMixedProvider({
@@ -108,7 +110,7 @@ async function startNewGame() {
 
     logEntries = [];
     const who = humanFactionId ? `You play ${FACTION_NAMES[humanFactionId]}` : 'Spectating';
-    addLog('setup', 1, `New game. ${who}; opponents: ${aiChoice === 'basic' ? 'Basic AI' : 'Passive'}.`);
+    addLog('setup', 1, `New game (seed ${gameState.meta.seed}). ${who}; opponents: ${{ strategic: 'Strategic AI', basic: 'Basic AI', passive: 'Passive' }[aiChoice]}.`);
     render();
 
     const setup = await turnEngine.runSetupDecisions(gameState, decisionProvider);
