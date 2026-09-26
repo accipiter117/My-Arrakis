@@ -9,6 +9,7 @@
 // even a decision point in this phase for either to make, it's fully
 // deterministic once the deck order is set).
 
+import { random } from './random.js';
 function buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle) {
   const wormCards = Array.from(
     { length: spiceDeckData.shaiHuludCount },
@@ -43,7 +44,7 @@ function drawSpiceCard(state) {
 function reshuffle(array) {
   const result = array.slice();
   for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
