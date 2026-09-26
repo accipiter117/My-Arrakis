@@ -99,12 +99,24 @@
         "justification": "Advanced rules: after the first storm, the Fremen reveal the Storm card they previewed last turn, then shuffle all six back and preview the next. The six cards are modelled as values 1 to 6, one each (js/stormEngine.js STORM_DECK), pending confirmation against the physical deck. Without the Fremen in play, the last two battlers dial 1-3 each as in the basic rules."
       },
       {
-        "id": "unbuiltCardDiscard",
-        "justification": "The official rules allow no voluntary discards. But Karama and Truthtrance (effects not yet built) and Weather Control and Family Atomics (need sector data) have no use in this version yet, so their holders may discard them: the human any time from the Hand sheet, the AI at the start of Bidding. Remove once those cards work."
-      },
-      {
         "id": "atreidesForesightTiming",
         "justification": "House rule at the project owner's request. Officially Atreides look at the top Spice card during Shipment and Movement; here they see it from the end of the Spice Blow. The card cannot change in between (nothing is drawn until the next Spice Blow), so Atreides simply know it earlier, during Bidding and Revival."
+      },
+      {
+        "id": "unbuiltCardDiscard",
+        "justification": "The official rules allow no voluntary discards. Weather Control and Family Atomics need the storm's sector data and have no use yet, so their holders may discard them (the human from the Hand sheet, the AI at the start of Bidding). Remove once the storm is built."
+      },
+      {
+        "id": "truthtranceQuestions",
+        "justification": "Truthtrance allows any yes/no question answered truthfully. Digitally, questions are limited to facts the game can answer from its own state (do you hold a kind of card, is this leader your traitor, do you have at least N spice), in line with tournament guidance to avoid speculative questions. The game answers, so answers are always truthful."
+      },
+      {
+        "id": "karamaScope",
+        "justification": "Karama's core use is built: cancelling the Voice, Atreides Prescience or a Harkonnen capture as it is used against you. Other Karama cancels and each faction's once-per-game advanced Karama power are not yet built."
+      },
+      {
+        "id": "allyPledge",
+        "justification": "Allies may pay for each other's treachery cards and shipments. Digitally, at the start of Bidding each allied faction may pledge an amount for that turn; the ally spends its own spice first, then the pledge."
       }
     ]
   },
