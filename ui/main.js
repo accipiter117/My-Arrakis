@@ -333,7 +333,8 @@ function describe(entry) {
       const text = result.placed.length
         ? result.placed.map(m => `${m.amount} spice in ${territoryNameOf(m.territoryId)}`).join(', ')
         : 'no new spice placed';
-      return log(`Spice blow: ${text}.${result.nexus ? ' Shai-Hulud appeared, a Nexus follows.' : ''}`);
+      const rides = (result.rides ?? []).map(r => ` Fremen rode the worm from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)} with ${r.amount} forces.`).join('');
+      return log(`Spice blow: ${text}.${result.nexus ? ' Shai-Hulud appeared, a Nexus follows.' : ''}${rides}`);
     }
     case 'charity':
       if (result.length) log(result.map(r => `${nameOf(r.factionId)} +${r.amountReceived}`).join(', ') + ' spice.');
@@ -361,11 +362,14 @@ function describe(entry) {
     case 'battle':
       for (const r of result) {
         const place = territoryNameOf(r.territoryId);
+        const voiced = r.voice ? ` Voice: ${nameOf(r.voice.target)} ${r.voice.command === 'play' ? 'must play' : 'must not play'} ${r.voice.category.replace(/([A-Z])/g, ' $1').toLowerCase()}.` : '';
+        const canSee = r.capture && (humanFactionId === 'harkonnen' || humanFactionId === r.capture.from || !humanFactionId);
+        const captured = r.capture ? ` Harkonnen captured ${canSee ? leaderNameOf(r.capture.leaderId) : 'a leader'} from ${nameOf(r.capture.from)}${r.capture.action === 'kill' ? ' and killed them for 2 spice' : ''}.` : '';
         const saw = r.prescience ? ` Prescience: Atreides saw ${nameOf(r.prescience.opponentId)}'s ${r.prescience.element === 'number' ? 'force count' : r.prescience.element}.` : '';
         const plans = r.plans ? ` [${describePlan(r.aggressorId, r.plans[r.aggressorId])} | ${describePlan(r.defenderId, r.plans[r.defenderId])}]` : '';
         if (r.explosion) log(`Lasgun/shield explosion in ${place}: everything there is destroyed.${plans}`);
         else if (r.mutualTraitors) log(`Both leaders were traitors in ${place}; both sides lose everything.${plans}`);
-        else log(`${nameOf(r.winnerFactionId)} beat ${nameOf(r.loserFactionId)} in ${place}${r.traitor ? ' (traitor revealed)' : ''}.${saw}${plans}`);
+        else log(`${nameOf(r.winnerFactionId)} beat ${nameOf(r.loserFactionId)} in ${place}${r.traitor ? ' (traitor revealed)' : ''}.${voiced}${saw}${captured}${plans}`);
       }
       return;
     case 'spiceCollection': {
