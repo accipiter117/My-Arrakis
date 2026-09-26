@@ -21,6 +21,7 @@
 import { random } from '../random.js';
 import * as movementEngine from '../movementEngine.js';
 import * as revivalEngine from '../revivalEngine.js';
+import * as battleEngine from '../battleEngine.js';
 
 const WEAPON_CATEGORIES = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
 const DEFENSE_CATEGORIES = ['poisonDefense', 'projectileDefense'];
@@ -266,6 +267,39 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     // Commits more for strongholds, backs forces with spice while keeping
     // a little in reserve, plays its strongest leader and whatever weapon
     // and defence it holds. Never pairs its own lasgun with its own shield.
+    // Bene Gesserit only. With a weapon in hand, forbid the defence that
+    // stops it; with a defence, command the weapon it stops (wasting it).
+    chooseVoice(state, factionId) {
+      const hand = own(state, factionId).treacheryHand.map(id => cardLookup[id]?.category);
+      if (hand.includes('poisonWeapon')) return { command: 'notPlay', category: 'poisonDefense' };
+      if (hand.includes('projectileWeapon')) return { command: 'notPlay', category: 'projectileDefense' };
+      if (hand.includes('poisonDefense')) return { command: 'play', category: 'poisonWeapon' };
+      if (hand.includes('projectileDefense')) return { command: 'play', category: 'projectileWeapon' };
+      return { command: 'notPlay', category: 'specialWeapon' };
+    },
+
+    // After a win, shed worthless cards and keep everything useful.
+    chooseCardsToDiscard(state, factionId, played) {
+      return played.filter(id => cardLookup[id]?.category === 'worthless');
+    },
+
+    // Harkonnen: keep a strong captured leader to fight with, kill a weak
+    // one for 2 spice.
+    chooseCaptureAction(state, factionId, leaderId) {
+      return (leaderValue[leaderId] ?? 0) >= 4 ? 'keep' : 'kill';
+    },
+
+    // Fremen: ride the worm to the most valuable territory it can land in.
+    chooseWormRide(state, factionId, from) {
+      let best = null;
+      for (const to of Object.keys(state.board.territories)) {
+        if (!movementEngine.canRideWorm(state, from, to).ok) continue;
+        const score = territoryValue(state, factionId, to) + rng();
+        if (score > 5 && (!best || score > best.score)) best = { to, score };
+      }
+      return best?.to ?? null;
+    },
+
     // Atreides only: protect the leader by learning the weapon.
     choosePrescienceElement() {
       return 'weapon';
@@ -283,7 +317,9 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
       const supportedOrdinaryCount = spiceCommitted - supportedStarredCount;
 
-      const leaders = me.leaders.available.slice().sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0));
+      // Only leaders who haven't fought in another territory this turn.
+      const leaders = me.leaders.available.filter(id => battleEngine.isLeaderAvailable(state, factionId, id, territoryId))
+        .sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0));
       const leaderId = leaders[0] ?? null;
       const hand = me.treacheryHand.map(id => ({ id, category: cardLookup[id]?.category }));
       const cheapHeroCardId = leaderId ? null : (hand.find(c => c.category === 'specialLeaderSubstitute')?.id ?? null);
@@ -294,14 +330,21 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const usingLasgun = weaponCardId && cardLookup[weaponCardId]?.category === 'specialWeapon';
       const defense = hand.find(c => DEFENSE_CATEGORIES.includes(c.category) &&
         !(usingLasgun && c.category === 'projectileDefense'));
-      const defenseCardId = defense?.id ?? null;
+      let defenseCardId = defense?.id ?? null;
+      // Worthless cards can only be shed by playing them: fill empty slots.
+      const worthless = hand.filter(c => c.category === 'worthless').map(c => c.id);
+      let finalWeapon = weaponCardId;
+      if (!finalWeapon && worthless.length) finalWeapon = worthless.shift();
+      if (!defenseCardId && worthless.length) defenseCardId = worthless.shift();
 
       const plan = {
         forcesCommitted, starredForcesCommitted, spiceCommitted,
         supportedStarredCount, supportedOrdinaryCount,
         leaderId, leaderFightingValue: leaderId ? (leaderValue[leaderId] ?? 0) : 0,
-        cheapHeroCardId, weaponCardId, defenseCardId,
-        useKwisatzHaderach: Boolean(me.specialFactionState?.kwisatzHaderachActive && (leaderId || cheapHeroCardId))
+        cheapHeroCardId, weaponCardId: finalWeapon, defenseCardId,
+        // The Kwisatz Haderach may join only one territory's battle per phase.
+        useKwisatzHaderach: Boolean(me.specialFactionState?.kwisatzHaderachActive && (leaderId || cheapHeroCardId) &&
+          [null, undefined, territoryId].includes(me.specialFactionState?.kwisatzHaderachUsedInTerritoryThisPhase))
       };
       return intel ? applyIntel(plan, intel, me, hand, present, starredPresent) : plan;
     }
