@@ -496,6 +496,8 @@ strong { color: var(--gold); }
 .token__disc { stroke: #f1dfb8; stroke-width: 3; paint-order: stroke; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55)); }
 .token__count { font-family: var(--font-data); font-weight: 700; font-size: 17px; fill: #fff6e4; text-anchor: middle; }
 .token__count--spice { fill: #1c0d04; }
+.token__count--counter { font-size: 17px; fill: #fff8ea; paint-order: stroke; stroke: #120b06; stroke-width: 3px; stroke-linejoin: round; }
+.token__counter { filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.55)); }
 .token__spice-bg { fill: #f08d3e; stroke: #fff0d0; stroke-width: 2; filter: drop-shadow(0 0 5px rgba(240, 141, 62, 0.95)); animation: spice-glow 2.6s ease-in-out infinite; }
 @keyframes spice-glow { 50% { filter: drop-shadow(0 0 10px rgba(255, 170, 90, 1)); } }
 .token--foreseen { opacity: 0.85; }
