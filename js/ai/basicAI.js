@@ -18,13 +18,14 @@
 // canX() validators a human action would use, so an illegal proposal is
 // simply refused rather than bending the rules.
 
+import { random } from '../random.js';
 import * as movementEngine from '../movementEngine.js';
 import * as revivalEngine from '../revivalEngine.js';
 
 const WEAPON_CATEGORIES = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
 const DEFENSE_CATEGORIES = ['poisonDefense', 'projectileDefense'];
 
-export function createBasicAI({ leadersData, cardLookup, rng = Math.random }) {
+export function createBasicAI({ leadersData, cardLookup, rng = random }) {
   // Leader fighting values are printed on the discs, so they are public.
   const leaderValue = {};
   for (const factionLeaders of Object.values(leadersData)) {
