@@ -287,17 +287,21 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     if (decision.movement) {
       const { from, to, amount } = decision.movement;
       if (movementEngine.canMove(state, factionId, from, to, amount).ok) {
+        // Ornithopter access is decided at the start of the move: leaving
+        // Arrakeen or Carthag in this very move still flies.
+        const ornithopter = movementEngine.hasOrnithopterAccess(state, factionId);
         movementEngine.executeMove(state, factionId, from, to, amount);
-        results.push({ factionId, type: 'movement', from, to, amount });
-        await observe(decisionProvider, { type: 'move', factionId, from, to, amount }, state);
+        results.push({ factionId, type: 'movement', from, to, amount, ornithopter });
+        await observe(decisionProvider, { type: 'move', factionId, from, to, amount, ornithopter }, state);
       }
     }
     // Hajr: one extra move, played after the normal one.
     if (decision.hajrMove && cardEffects.canPlayHajr(state, factionId, decision.hajrMove).ok) {
       const { from, to, amount } = decision.hajrMove;
+      const ornithopter = movementEngine.hasOrnithopterAccess(state, factionId);
       cardEffects.playHajr(state, factionId, decision.hajrMove);
-      results.push({ factionId, type: 'movement', from, to, amount, card: 'hajr' });
-      await observe(decisionProvider, { type: 'move', factionId, from, to, amount, card: 'hajr' }, state);
+      results.push({ factionId, type: 'movement', from, to, amount, card: 'hajr', ornithopter });
+      await observe(decisionProvider, { type: 'move', factionId, from, to, amount, card: 'hajr', ornithopter }, state);
     }
   }
 
