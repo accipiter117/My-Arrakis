@@ -859,7 +859,10 @@ const music = createMusic({
     $('music-now').textContent = !m.enabled ? 'Music is off.' : m.playing ? `Now playing: ${m.title}` : 'Music starts with your first tap.';
   }
 });
-const sfx = createSfx({ onPlay: name => { if (name === 'wormRoar') music.duck(3.2); } });
+const sfx = createSfx({ onPlay: (name, seconds) => {
+  if (name === 'wormRoar') music.duck(3.2);
+  if (name.startsWith('turn-')) music.duck(seconds); // let turn announcements come through
+} });
 $('select-sfx').value = sfx.settings.enabled ? 'on' : 'off';
 $('sfx-volume').value = String(sfx.settings.volume);
 $('select-sfx').addEventListener('change', e => sfx.setEnabled(e.target.value === 'on'));
