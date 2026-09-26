@@ -14,7 +14,7 @@ const CATEGORY_TEXT = { poisonWeapon: 'a poison weapon', projectileWeapon: 'a pr
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export function createPresenter({ board, layer, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null, cardLookup = null }) {
+export function createPresenter({ board, layer, banner = null, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null, cardLookup = null }) {
   const speed = () => getSpeed();
   const scaled = ms => ms * speed();
   const wait = ms => new Promise(resolve => setTimeout(resolve, scaled(ms)));
@@ -63,7 +63,50 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
   }
   const chip = f => `<span class="faction-chip" style="background:${factionColors[f]}"></span>${esc(names.faction(f))}`;
 
+  // --- Turn banner: whose turn it is, at the top centre of the map -------------
+  const PHASE_LABELS = { shipment: 'Shipment & movement', revival: 'Revival' };
+  const counterUrl = f => new URL(`../assets/counters/${f}.png`, import.meta.url).href;
+  function showBanner(factionId, phase, mine) {
+    if (!banner) return;
+    banner.style.setProperty('--banner-colour', factionColors[factionId]);
+    banner.innerHTML = `<img src="${counterUrl(factionId)}" alt="">
+      <div><div class="turn-banner__name">${mine ? 'Your turn' : esc(names.faction(factionId))}</div>
+      <div class="turn-banner__phase">${mine ? esc(names.faction(factionId)) + ' · ' : ''}${esc(PHASE_LABELS[phase] ?? phase)}</div>
+      <div class="turn-banner__note" hidden></div></div>`;
+    banner.hidden = false;
+    banner.classList.remove('turn-banner--leaving');
+  }
+  function bannerNote(text) {
+    const note = banner?.querySelector('.turn-banner__note');
+    if (note) { note.textContent = text; note.hidden = false; }
+  }
+  function hideBanner() {
+    if (!banner || banner.hidden) return;
+    banner.classList.add('turn-banner--leaving');
+    setTimeout(() => { if (banner.classList.contains('turn-banner--leaving')) banner.hidden = true; }, 250);
+  }
+
   const handlers = {
+    // A faction's turn begins: announce it, and give the player a moment to see it.
+    async turnStart(e) {
+      if (!speed()) return;
+      const mine = getViewer() === e.factionId;
+      showBanner(e.factionId, e.phase, mine);
+      sfx?.play(`turn-${e.factionId}`); // per-faction announcement audio, once supplied
+      if (!mine) await wait(900);
+    },
+    // A faction's turn ends: say what happened if it isn't already visible.
+    async turnEnd(e) {
+      if (!speed()) return;
+      const mine = getViewer() === e.factionId;
+      const note = !e.acted ? 'passes'
+        : e.phase === 'revival' ? `revives ${[e.forces ? `${e.forces} troop${e.forces === 1 ? '' : 's'}` : '', e.leaders ? `${e.leaders} leader${e.leaders === 1 ? '' : 's'}` : ''].filter(Boolean).join(' and ')}`
+        : null;
+      if (note) bannerNote(note);
+      await wait(note ? (mine ? 500 : 1000) : (mine ? 0 : 450));
+      hideBanner();
+    },
+
     async auctionStart(e) {
       if (!speed()) return;
       // Only Atreides may see the card before bidding (Prescience).
