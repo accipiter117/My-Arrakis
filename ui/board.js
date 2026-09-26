@@ -35,6 +35,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   const stormLayer = el('g', {}, svg);
   const labelLayer = el('g', { class: 'board__labels' }, svg);
   const tokenLayer = el('g', {}, svg);
+  const fxLayer = el('g', { class: 'board__fx' }, svg); // animations sit above everything
 
   // 18 sectors: decorative radial lines (sector membership of territories
   // is still awaiting the sector count, see docs/STORM_TODO.md).
@@ -185,8 +186,106 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     }
   }
 
+  // --- Animation tools (used by ui/presenter.js) ----------------------------
+
+  const tween = (ms, step) => new Promise(resolve => {
+    if (ms <= 0) { step(1); resolve(); return; }
+    const t0 = performance.now();
+    const frame = now => {
+      const t = Math.min(1, (now - t0) / ms);
+      step(t);
+      if (t < 1) requestAnimationFrame(frame); else resolve();
+    };
+    requestAnimationFrame(frame);
+  });
+  const ease = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+
+  const labelPoint = id => geometry.territories[id]?.label ?? [cx, cy];
+
+  // Shortest route through adjacent territories, so a march visibly
+  // passes through each territory on the way.
+  function pathBetween(from, to) {
+    const prev = { [from]: null };
+    const queue = [from];
+    while (queue.length) {
+      const cur = queue.shift();
+      if (cur === to) break;
+      for (const next of territoriesData.territories[cur]?.adjacentDraft ?? []) {
+        if (!(next in prev)) { prev[next] = cur; queue.push(next); }
+      }
+    }
+    if (!(to in prev)) return [from, to];
+    const path = [];
+    for (let at = to; at !== null; at = prev[at]) path.unshift(at);
+    return path;
+  }
+
+  // A point beyond the rim, in line with the destination: shipments glide
+  // in from off the board's edge.
+  function offBoardPoint(id) {
+    const [x, y] = labelPoint(id);
+    const a = Math.atan2(y - cy, x - cx);
+    return [cx + (radius + 160) * Math.cos(a), cy + (radius + 160) * Math.sin(a)];
+  }
+
+  function makeGhost(color, count) {
+    const g = el('g', { class: 'token token--ghost' }, fxLayer);
+    el('circle', { r: 19, fill: color, class: 'token__disc' }, g);
+    const t = el('text', { class: 'token__count', y: 6 }, g);
+    t.textContent = count;
+    return g;
+  }
+
+  // Walk a token through a list of points, hopping between them.
+  async function animateToken({ color, count, points, msPerHop = 380, hop = 14 }) {
+    const g = makeGhost(color, count);
+    for (let i = 0; i < points.length - 1; i++) {
+      const [x1, y1] = points[i], [x2, y2] = points[i + 1];
+      await tween(msPerHop, t => {
+        const e = ease(t);
+        const lift = Math.sin(Math.PI * t) * hop;
+        g.setAttribute('transform', `translate(${x1 + (x2 - x1) * e},${y1 + (y2 - y1) * e - lift})`);
+      });
+    }
+    g.remove();
+  }
+
+  // Shai-Hulud: sand rings spread and a maw opens, then closes.
+  async function worm(territoryId, ms = 1300) {
+    const [x, y] = labelPoint(territoryId);
+    const g = el('g', { class: 'fx-worm', transform: `translate(${x},${y})` }, fxLayer);
+    const rings = [0, 1, 2].map(() => el('circle', { r: 0, class: 'fx-worm__ring' }, g));
+    const maw = el('circle', { r: 0, class: 'fx-worm__maw' }, g);
+    await tween(ms, t => {
+      rings.forEach((ring, i) => {
+        const rt = Math.max(0, Math.min(1, t * 1.4 - i * 0.2));
+        ring.setAttribute('r', 20 + rt * 90);
+        ring.setAttribute('opacity', 1 - rt);
+      });
+      maw.setAttribute('r', Math.sin(Math.PI * t) * 42);
+    });
+    g.remove();
+  }
+
+  // Draw the eye to a territory (spice landing, a battle).
+  async function pulse(territoryId, kind = 'spice', ms = 900) {
+    const [x, y] = labelPoint(territoryId);
+    const ring = el('circle', { cx: x, cy: y, r: 10, class: `fx-pulse fx-pulse--${kind}` }, fxLayer);
+    await tween(ms, t => {
+      ring.setAttribute('r', 12 + ease(t) * 70);
+      ring.setAttribute('opacity', 1 - t);
+    });
+    ring.remove();
+  }
+
   return {
     render,
+    labelPoint,
+    pathBetween,
+    offBoardPoint,
+    animateToken,
+    worm,
+    pulse,
     zoomBy: factor => zoomAt(view.x + view.w / 2, view.y + view.w / 2, factor),
     resetZoom: () => { view.x = 0; view.y = 0; view.w = FULL; applyView(); }
   };
