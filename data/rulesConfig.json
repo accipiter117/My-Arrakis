@@ -93,6 +93,10 @@
       {
         "id": "traitorRevealIsAChoice",
         "justification": "Revealing a traitor is optional in the rules. The holder (or, for a Harkonnen traitor used for an ally, Harkonnen) is asked once plans are revealed; the AI always reveals."
+      },
+      {
+        "id": "stormDeckValues",
+        "justification": "Advanced rules: after the first storm, the Fremen reveal the Storm card they previewed last turn, then shuffle all six back and preview the next. The six cards are modelled as values 1 to 6, one each (js/stormEngine.js STORM_DECK), pending confirmation against the physical deck. Without the Fremen in play, the last two battlers dial 1-3 each as in the basic rules."
       }
     ]
   },
