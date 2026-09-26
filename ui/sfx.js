@@ -21,7 +21,8 @@ const SOUNDS = {
   shipping: '../assets/sfx/shipping.wav',
   // Turn announcements, played as a faction's turn banner appears.
   'turn-atreides': '../assets/sfx/turn-atreides.mp3',
-  'turn-harkonnen': '../assets/sfx/turn-harkonnen.mp3'
+  'turn-harkonnen': '../assets/sfx/turn-harkonnen.mp3',
+  'turn-gesserit': '../assets/sfx/turn-gesserit.mp3'
 };
 const KEY = 'my-arrakis-sfx';
 const MIN_GAP_MS = 700;
