@@ -3,6 +3,7 @@
 // only the shape of the data. Faction abilities operate ON this state via
 // the engine, they don't get their own parallel state objects.
 
+import { random } from './random.js';
 function createInitialGameState(config) {
   // config: { factionIds: [...], playerCount, rulesConfig }
 
@@ -115,7 +116,7 @@ function buildFactionStates(factionIds) {
 }
 
 function generateSeed() {
-  return "DUNE-" + Math.floor(Math.random() * 1e6);
+  return "DUNE-" + Math.floor(random() * 1e6);
 }
 
 function createTerritoryMap() {
