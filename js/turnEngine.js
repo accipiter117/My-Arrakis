@@ -182,7 +182,7 @@ async function runStormPhase(state, decisionProvider) {
 
 async function runSpiceBlowPhase(state, decisionProvider) {
   spiceEngine.resolveSpiceBlowPhase(state);
-  if (state.factions.atreides) delete state.factions.atreides.specialFactionState.foreseenSpice; // now drawn
+  foreseeSpice(state); // Atreides see the next card as soon as this Spice Blow is over (house rule)
   for (const draw of state.nexus.draws ?? []) await observe(decisionProvider, { type: 'spiceCard', ...draw }, state);
   // Snapshot what was placed now, later phases (collection, worms) can
   // remove these markers before anything reads the log.
@@ -310,12 +310,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
   // Atreides Prescience: during Shipment and Movement, Atreides may look at
   // the top card of the Spice Deck (the next card drawn). Private knowledge,
   // kept until that card is drawn.
-  if (state.factions.atreides) {
-    const top = state.decks.spiceDeck[state.decks.spiceDeck.length - 1];
-    state.factions.atreides.specialFactionState.foreseenSpice = top
-      ? { type: top.type, territoryId: top.type === 'territory' ? top.id : null, amount: top.maxValue ?? null }
-      : { reshuffle: true };
-  }
+  foreseeSpice(state); // unchanged since the Spice Blow: nothing is drawn in between
   const turnOrder = state.meta.turnOrder ?? Object.keys(state.factions);
 
   for (const factionId of turnOrder) {
@@ -411,6 +406,19 @@ function recordKnownCards(state, holder, cardIds) {
   for (const [id, f] of Object.entries(known)) {
     if (!state.factions[f]?.treacheryHand.includes(id)) delete known[id];
   }
+}
+
+// Atreides Prescience: the top card of the Spice Deck (the next card drawn).
+// Officially seen during Shipment and Movement; here from the end of the
+// Spice Blow (house rule, data/rulesConfig.json: atreidesForesightTiming).
+// The card cannot change in between, since nothing is drawn until the next
+// Spice Blow, so only the timing of the knowledge differs.
+function foreseeSpice(state) {
+  if (!state.factions.atreides) return;
+  const top = state.decks.spiceDeck[state.decks.spiceDeck.length - 1];
+  state.factions.atreides.specialFactionState.foreseenSpice = top
+    ? { type: top.type, territoryId: top.type === 'territory' ? top.id : null, amount: top.maxValue ?? null }
+    : { reshuffle: true };
 }
 
 // Lets the UI present each event as it happens (cards, sweeps, marches).
