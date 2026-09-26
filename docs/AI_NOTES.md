@@ -1,5 +1,31 @@
 # AI Notes
 
+## Battle brain (js/ai/battleBrain.js), step 3 of AI_PLAN.md
+
+Samples 150 plausible opponent hands and battle plans from honest knowledge
+(own hand, discard pile, publicly known cards, hand sizes, Prescience and
+Voice), scores every sensible plan of its own across all of them, and plays
+the best on average, discounting leaders by estimated traitor risk.
+
+Head to head (30 seeds per seat, identical decks and dice, one seat with
+the brain vs without):
+
+- Game wins 80 vs 53 (+51%), better from all six seats: Emperor 15 vs 8,
+  Fremen 16 vs 7, Harkonnen 10 vs 7, Bene Gesserit 10 vs 6, Guild 23 vs 20,
+  Atreides 6 vs 5.
+- It wins FEWER battles (44% vs 48%) but far more games: it throws battles
+  that don't matter with zero forces and saves strength for decisive ones.
+  Emerged from the scoring, not programmed in (brief section 18).
+- 2.2 ms per decision on a server.
+
+## Diplomacy and betrayal
+
+Strategic AI forms alliances at each Nexus and now betrays for the classic
+reason: alone it needs 3 strongholds, allied 4. Over 60 games: 179
+alliances formed, 53 broken, 28 offers rejected; allies never fought each
+other. Win methods became far more varied: alliance 29, solo 19, Guild
+special 5 (was 20), Fremen special 3, Bene Gesserit prediction 4.
+
 ## Strategic AI (js/ai/strategicAI.js), step 2 of AI_PLAN.md
 
 Wraps the Basic AI with a strategic layer: victory proximity from public
