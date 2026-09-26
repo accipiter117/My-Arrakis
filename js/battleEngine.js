@@ -221,11 +221,15 @@ function checkTraitor(revealingFactionState, opponentLeaderId) {
 
 // --- Full battle resolution -----------------------------------------------
 
-function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId, aggressorPlanInput, defenderPlanInput, cardLookup) {
+// traitorCalls (optional): { [factionId]: true } for each side that chose to
+// reveal a traitor. Eligibility and the choice are made by the turn runner
+// (it also handles Harkonnen traitors used for an ally). Without it, any
+// eligible traitor is revealed automatically.
+function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId, aggressorPlanInput, defenderPlanInput, cardLookup, traitorCalls) {
   // Traitor check first: either side may hold a traitor card matching the
   // OTHER side's leader. Cheap heroes can't be traitors (no leaderId).
-  const aggressorHoldsTraitor = isTraitorAgainst(state, aggressorFactionId, defenderPlanInput.leaderId);
-  const defenderHoldsTraitor = isTraitorAgainst(state, defenderFactionId, aggressorPlanInput.leaderId);
+  const aggressorHoldsTraitor = traitorCalls ? Boolean(traitorCalls[aggressorFactionId]) : isTraitorAgainst(state, aggressorFactionId, defenderPlanInput.leaderId);
+  const defenderHoldsTraitor = traitorCalls ? Boolean(traitorCalls[defenderFactionId]) : isTraitorAgainst(state, defenderFactionId, aggressorPlanInput.leaderId);
 
   if (aggressorHoldsTraitor && defenderHoldsTraitor) {
     return resolveMutualTraitors(state, territoryId, aggressorFactionId, defenderFactionId, aggressorPlanInput, defenderPlanInput);
