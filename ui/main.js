@@ -148,6 +148,19 @@ function buildProvider(data) {
   return { ...provider, observe: (event, state) => { logEvent(event); return presenter?.observe(event, state); } };
 }
 
+// Phase ambiences: the Tleilaxu tanks through Revival, the auction hall
+// through Bidding. Each loops for its whole phase, then fades out.
+const PHASE_AMBIENCE = { revival: 'revivalTanks', bidding: 'bidding' };
+async function withPhaseAmbience(runPhase) {
+  const loop = PHASE_AMBIENCE[phaseEngine.currentPhase(gameState)];
+  if (loop) sfx.startLoop(loop);
+  try {
+    return await runPhase();
+  } finally {
+    if (loop) sfx.stopLoop(loop);
+  }
+}
+
 function logEvent(e) {
   const turn = gameState?.meta.turn;
   if (e.type === 'truthtrance') {
@@ -275,7 +288,7 @@ async function stepPhase() {
   if (!gameState || gameState.victory.achieved || busy) return;
   setBusy(true);
   try {
-    describe(await turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup));
+    describe(await withPhaseAmbience(() => turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup)));
     saveGame();
     checkVictory();
   } catch (err) {
@@ -294,7 +307,7 @@ async function runTurn() {
     // as the turn unfolds, which matters while waiting on your decisions.
     const startTurn = gameState.meta.turn;
     while (!gameState.victory.achieved && gameState.meta.turn === startTurn) {
-      describe(await turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup));
+      describe(await withPhaseAmbience(() => turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup)));
       saveGame(); // after every completed phase, so a reload never loses more than one phase
       render();
     }
