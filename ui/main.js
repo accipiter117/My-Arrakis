@@ -13,6 +13,7 @@ import * as turnEngine from '../js/turnEngine.js';
 import * as phaseEngine from '../js/phaseEngine.js';
 import { createBasicAI } from '../js/ai/basicAI.js';
 import { createStrategicAI } from '../js/ai/strategicAI.js';
+import { createAI, DIFFICULTIES } from '../js/ai/difficulty.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
@@ -51,7 +52,7 @@ let humanFactionId = null;
 let busy = false;
 let board = null;
 let selectedTerritory = null;
-let aiChoice = 'strategic';
+let aiChoice = 'hard';
 let highlightIds = [];
 let presenter = null;
 
@@ -61,7 +62,8 @@ const storedSpeed = localStorage.getItem(SPEED_KEY);
 let speed = storedSpeed !== null ? Number(storedSpeed) : (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.45 : 1);
 
 const SAVE_KEY = 'my-arrakis-save-v1';
-const AI_NAMES = { strategic: 'Strategic AI', basic: 'Basic AI', passive: 'Passive' };
+const AI_NAMES = { easy: 'Easy AI', normal: 'Normal AI', hard: 'Hard AI', passive: 'Passive',
+  strategic: 'Hard AI', basic: 'Easy AI' }; // older saves used strategic/basic
 
 // --- Data --------------------------------------------------------------
 
@@ -142,9 +144,9 @@ function buildProvider(data) {
 }
 
 function buildDecisionMaker(data) {
-  const ai = aiChoice === 'strategic' ? createStrategicAI({ leadersData: data.leaders, cardLookup })
-    : aiChoice === 'basic' ? createBasicAI({ leadersData: data.leaders, cardLookup })
-    : turnEngine.passiveDecisionProvider;
+  const level = { strategic: 'hard', basic: 'easy' }[aiChoice] ?? aiChoice; // older saves
+  const ai = level === 'passive' ? turnEngine.passiveDecisionProvider
+    : createAI(level, { leadersData: data.leaders, cardLookup });
   return humanFactionId
     ? createMixedProvider({
         humanFactionId, ai,
@@ -193,7 +195,7 @@ async function resumeGame(save) {
     setRandomState(save.rng);
     logEntries = save.log ?? [];
     humanFactionId = save.humanFactionId ?? null;
-    aiChoice = save.aiChoice ?? 'strategic';
+    aiChoice = save.aiChoice ?? 'hard';
     decisionProvider = buildProvider(data);
     const phase = PHASE_LABELS[phaseEngine.currentPhase(gameState)] ?? phaseEngine.currentPhase(gameState);
     addLog('setup', gameState.meta.turn, `Game resumed at turn ${gameState.meta.turn}, ${phase}.`);
@@ -631,6 +633,9 @@ $('input-import').addEventListener('change', e => { if (e.target.files[0]) impor
 $('btn-step-phase').addEventListener('click', stepPhase);
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
+const describeDifficulty = () => { $('difficulty-note').textContent = DIFFICULTIES[$('select-ai').value]?.describe ?? 'Every faction passes: for testing the engine.'; };
+$('select-ai').addEventListener('change', describeDifficulty);
+describeDifficulty();
 $('select-speed').addEventListener('change', e => { speed = Number(e.target.value); localStorage.setItem(SPEED_KEY, String(speed)); });
 $('zoom-out').addEventListener('click', () => board?.zoomBy(1 / 1.5));
 $('zoom-reset').addEventListener('click', () => board?.resetZoom());
