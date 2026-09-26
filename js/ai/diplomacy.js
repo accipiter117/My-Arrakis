@@ -71,8 +71,14 @@ export function createDiplomacy({ rng = random } = {}) {
       return partnerScore(state, me, proposer) >= 3;
     },
 
-    // Break only when the alliance has clearly stopped paying.
+    // Break only when it clearly pays. The classic Dune betrayal: alone I need
+    // 3 strongholds, allied we need 4. Holding 2 myself while the alliance
+    // is still short of 4 is the moment to go it alone (not every time, so
+    // it stays hard to read). Otherwise, break only a clearly useless alliance.
     shouldBreak(state, me, ally) {
+      const mine = held(state, me).length;
+      const combined = new Set([...held(state, me), ...held(state, ally)]).size;
+      if (mine >= 2 && combined < 4 && state.meta.turn >= 3 && rng() < 0.5) return true;
       return partnerScore(state, me, ally) < -1.5;
     }
   };
