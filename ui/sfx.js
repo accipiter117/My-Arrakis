@@ -18,7 +18,9 @@ const SOUNDS = {
   // Phase ambiences: seamless loops (WAV, since MP3 padding leaves a gap on every loop).
   revivalTanks: '../assets/sfx/revival-tanks.wav',
   bidding: '../assets/sfx/bidding.wav',
-  shipping: '../assets/sfx/shipping.wav'
+  shipping: '../assets/sfx/shipping.wav',
+  // Turn announcements, played as a faction's turn banner appears.
+  'turn-atreides': '../assets/sfx/turn-atreides.mp3'
 };
 const KEY = 'my-arrakis-sfx';
 const MIN_GAP_MS = 700;
