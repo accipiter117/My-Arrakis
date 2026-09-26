@@ -671,6 +671,37 @@ strong { color: var(--gold); }
 .br-good { color: #9fd3a8; font-weight: 600; }
 .br-hint { font-family: var(--font-data); font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.45; text-align: center; margin-top: 0.45rem; }
 
+/* --- Turn banner: whose turn it is ------------------------------------------ */
+
+.turn-banner {
+  position: absolute;
+  top: 0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0.9rem 0.35rem 0.4rem;
+  min-width: 11rem;
+  max-width: 94%;
+  background: linear-gradient(180deg, rgba(40, 28, 18, 0.96), rgba(18, 12, 8, 0.96));
+  border: 1px solid var(--bronze-bright);
+  border-bottom: 3px solid var(--banner-colour, var(--spice));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.6);
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  pointer-events: none;
+  animation: banner-in 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.15);
+}
+.turn-banner[hidden] { display: none; }
+.turn-banner--leaving { animation: banner-out 0.25s ease-in forwards; }
+@keyframes banner-in { from { transform: translate(-50%, -140%); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+@keyframes banner-out { to { transform: translate(-50%, -140%); opacity: 0; } }
+.turn-banner img { width: 34px; height: 34px; flex: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
+.turn-banner__name { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sand); line-height: 1.1; }
+.turn-banner__phase { white-space: nowrap; font-family: var(--font-data); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--sand-dim); }
+.turn-banner__note { white-space: nowrap; font-size: 11.5px; color: var(--gold); margin-top: 1px; }
+
 /* --- Accessibility -------------------------------------------------------------------- */
 
 :focus-visible { outline: 2px solid var(--spice); outline-offset: 2px; }
