@@ -28,7 +28,11 @@ const STARRED_REVIVAL_CAP_PER_TURN = 1; // "Only one Sardaukar/Fedaykin force ca
 
 // --- Force revival ---------------------------------------------------
 
-function freeRevivalAllowance(factionId) {
+// With state, includes the Fremen alliance advantage: the Fremen's ally
+// revives up to 3 forces free each turn.
+function freeRevivalAllowance(factionId, state) {
+  const allyOfF = state ? (state.alliances ?? []).find(a => a.factions.includes(factionId))?.factions.find(f => f !== factionId) : null;
+  if (allyOfF === 'fremen') return Math.max(FREE_FORCE_REVIVAL[factionId] ?? 0, 3);
   return FREE_FORCE_REVIVAL[factionId] ?? 0;
 }
 
@@ -57,7 +61,7 @@ function canReviveForces(state, factionId, amount, starredAmount = 0) {
     return { ok: false, reason: 'Would exceed the per-turn starred-force revival cap.' };
   }
 
-  const freeAllowance = freeRevivalAllowance(factionId);
+  const freeAllowance = freeRevivalAllowance(factionId, state);
   const alreadyUsedFree = Math.min(faction.forcesRevivedThisTurn ?? 0, freeAllowance);
   const remainingFree = Math.max(0, freeAllowance - alreadyUsedFree);
   const paidPortion = Math.max(0, amount - remainingFree);
@@ -144,7 +148,32 @@ function resetRevivalTurnFlags(state) {
   return state;
 }
 
+// Emperor alliance advantage: the Emperor may pay for up to 3 extra forces
+// for their ally each turn, beyond the ally's normal limit, at 2 spice each.
+function canEmperorReviveForAlly(state, allyId, amount) {
+  const emperor = state.factions.emperor, ally = state.factions[allyId];
+  const allyOfEmperor = (state.alliances ?? []).find(a => a.factions.includes('emperor'))?.factions.find(f => f !== 'emperor');
+  if (!emperor || allyOfEmperor !== allyId) return { ok: false, reason: 'Only the Emperor’s ally can be helped.' };
+  if (amount < 1 || amount > 3) return { ok: false, reason: 'The Emperor may pay for 1 to 3 extra forces.' };
+  const ordinaryInTanks = (ally.revivalTanks ?? 0) - (ally.starredRevivalTanks ?? 0);
+  if (amount > ordinaryInTanks) return { ok: false, reason: 'Not that many forces in the tanks.' };
+  if (amount * 2 > emperor.spice) return { ok: false, reason: 'The Emperor cannot afford that.' };
+  return { ok: true, cost: amount * 2 };
+}
+
+function emperorRevivesForAlly(state, allyId, amount) {
+  const check = canEmperorReviveForAlly(state, allyId, amount);
+  if (!check.ok) throw new Error(check.reason);
+  state.factions.emperor.spice -= check.cost;
+  state.spiceBank.totalInCirculation += check.cost;
+  state.factions[allyId].revivalTanks -= amount;
+  state.factions[allyId].forces.reserve += amount;
+  return { payer: 'emperor', factionId: allyId, amount, cost: check.cost };
+}
+
 export {
+  canEmperorReviveForAlly,
+  emperorRevivesForAlly,
   freeRevivalAllowance,
   canReviveForces,
   reviveForces,
