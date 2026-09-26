@@ -130,6 +130,7 @@ async function runStormPhase(state, decisionProvider) {
 
   const previousPosition = state.board.stormPosition ?? 0;
   state.board.stormPosition = stormEngine.advanceStormPosition(previousPosition, sectorsToMove);
+  await observe(decisionProvider, { type: 'storm', from: previousPosition, to: state.board.stormPosition, sectors: sectorsToMove, dials: [dialA, dialB], first: isFirstStorm }, state);
 
   // First Player is genuinely blocked on player-circle sector data (see
   // docs/STORM_TODO.md), but leaving state.meta.firstPlayer as null broke
@@ -152,6 +153,7 @@ async function runStormPhase(state, decisionProvider) {
 
 async function runSpiceBlowPhase(state, decisionProvider) {
   spiceEngine.resolveSpiceBlowPhase(state);
+  for (const draw of state.nexus.draws ?? []) await observe(decisionProvider, { type: 'spiceCard', ...draw }, state);
   // Snapshot what was placed now, later phases (collection, worms) can
   // remove these markers before anything reads the log.
   const result = {
@@ -179,7 +181,11 @@ async function runSpiceBlowPhase(state, decisionProvider) {
     for (const from of state.nexus.wormTerritories ?? []) {
       if (!(state.factions.fremen.forces.onBoard[from] > 0)) continue;
       const to = await decisionProvider.chooseWormRide(state, 'fremen', from);
-      if (to && movementEngine.canRideWorm(state, from, to).ok) result.rides.push(movementEngine.rideWorm(state, from, to));
+      if (to && movementEngine.canRideWorm(state, from, to).ok) {
+        const ride = movementEngine.rideWorm(state, from, to);
+        result.rides.push(ride);
+        await observe(decisionProvider, { type: 'wormRide', factionId: 'fremen', ...ride }, state);
+      }
     }
   }
   return result;
@@ -271,6 +277,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
       if (movementEngine.canShip(state, factionId, territoryId, amount).ok) {
         movementEngine.executeShipment(state, factionId, territoryId, amount);
         results.push({ factionId, type: 'shipment', territoryId, amount });
+        await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount }, state);
       }
     }
     if (decision.movement) {
@@ -278,6 +285,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
       if (movementEngine.canMove(state, factionId, from, to, amount).ok) {
         movementEngine.executeMove(state, factionId, from, to, amount);
         results.push({ factionId, type: 'movement', from, to, amount });
+        await observe(decisionProvider, { type: 'move', factionId, from, to, amount }, state);
       }
     }
     // Hajr: one extra move, played after the normal one.
@@ -285,6 +293,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
       const { from, to, amount } = decision.hajrMove;
       cardEffects.playHajr(state, factionId, decision.hajrMove);
       results.push({ factionId, type: 'movement', from, to, amount, card: 'hajr' });
+      await observe(decisionProvider, { type: 'move', factionId, from, to, amount, card: 'hajr' }, state);
     }
   }
 
@@ -311,6 +320,12 @@ function revealPlanElement(plan, element) {
     number: plan.forcesCommitted
   }[element];
   return { element, value };
+}
+
+// Lets the UI present each event as it happens (cards, sweeps, marches).
+// Awaited so play only continues once the presentation has finished.
+async function observe(decisionProvider, event, state) {
+  if (decisionProvider.observe) await decisionProvider.observe(event, state);
 }
 
 function findBattleTerritories(state) {
@@ -420,6 +435,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     });
     results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture,
       plans: { [aggressorId]: reveal(plans[aggressorId]), [defenderId]: reveal(plans[defenderId]) }, ...outcome });
+    await observe(decisionProvider, { type: 'battle', ...results[results.length - 1] }, state);
 
     battleSites = findBattleTerritories(state);
   }
