@@ -56,6 +56,20 @@ const passiveDecisionProvider = {
     const other = Object.keys(state.factions).find(f => f !== factionId);
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
+  // Always reveals a traitor when it can.
+  chooseRevealTraitor() {
+    return true;
+  },
+  // No diplomacy.
+  chooseBreakAlliance() {
+    return false;
+  },
+  chooseAllianceProposal() {
+    return null;
+  },
+  chooseAllianceResponse() {
+    return false;
+  },
   // Bene Gesserit only: no Voice.
   chooseVoice() {
     return null;
@@ -75,10 +89,6 @@ const passiveDecisionProvider = {
   // Atreides only: always asks about the weapon.
   choosePrescienceElement() {
     return 'weapon';
-  },
-  // Never proposes or breaks alliances.
-  chooseAllianceActions(state) {
-    return { form: [], breakFrom: [] };
   },
   // Never bids, every card goes unsold, ending the Bidding phase
   // immediately per the rulebook's own "no bids at all" rule.
@@ -163,19 +173,7 @@ async function runSpiceBlowPhase(state, decisionProvider) {
     nexus: Boolean(state.nexus.active),
     rides: []
   };
-  if (state.nexus.active) {
-    const actions = await decisionProvider.chooseAllianceActions(state);
-    for (const factionId of actions.breakFrom ?? []) {
-      if (allianceEngine.canBreakAlliance(state, factionId).ok) {
-        allianceEngine.breakAlliance(state, factionId);
-      }
-    }
-    for (const [a, b] of actions.form ?? []) {
-      if (allianceEngine.canFormAlliance(state, a, b).ok) {
-        allianceEngine.formAlliance(state, a, b);
-      }
-    }
-  }
+  if (state.nexus.active) result.diplomacy = await runNexusDiplomacy(state, decisionProvider);
   // Fremen caught by a worm may ride it to any one territory.
   if (state.factions.fremen && decisionProvider.chooseWormRide) {
     for (const from of state.nexus.wormTerritories ?? []) {
@@ -322,6 +320,34 @@ function revealPlanElement(plan, element) {
   return { element, value };
 }
 
+// --- Nexus diplomacy -----------------------------------------------------------
+// In turn order: allied factions may break away; then each unallied faction
+// may propose to one other unallied faction, who accepts or rejects.
+async function runNexusDiplomacy(state, decisionProvider) {
+  const events = [];
+  const order = state.meta.turnOrder ?? Object.keys(state.factions);
+  for (const f of order) {
+    if (!allianceEngine.isFactionAllied(state, f) || !decisionProvider.chooseBreakAlliance) continue;
+    const ally = allianceEngine.allyOf(state, f);
+    if (await decisionProvider.chooseBreakAlliance(state, f, ally)) {
+      allianceEngine.breakAlliance(state, f);
+      events.push({ type: 'allianceBroken', by: f, of: ally });
+      await observe(decisionProvider, events[events.length - 1], state);
+    }
+  }
+  for (const f of order) {
+    if (allianceEngine.isFactionAllied(state, f) || !decisionProvider.chooseAllianceProposal) continue;
+    const target = await decisionProvider.chooseAllianceProposal(state, f);
+    if (!target || !allianceEngine.canFormAlliance(state, f, target).ok) continue;
+    const accepted = await decisionProvider.chooseAllianceResponse(state, target, f);
+    const event = { type: accepted ? 'allianceFormed' : 'allianceRejected', proposer: f, target };
+    if (accepted) allianceEngine.formAlliance(state, f, target);
+    events.push(event);
+    await observe(decisionProvider, event, state);
+  }
+  return events;
+}
+
 // Lets the UI present each event as it happens (cards, sweeps, marches).
 // Awaited so play only continues once the presentation has finished.
 async function observe(decisionProvider, event, state) {
@@ -337,7 +363,17 @@ function findBattleTerritories(state) {
       territories[territoryId].push(factionId);
     }
   }
-  return Object.entries(territories).filter(([, factions]) => factions.length >= 2);
+  const allied = (a, b) => allianceEngine.allyOf(state, a) === b;
+  return Object.entries(territories)
+    .map(([territoryId, factions]) => {
+      for (let i = 0; i < factions.length; i++) {
+        for (let j = i + 1; j < factions.length; j++) {
+          if (!allied(factions[i], factions[j])) return [territoryId, [factions[i], factions[j]]];
+        }
+      }
+      return null; // only allies here (or one faction): no battle
+    })
+    .filter(Boolean);
 }
 
 async function runBattlePhase(state, decisionProvider, cardLookup) {
@@ -360,9 +396,13 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const fighting = [aggressorId, defenderId];
 
     // 1. Bene Gesserit Voice, always before Atreides Prescience.
+    const allyOf = f => allianceEngine.allyOf(state, f);
+    // The faction a power works for: itself, or its ally (alliance advantage).
+    const beneficiary = power => fighting.find(f => f === power) ?? fighting.find(f => allyOf(f) === power) ?? null;
     let voice = null;
-    if (fighting.includes('gesserit') && decisionProvider.chooseVoice) {
-      const target = opponentOf('gesserit');
+    const voiced = state.factions.gesserit ? beneficiary('gesserit') : null;
+    if (voiced && decisionProvider.chooseVoice) {
+      const target = opponentOf(voiced);
       const command = await decisionProvider.chooseVoice(state, 'gesserit', territoryId, target);
       if (command && ['play', 'notPlay'].includes(command.command) && battleEngine.VOICE_CATEGORIES.includes(command.category)) {
         voice = { ...command, target };
@@ -384,18 +424,38 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     // they reveal anyway), then Atreides sees the named element and plans.
     const plans = {};
     let prescience = null;
-    if (fighting.includes('atreides')) {
-      const opp = opponentOf('atreides');
+    const seer = state.factions.atreides ? beneficiary('atreides') : null;
+    if (seer) {
+      const opp = opponentOf(seer);
       const element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opp);
       plans[opp] = await planFor(opp);
-      prescience = { ...revealPlanElement(plans[opp], element), opponentId: opp };
-      plans.atreides = await planFor('atreides', prescience);
+      prescience = { ...revealPlanElement(plans[opp], element), opponentId: opp, forFaction: seer };
+      plans[seer] = await planFor(seer, prescience);
     } else {
       plans[aggressorId] = await planFor(aggressorId);
       plans[defenderId] = await planFor(defenderId);
     }
 
-    const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, plans[aggressorId], plans[defenderId], cardLookup);
+    // Traitors: once plans are revealed, each side holding a traitor card for
+    // the opposing leader (or whose Harkonnen ally does) may reveal it.
+    const traitorCalls = {};
+    let traitor = null;
+    for (const f of fighting) {
+      const theirLeader = plans[opponentOf(f)].leaderId;
+      const holder = battleEngine.isTraitorAgainst(state, f, theirLeader) ? f
+        : allyOf(f) === 'harkonnen' && battleEngine.isTraitorAgainst(state, 'harkonnen', theirLeader) ? 'harkonnen' : null;
+      if (!holder) continue;
+      const reveal = decisionProvider.chooseRevealTraitor
+        ? await decisionProvider.chooseRevealTraitor(state, holder, theirLeader, territoryId, opponentOf(f), f)
+        : true;
+      if (reveal) {
+        traitorCalls[f] = true;
+        traitor = { revealedBy: holder, forFaction: f, leaderId: theirLeader, against: opponentOf(f) };
+        await observe(decisionProvider, { type: 'traitor', territoryId, ...traitor }, state);
+      }
+    }
+
+    const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, plans[aggressorId], plans[defenderId], cardLookup, traitorCalls);
     for (const f of fighting) if (plans[f].leaderId) state.battle.leaderTerritory[plans[f].leaderId] = territoryId;
 
     // 3. The winner may keep or discard each card they played.
@@ -433,7 +493,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       cheapHero: Boolean(plan.cheapHeroCardId), weapon: plan.weaponCardId, defense: plan.defenseCardId,
       refused: plan.refused ?? null
     });
-    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture,
+    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor,
       plans: { [aggressorId]: reveal(plans[aggressorId]), [defenderId]: reveal(plans[defenderId]) }, ...outcome });
     await observe(decisionProvider, { type: 'battle', ...results[results.length - 1] }, state);
 
@@ -570,6 +630,7 @@ export {
   stepOnePhase,
   runTraitorSelection,
   runSetupDecisions,
+  runNexusDiplomacy,
   runFullTurn,
   findBattleTerritories,
   revealPlanElement
