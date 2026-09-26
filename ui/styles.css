@@ -609,6 +609,7 @@ strong { color: var(--gold); }
 .battle-side--won { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold), 0 0 14px rgba(212, 169, 79, 0.25); }
 .battle-side__name { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
 .battle-side__cards { color: var(--sand-dim); font-size: 10.5px; }
+.battle-side__total { font-family: var(--font-data); font-weight: 700; font-size: 20px; color: var(--spice); margin-top: 0.2rem; }
 .event-card--battle .event-card__detail { text-align: center; font-weight: 700; color: var(--gold); }
 
 .token--ghost .token__disc { filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.6)); }
