@@ -17,6 +17,7 @@ import { createAI, DIFFICULTIES } from '../js/ai/difficulty.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
+import * as cardEffects from '../js/cardEffects.js';
 import { createPresenter } from './presenter.js';
 import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
@@ -448,8 +449,44 @@ function tapTerritory(id) {
   if (selectedTerritory) document.dispatchEvent(new CustomEvent('territory-tap', { detail: { id } }));
 }
 
+// What an Atreides player has foreseen of the next spice blow (Prescience).
+function foreseenSpice() {
+  if (humanFactionId !== 'atreides') return null;
+  return gameState?.factions.atreides?.specialFactionState?.foreseenSpice ?? null;
+}
+
+// What each card does and how to use it, shown when a card is tapped.
+function cardHelp(id) {
+  const c = cardLookup[id]?.category;
+  if (cardEffects.UNBUILT_CARDS.includes(id)) {
+    const why = id.startsWith('weather') || id.startsWith('family') ? 'it needs the storm, which is still being built' : 'its effect is still being built';
+    return { text: `Not usable yet: ${why}. You may discard it to free a space in your hand.`, discard: true };
+  }
+  const help = {
+    poisonWeapon: 'Weapon (poison). In battle, kills the enemy leader unless they play a poison defence (Snooper).',
+    projectileWeapon: 'Weapon (projectile). In battle, kills the enemy leader unless they play a projectile defence (Shield).',
+    specialWeapon: 'Lasgun. Kills the enemy leader; nothing stops it. But if anyone plays a Shield in the same battle, everything there is destroyed.',
+    poisonDefense: 'Defence against poison weapons. Play it in a battle plan to protect your leader.',
+    projectileDefense: 'Defence against projectile weapons. Never pair it with your own Lasgun.',
+    specialLeaderSubstitute: 'Cheap Hero. Leads a battle in place of a leader, with strength 0, and can never be a traitor. Useful to throw a battle cheaply.',
+    worthless: 'Worthless. Its only use is as a bluff: play it in a battle plan as your weapon or defence, and it is discarded afterwards. That is how you get rid of it.'
+  }[c];
+  if (help) return { text: help };
+  if (id === 'hajr') return { text: 'Hajr. One extra move in the Movement phase: it is offered in your Shipment and movement panel.' };
+  if (id === 'ghola') return { text: 'Ghola. Revive a leader, or up to 5 troops, for free: it is offered in your Revival panel.' };
+  return { text: 'A special card.' };
+}
+
+function discardFromHand(id) {
+  if (!gameState || !cardEffects.canDiscardUnbuilt(gameState, humanFactionId, id).ok) return;
+  cardEffects.discardUnbuilt(gameState, humanFactionId, id);
+  addLog(phaseEngine.currentPhase(gameState), gameState.meta.turn, `You discarded ${cardNameOf(id)}.`);
+  saveGame();
+  render();
+}
+
 function renderBoard() {
-  board?.render(gameState, { selected: selectedTerritory, highlight: highlightIds });
+  board?.render(gameState, { selected: selectedTerritory, highlight: highlightIds, foreseen: foreseenSpice() });
 }
 
 function renderTerritoryInfo() {
@@ -534,13 +571,26 @@ function renderHand() {
   $('dock-hand').hidden = !me;
   if (!me) return;
   const cards = me.treacheryHand.length
-    ? me.treacheryHand.map(id => `<li>${cardNameOf(id)} <em>${(cardLookup[id]?.category ?? '').replace(/([A-Z])/g, ' $1').toLowerCase()}</em></li>`).join('')
+    ? me.treacheryHand.map(id => {
+        const help = cardHelp(id);
+        return `<li class="hand-card">
+          <button class="hand-card__face" data-card="${id}">${cardNameOf(id)} <em>${(cardLookup[id]?.category ?? '').replace(/([A-Z])/g, ' $1').toLowerCase()}</em></button>
+          <div class="hand-card__info" hidden>${escapeHTML(help.text)}${help.discard ? ` <button class="btn hand-card__discard" data-discard="${id}">Discard</button>` : ''}</div>
+        </li>`;
+      }).join('')
     : '<li class="empty-note">No treachery cards.</li>';
+  const seen = foreseenSpice();
+  const foresight = !seen ? '' : `<p class="hand-meta hand-meta--foresight"><strong>Prescience, next spice blow:</strong> ${
+    seen.reshuffle ? 'the Spice Deck will be reshuffled, so the next card cannot be foreseen.'
+    : seen.type === 'territory' ? `${seen.amount} spice in ${territoryNameOf(seen.territoryId)} (marked on the map).`
+    : 'Shai-Hulud. A worm will rise.'}</p>`;
   const traitors = (me.traitorHand ?? []).map(id => `${leaderNameOf(id)} (${nameOf(leadersById[id]?.faction)})`).join(', ') || 'None';
   const leaders = me.leaders.available.map(id => `${leaderNameOf(id)} ${leadersById[id]?.fightingValue ?? ''}`).join(', ') || 'None';
   $('hand-heading').textContent = `Your hand · ${FACTION_NAMES[humanFactionId]}`;
   $('hand-body').innerHTML = `
+    ${foresight}
     <ul class="hand-list">${cards}</ul>
+    <p class="hand-meta"><em>Tap a card to see what it does.</em></p>
     <p class="hand-meta"><strong>Traitor:</strong> ${traitors}</p>
     <p class="hand-meta"><strong>Leaders:</strong> ${leaders}</p>
     ${humanFactionId === 'fremen' && gameState.board.nextStormCard ? `<p class="hand-meta"><strong>Next storm:</strong> ${gameState.board.nextStormCard} sectors <em>(only you can see this)</em></p>` : ''}
@@ -608,6 +658,7 @@ function escapeHTML(str) {
 
 function openSheet(name) {
   closeSheets();
+  render(); // sheets always open with current information
   const sheet = document.querySelector(`.sheet[data-name="${name}"]`);
   if (!sheet) return;
   sheet.hidden = false;
@@ -636,6 +687,13 @@ $('btn-continue').addEventListener('click', () => { closeSheets(); resumeGame(re
 $('btn-export').addEventListener('click', exportSave);
 $('input-import').addEventListener('change', e => { if (e.target.files[0]) importSave(e.target.files[0]); e.target.value = ''; });
 $('btn-step-phase').addEventListener('click', stepPhase);
+// Hand: tap a card for what it does; discard cards whose effects aren't built yet.
+$('hand-body').addEventListener('click', e => {
+  const face = e.target.closest('[data-card]');
+  if (face) { const info = face.nextElementSibling; info.hidden = !info.hidden; return; }
+  const discard = e.target.closest('[data-discard]');
+  if (discard) discardFromHand(discard.dataset.discard);
+});
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
 const describeDifficulty = () => { $('difficulty-note').textContent = DIFFICULTIES[$('select-ai').value]?.describe ?? 'Every faction passes: for testing the engine.'; };
