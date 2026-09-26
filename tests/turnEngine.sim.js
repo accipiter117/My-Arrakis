@@ -143,4 +143,15 @@ calls.length = 0;
 await turnEngine.runBattlePhase(state, recorder, {});
 assert(!calls.some(c => c.startsWith('ask')), 'nobody is asked a Prescience question');
 
+console.log('\nTest 13: CHOAM Charity is paid every turn, not just once per game');
+state = freshGame();
+phaseEngine.nextPhase(state);
+let gesseritCharity = 0;
+for (let i = 0; i < 4; i++) {
+  const turnLog = await turnEngine.runFullTurn(state, turnEngine.passiveDecisionProvider, territoriesData, {});
+  const charity = turnLog.find(e => e.phase === 'charity')?.result ?? [];
+  if (charity.some(c => c.factionId === 'gesserit' && c.amountReceived === 2)) gesseritCharity++;
+}
+assert(gesseritCharity === 4, `Bene Gesserit receive 2 spice of charity in each of 4 turns, got ${gesseritCharity}`);
+
 console.log('\nAll turn engine integration checks passed.');
