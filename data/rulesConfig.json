@@ -85,6 +85,14 @@
       {
         "id": "captureChoiceAfterDiscard",
         "justification": "After a Harkonnen win, the winner's keep/discard choice is resolved before the capture. The two are independent in the rules; a fixed order keeps the digital flow simple."
+      },
+      {
+        "id": "structuredNexusDiplomacy",
+        "justification": "At the table, Nexus negotiation is free conversation. Digitally it runs in turn order: each allied faction may break away, then each unallied faction may propose to one other unallied faction, who accepts or rejects. Every faction gets a say, and no alliance forms without both sides agreeing."
+      },
+      {
+        "id": "traitorRevealIsAChoice",
+        "justification": "Revealing a traitor is optional in the rules. The holder (or, for a Harkonnen traitor used for an ally, Harkonnen) is asked once plans are revealed; the AI always reveals."
       }
     ]
   },
