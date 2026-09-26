@@ -13,12 +13,18 @@
 import { createBasicAI } from './basicAI.js';
 import * as movementEngine from '../movementEngine.js';
 import { createDiplomacy } from './diplomacy.js';
+import { createBattleBrain } from './battleBrain.js';
 
 const BLOCKS_FREMEN_AT_TUEKS = ['harkonnen', 'atreides', 'emperor', 'richese'];
 
 export function createStrategicAI(options) {
   const base = createBasicAI(options);
   const diplomacy = createDiplomacy({ rng: options.rng });
+  // Leader fighting values are printed on the discs: public.
+  const leaderValue = {};
+  for (const list of Object.values(options.leadersData)) if (Array.isArray(list)) for (const l of list) leaderValue[l.id] = l.fightingValue;
+  const brain = options.battleBrain === false ? null
+    : createBattleBrain({ cardLookup: options.cardLookup, leaderValue, rng: options.rng, samples: options.battleSamples ?? 150 });
 
   const strongholds = state => Object.keys(state.board.territories)
     .filter(id => state.board.territories[id].type === 'stronghold');
@@ -155,6 +161,16 @@ export function createStrategicAI(options) {
   return {
     ...base,
     name: 'Strategic AI',
+
+    // Battles by sampling (js/ai/battleBrain.js); falls back to the Basic plan.
+    chooseBattlePlan(state, me, territoryId, opponentId, intel, voice) {
+      if (brain) {
+        const issued = state.meta.currentBattle?.voice;
+        const plan = brain.choosePlan(state, me, territoryId, opponentId, intel, issued?.target === opponentId ? issued : null);
+        if (plan) return plan;
+      }
+      return base.chooseBattlePlan(state, me, territoryId, opponentId, intel, voice);
+    },
 
     chooseAllianceProposal: (state, me) => diplomacy.propose(state, me),
     chooseAllianceResponse: (state, me, proposer) => diplomacy.respond(state, me, proposer),
