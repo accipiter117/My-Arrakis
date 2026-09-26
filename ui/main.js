@@ -687,6 +687,9 @@ function renderHand() {
     ${me.specialFactionState?.prediction ? `<p class="hand-meta"><strong>Prediction:</strong> ${nameOf(me.specialFactionState.prediction.factionId)} on turn ${me.specialFactionState.prediction.turn}</p>` : ''}`;
 }
 
+// Cards a faction revealed in battle and kept: public knowledge at the table.
+const knownCardsOf = f => Object.entries(gameState?.meta.knownCards ?? {}).filter(([, x]) => x === f).map(([id]) => cardNameOf(id)).join(', ');
+
 const allyName = f => {
   const ally = gameState?.alliances?.find(a => a.factions.includes(f))?.factions.find(x => x !== f);
   return ally ? FACTION_NAMES[ally] : null;
@@ -700,11 +703,12 @@ function renderFactions() {
     const hidden = humanFactionId && f !== humanFactionId;
     const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
     return `<tr${f === humanFactionId ? ' class="is-you"' : ''}>
-      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}</td>
+      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
       <td>${hidden ? '?' : faction.spice}</td><td>${faction.treacheryHand.length}</td><td>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</td>
       <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
   }).join('');
-  grid.innerHTML = `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const anyKnown = Object.keys(gameState.meta.knownCards ?? {}).length;
+  grid.innerHTML = (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderTerritories() {
