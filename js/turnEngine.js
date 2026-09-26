@@ -31,6 +31,7 @@ import * as traitorDeckEngine from './traitorDeckEngine.js';
 import * as setupEngine from './setupEngine.js';
 import * as cardEffects from './cardEffects.js';
 import { random } from './random.js';
+import * as allySupport from './allySupport.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -56,6 +57,10 @@ const passiveDecisionProvider = {
     const other = Object.keys(state.factions).find(f => f !== factionId);
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
+  chooseTruthtrance() { return null; },
+  chooseKaramaCancel() { return false; },
+  chooseAllyPledge() { return 0; },
+  chooseEmperorAllyRevival() { return 0; },
   // Keeps every card.
   chooseDiscards() {
     return [];
@@ -237,6 +242,20 @@ async function runBiddingPhase(state, decisionProvider) {
       }
     }
   }
+  // Alliance advantage: allies may pledge spice toward each other's cards and
+  // shipments for this turn.
+  allySupport.clearPledges(state);
+  if (decisionProvider.chooseAllyPledge) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      const ally = allySupport.allyOf(state, f);
+      if (!ally || state.factions[f].spice < 1) continue;
+      const amount = await decisionProvider.chooseAllyPledge(state, f, ally);
+      if (amount > 0) {
+        const pledged = allySupport.setPledge(state, f, amount);
+        await observe(decisionProvider, { type: 'pledge', from: f, to: ally, amount: pledged }, state);
+      }
+    }
+  }
   biddingEngine.startBiddingPhase(state);
   const results = [];
 
@@ -299,6 +318,14 @@ async function runRevivalPhase(state, decisionProvider) {
           revivalEngine.canReviveLeader(state, factionId, decision.leaderId, decision.leaderFightingValue).ok) {
         results.push(revivalEngine.reviveLeader(state, factionId, decision.leaderId, decision.leaderFightingValue));
       }
+    }
+  }
+  // Alliance advantage: the Emperor may pay for up to 3 extra forces for their ally.
+  const emperorAlly = allySupport.allyOf(state, 'emperor');
+  if (emperorAlly && decisionProvider.chooseEmperorAllyRevival) {
+    const n = await decisionProvider.chooseEmperorAllyRevival(state, 'emperor', emperorAlly);
+    if (n > 0 && revivalEngine.canEmperorReviveForAlly(state, emperorAlly, n).ok) {
+      results.push({ ...revivalEngine.emperorRevivesForAlly(state, emperorAlly, n), allyRevival: true });
     }
   }
   revivalEngine.resetRevivalTurnFlags(state);
@@ -468,6 +495,24 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const opponentOf = f => (f === aggressorId ? defenderId : aggressorId);
     const fighting = [aggressorId, defenderId];
 
+    // 0. Truthtrance: a combatant may ask the opponent one factual question.
+    for (const f of fighting) {
+      if (!decisionProvider.chooseTruthtrance || !cardEffects.canPlayTruthtrance(state, f, opponentOf(f)).ok) continue;
+      const question = await decisionProvider.chooseTruthtrance(state, f, territoryId, opponentOf(f));
+      if (question) {
+        const record = cardEffects.playTruthtrance(state, f, opponentOf(f), question, cardLookup);
+        await observe(decisionProvider, { type: 'truthtrance', territoryId, ...record }, state);
+      }
+    }
+    // Karama: the target of a faction advantage may cancel it as it is used.
+    const karamaCancels = async (f, purpose, extra = {}) => {
+      if (!cardEffects.holdsKarama(state, f) || !decisionProvider.chooseKaramaCancel) return false;
+      if (!(await decisionProvider.chooseKaramaCancel(state, f, purpose, { territoryId, ...extra }))) return false;
+      cardEffects.playKarama(state, f, purpose);
+      await observe(decisionProvider, { type: 'karama', factionId: f, purpose, territoryId }, state);
+      return true;
+    };
+
     // 1. Bene Gesserit Voice, always before Atreides Prescience.
     const allyOf = f => allianceEngine.allyOf(state, f);
     // The faction a power works for: itself, or its ally (alliance advantage).
@@ -479,6 +524,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       const command = await decisionProvider.chooseVoice(state, 'gesserit', territoryId, target);
       if (command && ['play', 'notPlay'].includes(command.command) && battleEngine.VOICE_CATEGORIES.includes(command.category)) {
         voice = { ...command, target };
+        if (await karamaCancels(target, 'voice', { voice: command })) voice = null;
       }
     }
     const voiceFor = f => (voice?.target === f ? voice : null);
@@ -499,7 +545,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     // they reveal anyway), then Atreides sees the named element and plans.
     const plans = {};
     let prescience = null;
-    const seer = state.factions.atreides ? beneficiary('atreides') : null;
+    let seer = state.factions.atreides ? beneficiary('atreides') : null;
+    if (seer && await karamaCancels(opponentOf(seer), 'prescience')) seer = null;
     if (seer) {
       const opp = opponentOf(seer);
       const element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opp);
@@ -561,9 +608,13 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       const candidates = battleEngine.captureCandidates(state, outcome.loserFactionId, territoryId);
       if (candidates.length) {
         const leaderId = candidates[Math.floor(random() * candidates.length)];
-        const action = (await decisionProvider.chooseCaptureAction(state, 'harkonnen', leaderId, outcome.loserFactionId)) === 'keep' ? 'keep' : 'kill';
-        battleEngine.applyCapture(state, outcome.loserFactionId, leaderId, action);
-        capture = { leaderId, from: outcome.loserFactionId, action };
+        if (await karamaCancels(outcome.loserFactionId, 'capture', { leaderId })) {
+          capture = { leaderId, from: outcome.loserFactionId, action: 'prevented' };
+        } else {
+          const action = (await decisionProvider.chooseCaptureAction(state, 'harkonnen', leaderId, outcome.loserFactionId)) === 'keep' ? 'keep' : 'kill';
+          battleEngine.applyCapture(state, outcome.loserFactionId, leaderId, action);
+          capture = { leaderId, from: outcome.loserFactionId, action };
+        }
       }
     }
     battleEngine.returnAllCapturedIfNeeded(state);
