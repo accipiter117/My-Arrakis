@@ -10,7 +10,7 @@
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export function createPresenter({ board, layer, factionColors, names, getSpeed, renderDisplay, renderReal }) {
+export function createPresenter({ board, layer, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null }) {
   const speed = () => getSpeed();
   const scaled = ms => ms * speed();
   const wait = ms => new Promise(resolve => setTimeout(resolve, scaled(ms)));
@@ -47,7 +47,51 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
   const card = (eyebrow, title, detail = '') =>
     `<div class="event-card__eyebrow">${esc(eyebrow)}</div><div class="event-card__title">${esc(title)}</div>${detail ? `<div class="event-card__detail">${detail}</div>` : ''}`;
 
+  // --- The auction: one card that stays up while bids go round the table.
+  let auction = null;
+  function auctionLine(html, cls = '') {
+    if (!auction) return;
+    const li = document.createElement('li');
+    li.className = cls;
+    li.innerHTML = html;
+    auction.list.appendChild(li);
+    auction.list.scrollTop = auction.list.scrollHeight;
+  }
+  const chip = f => `<span class="faction-chip" style="background:${factionColors[f]}"></span>${esc(names.faction(f))}`;
+
   const handlers = {
+    async auctionStart(e) {
+      if (!speed()) return;
+      // Only Atreides may see the card before bidding (Prescience).
+      const seen = getViewer() === 'atreides' ? esc(names.card(e.cardId)) : 'Face down';
+      layer.innerHTML = `<div class="event-card event-card--auction" role="status">
+        <div class="event-card__eyebrow">Auction · card ${e.index + 1} of ${e.total}</div>
+        <div class="event-card__title">${seen}</div>
+        <ol class="auction-bids"></ol></div>`;
+      layer.hidden = false;
+      layer.onclick = null; // stays up for the whole auction
+      auction = { list: layer.querySelector('.auction-bids') };
+      await wait(350);
+    },
+    async bid(e) {
+      auctionLine(`${chip(e.factionId)} bids <strong>${e.amount}</strong>`);
+      await wait(380);
+    },
+    async pass(e) {
+      auctionLine(`${chip(e.factionId)} passes`, 'is-pass');
+      await wait(160);
+    },
+    async auctionWon(e) {
+      auctionLine(`${chip(e.factionId)} wins for <strong>${e.price} spice</strong>${e.bonus ? ' and draws a free bonus card' : ''}`, 'is-won');
+      await wait(1000);
+      endAuction();
+    },
+    async auctionUnsold(e) {
+      auctionLine(`No bids. ${e.returned} card${e.returned === 1 ? '' : 's'} return to the deck; the auction ends.`, 'is-won');
+      await wait(1000);
+      endAuction();
+    },
+
     async storm(e, state) {
       await showCard('storm', card(e.first ? 'The first storm' : 'Storm card',
         `${e.sectors} sector${e.sectors === 1 ? '' : 's'}`, `Dials ${e.dials[0]} + ${e.dials[1]}`), 1500);
@@ -146,6 +190,12 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
       await shown;
     }
   };
+
+  function endAuction() {
+    auction = null;
+    layer.hidden = true;
+    layer.innerHTML = '';
+  }
 
   return {
     async observe(event, state) {
