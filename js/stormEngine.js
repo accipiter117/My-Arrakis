@@ -78,17 +78,6 @@ function sectorsSwept(startSector, sectorsToMove) {
 
 // --- STUBBED: needs sector <-> territory data, see docs/STORM_TODO.md ----
 
-function applyStormDamage(state, sweptSectors, territorySectorMap) {
-  throw new Error(
-    'NOT_IMPLEMENTED: applyStormDamage needs a territorySectorMap (which sectors each ' +
-    'territory occupies) that does not exist yet. See docs/STORM_TODO.md item 2. ' +
-    'Once that map exists, this removes forces (except in Imperial Basin, which is ' +
-    'explicitly storm-immune per the rulebook) and spice from every territory whose ' +
-    'sectors overlap sweptSectors, sending forces to the Tleilaxu Tanks and spice to ' +
-    'the Spice Bank.'
-  );
-}
-
 function isTerritoryPartiallyInStorm(territoryId, currentStormSector, territorySectorMap) {
   throw new Error(
     'NOT_IMPLEMENTED: needs territorySectorMap. See docs/STORM_TODO.md item 2. ' +
@@ -105,6 +94,51 @@ function determineFirstPlayer(state, currentStormSector, playerCircleSectorMap) 
     'docs/STORM_TODO.md item 3. This determines First Player each turn: whoever\'s ' +
     'circle the storm "next approaches."'
   );
+}
+
+// --- Storm damage --------------------------------------------------------------
+// House rule (project owner), standing in for the board's printed sectors:
+// each territory lies "mostly" in one storm sector, computed from our map
+// geometry with the storm wedge's own angles (tools/computeSectors.py writes
+// stormSector into data/territories.json). As the storm moves, every SAND
+// territory whose sector it passes over or stops in loses all forces and
+// spice there. Stone territories and strongholds are immune; Imperial Basin
+// is sheltered by the Shield Wall; the Polar Sink is never in the storm.
+// Fremen (advanced) lose only half their forces, rounded up.
+const SHELTERED = ['imperialBasin'];
+
+function applyStormDamage(state, from, sectors) {
+  const swept = new Set(sectorsSwept(from, sectors));
+  const hit = Object.entries(state.board.territories)
+    .filter(([id, t]) => t.type === 'sand' && !SHELTERED.includes(id) && swept.has(t.stormSector))
+    .map(([id]) => id);
+  const losses = [];
+  let spiceLost = [];
+  for (const territoryId of hit) {
+    for (const [factionId, faction] of Object.entries(state.factions)) {
+      const here = faction.forces.onBoard[territoryId] ?? 0;
+      if (!here) continue;
+      const starredHere = faction.forces.starredOnBoard?.[territoryId] ?? 0;
+      const lost = factionId === 'fremen' ? Math.ceil(here / 2) : here;
+      // Ordinary forces are lost first, so elite forces survive where they can.
+      const starredLost = Math.max(0, lost - (here - starredHere));
+      faction.forces.onBoard[territoryId] = here - lost;
+      if (!faction.forces.onBoard[territoryId]) delete faction.forces.onBoard[territoryId];
+      if (starredLost) {
+        faction.forces.starredOnBoard[territoryId] = starredHere - starredLost;
+        if (!faction.forces.starredOnBoard[territoryId]) delete faction.forces.starredOnBoard[territoryId];
+      }
+      faction.revivalTanks = (faction.revivalTanks ?? 0) + lost;
+      faction.starredRevivalTanks = (faction.starredRevivalTanks ?? 0) + starredLost;
+      losses.push({ factionId, territoryId, lost });
+    }
+    const spiceHere = state.board.spiceBlowMarkers.filter(m => m.territoryId === territoryId);
+    if (spiceHere.length) {
+      spiceLost.push({ territoryId, amount: spiceHere.reduce((a, m) => a + m.amount, 0) });
+      state.board.spiceBlowMarkers = state.board.spiceBlowMarkers.filter(m => m.territoryId !== territoryId);
+    }
+  }
+  return { swept: [...swept], territories: hit, losses, spiceLost };
 }
 
 export {
