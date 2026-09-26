@@ -432,7 +432,8 @@ function ensureBoard(data) {
     renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds }),
     renderReal: renderBoard,
     getViewer: () => humanFactionId,
-    sfx
+    sfx,
+    cardLookup
   });
   // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
   if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, sfx, get state() { return gameState; } };
@@ -542,6 +543,7 @@ function renderHand() {
     <ul class="hand-list">${cards}</ul>
     <p class="hand-meta"><strong>Traitor:</strong> ${traitors}</p>
     <p class="hand-meta"><strong>Leaders:</strong> ${leaders}</p>
+    ${humanFactionId === 'fremen' && gameState.board.nextStormCard ? `<p class="hand-meta"><strong>Next storm:</strong> ${gameState.board.nextStormCard} sectors <em>(only you can see this)</em></p>` : ''}
     ${me.specialFactionState?.prediction ? `<p class="hand-meta"><strong>Prediction:</strong> ${nameOf(me.specialFactionState.prediction.factionId)} on turn ${me.specialFactionState.prediction.turn}</p>` : ''}`;
 }
 
