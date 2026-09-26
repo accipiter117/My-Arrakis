@@ -16,6 +16,7 @@ import { createStrategicAI } from '../js/ai/strategicAI.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
+import { createPresenter } from './presenter.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
@@ -52,6 +53,12 @@ let board = null;
 let selectedTerritory = null;
 let aiChoice = 'strategic';
 let highlightIds = [];
+let presenter = null;
+
+// Animation speed: remembered between visits; Fast if the device asks for reduced motion.
+const SPEED_KEY = 'my-arrakis-speed';
+const storedSpeed = localStorage.getItem(SPEED_KEY);
+let speed = storedSpeed !== null ? Number(storedSpeed) : (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.45 : 1);
 
 const SAVE_KEY = 'my-arrakis-save-v1';
 const AI_NAMES = { strategic: 'Strategic AI', basic: 'Basic AI', passive: 'Passive' };
@@ -127,7 +134,14 @@ async function startNewGame() {
 
 // --- Providers, saving and resuming -----------------------------------------
 
+// Every provider reports events to the presenter, which animates them
+// before the engine carries on.
 function buildProvider(data) {
+  const provider = buildDecisionMaker(data);
+  return { ...provider, observe: (event, state) => presenter?.observe(event, state) };
+}
+
+function buildDecisionMaker(data) {
   const ai = aiChoice === 'strategic' ? createStrategicAI({ leadersData: data.leaders, cardLookup })
     : aiChoice === 'basic' ? createBasicAI({ leadersData: data.leaders, cardLookup })
     : turnEngine.passiveDecisionProvider;
@@ -404,6 +418,14 @@ function ensureBoard(data) {
     factionColors: FACTION_COLORS, onTap: tapTerritory,
     onZoom: zoomed => { $('zoom-reset').hidden = !zoomed; }
   });
+  presenter = createPresenter({
+    board, layer: $('event-layer'), factionColors: FACTION_COLORS, getSpeed: () => speed,
+    names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
+    renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds }),
+    renderReal: renderBoard
+  });
+  // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
+  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, get state() { return gameState; } };
 }
 
 function tapTerritory(id) {
@@ -595,6 +617,8 @@ $('btn-export').addEventListener('click', exportSave);
 $('input-import').addEventListener('change', e => { if (e.target.files[0]) importSave(e.target.files[0]); e.target.value = ''; });
 $('btn-step-phase').addEventListener('click', stepPhase);
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
+$('select-speed').value = String(speed);
+$('select-speed').addEventListener('change', e => { speed = Number(e.target.value); localStorage.setItem(SPEED_KEY, String(speed)); });
 $('zoom-out').addEventListener('click', () => board?.zoomBy(1 / 1.5));
 $('zoom-reset').addEventListener('click', () => board?.resetZoom());
 // Decision panels outline legal choices on the map.
