@@ -30,6 +30,7 @@ import * as allianceEngine from './allianceEngine.js';
 import * as traitorDeckEngine from './traitorDeckEngine.js';
 import * as setupEngine from './setupEngine.js';
 import * as cardEffects from './cardEffects.js';
+import { random } from './random.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -54,6 +55,22 @@ const passiveDecisionProvider = {
   choosePrediction(state, factionId) {
     const other = Object.keys(state.factions).find(f => f !== factionId);
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
+  },
+  // Bene Gesserit only: no Voice.
+  chooseVoice() {
+    return null;
+  },
+  // Battle winners keep every card they played.
+  chooseCardsToDiscard() {
+    return [];
+  },
+  // Harkonnen always sends a captured leader to the tanks for 2 spice.
+  chooseCaptureAction() {
+    return 'kill';
+  },
+  // Fremen never ride worms.
+  chooseWormRide() {
+    return null;
   },
   // Atreides only: always asks about the weapon.
   choosePrescienceElement() {
@@ -141,7 +158,8 @@ async function runSpiceBlowPhase(state, decisionProvider) {
     placed: state.board.spiceBlowMarkers
       .filter(m => m.turn === state.meta.turn)
       .map(m => ({ territoryId: m.territoryId, amount: m.amount })),
-    nexus: Boolean(state.nexus.active)
+    nexus: Boolean(state.nexus.active),
+    rides: []
   };
   if (state.nexus.active) {
     const actions = await decisionProvider.chooseAllianceActions(state);
@@ -154,6 +172,14 @@ async function runSpiceBlowPhase(state, decisionProvider) {
       if (allianceEngine.canFormAlliance(state, a, b).ok) {
         allianceEngine.formAlliance(state, a, b);
       }
+    }
+  }
+  // Fremen caught by a worm may ride it to any one territory.
+  if (state.factions.fremen && decisionProvider.chooseWormRide) {
+    for (const from of state.nexus.wormTerritories ?? []) {
+      if (!(state.factions.fremen.forces.onBoard[from] > 0)) continue;
+      const to = await decisionProvider.chooseWormRide(state, 'fremen', from);
+      if (to && movementEngine.canRideWorm(state, from, to).ok) result.rides.push(movementEngine.rideWorm(state, from, to));
     }
   }
   return result;
@@ -301,47 +327,99 @@ function findBattleTerritories(state) {
 
 async function runBattlePhase(state, decisionProvider, cardLookup) {
   const results = [];
+  cardLookup = cardLookup ?? {};
   battleEngine.resetKwisatzHaderachPhaseLock(state);
+  state.battle = { leaderTerritory: {} }; // which territory each leader fought in this phase
   const participants = new Set();
 
   // Resolve territories one at a time, re-checking after each battle since
-  // a resolved battle can remove one of the factions entirely, changing
-  // what's left to fight, rather than computing the full list up front.
+  // a resolved battle can remove a faction entirely.
   let battleSites = findBattleTerritories(state);
-  while (battleSites.length > 0) {
+  let guard = 0;
+  while (battleSites.length > 0 && guard++ < 60) {
     const [territoryId, factionsPresent] = battleSites[0];
-    const [aggressorId, defenderId] = factionsPresent; // aggressor order (First Player priority) is sector/turn-order dependent, simplified to array order here
+    const [aggressorId, defenderId] = factionsPresent; // aggressor order (First Player priority) awaits sector data
     participants.add(aggressorId);
     participants.add(defenderId);
+    const opponentOf = f => (f === aggressorId ? defenderId : aggressorId);
+    const fighting = [aggressorId, defenderId];
 
-    // Atreides Prescience: before plans lock, Atreides names one element of
-    // the opponent's plan and must be shown it. Digital equivalent: the
-    // opponent locks first (they must play what they reveal anyway), then
-    // Atreides sees the named element and plans with it.
-    let aggressorPlan, defenderPlan, prescience = null;
-    const atreidesId = [aggressorId, defenderId].includes('atreides') ? 'atreides' : null;
-    if (atreidesId) {
-      const opponentId = aggressorId === 'atreides' ? defenderId : aggressorId;
-      const element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opponentId);
-      const opponentPlan = await decisionProvider.chooseBattlePlan(state, opponentId, territoryId, 'atreides');
-      prescience = revealPlanElement(opponentPlan, element);
-      prescience.opponentId = opponentId;
-      const atreidesPlan = await decisionProvider.chooseBattlePlan(state, 'atreides', territoryId, opponentId, prescience);
-      aggressorPlan = aggressorId === 'atreides' ? atreidesPlan : opponentPlan;
-      defenderPlan = defenderId === 'atreides' ? atreidesPlan : opponentPlan;
-    } else {
-      aggressorPlan = await decisionProvider.chooseBattlePlan(state, aggressorId, territoryId, defenderId);
-      defenderPlan = await decisionProvider.chooseBattlePlan(state, defenderId, territoryId, aggressorId);
+    // 1. Bene Gesserit Voice, always before Atreides Prescience.
+    let voice = null;
+    if (fighting.includes('gesserit') && decisionProvider.chooseVoice) {
+      const target = opponentOf('gesserit');
+      const command = await decisionProvider.chooseVoice(state, 'gesserit', territoryId, target);
+      if (command && ['play', 'notPlay'].includes(command.command) && battleEngine.VOICE_CATEGORIES.includes(command.category)) {
+        voice = { ...command, target };
+      }
     }
-    const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, aggressorPlan, defenderPlan, cardLookup ?? {});
-    // Plans are revealed after a battle in the physical game, so returning
-    // them here leaks nothing that wasn't already public.
+    const voiceFor = f => (voice?.target === f ? voice : null);
+
+    // Every plan is made to obey any Voice, then checked against the rules;
+    // a plan that breaks them is replaced by a minimal legal one.
+    const planFor = async (f, intel) => {
+      let plan = await decisionProvider.chooseBattlePlan(state, f, territoryId, opponentOf(f), intel, voiceFor(f));
+      plan = battleEngine.enforceVoice(state, f, { ...plan, territoryId }, voiceFor(f), cardLookup);
+      const check = battleEngine.canDeclareBattlePlan(state, territoryId, f, plan, cardLookup);
+      if (!check.ok) plan = { ...battleEngine.fallbackPlan(state, territoryId, f, cardLookup), refused: check.reason };
+      return plan;
+    };
+
+    // 2. Atreides Prescience: the opponent locks first (they must play what
+    // they reveal anyway), then Atreides sees the named element and plans.
+    const plans = {};
+    let prescience = null;
+    if (fighting.includes('atreides')) {
+      const opp = opponentOf('atreides');
+      const element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opp);
+      plans[opp] = await planFor(opp);
+      prescience = { ...revealPlanElement(plans[opp], element), opponentId: opp };
+      plans.atreides = await planFor('atreides', prescience);
+    } else {
+      plans[aggressorId] = await planFor(aggressorId);
+      plans[defenderId] = await planFor(defenderId);
+    }
+
+    const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, plans[aggressorId], plans[defenderId], cardLookup);
+    for (const f of fighting) if (plans[f].leaderId) state.battle.leaderTerritory[plans[f].leaderId] = territoryId;
+
+    // 3. The winner may keep or discard each card they played.
+    let discarded = [];
+    const winner = outcome.winnerFactionId;
+    if (winner && decisionProvider.chooseCardsToDiscard) {
+      const hand = state.factions[winner].treacheryHand;
+      const played = [plans[winner].weaponCardId, plans[winner].defenseCardId, plans[winner].cheapHeroCardId].filter(id => id && hand.includes(id));
+      if (played.length) {
+        discarded = ((await decisionProvider.chooseCardsToDiscard(state, winner, played)) ?? []).filter(id => played.includes(id));
+        state.factions[winner].treacheryHand = hand.filter(id => !discarded.includes(id));
+        state.decks.treacheryDiscard.push(...discarded);
+      }
+    }
+
+    // 4. A captured leader Harkonnen used goes home after one battle.
+    if (fighting.includes('harkonnen') && plans.harkonnen.leaderId) battleEngine.returnCapturedLeader(state, plans.harkonnen.leaderId);
+
+    // 5. Harkonnen captures a random leader from the faction it beat.
+    let capture = null;
+    if (winner === 'harkonnen' && outcome.loserFactionId && decisionProvider.chooseCaptureAction) {
+      const candidates = battleEngine.captureCandidates(state, outcome.loserFactionId, territoryId);
+      if (candidates.length) {
+        const leaderId = candidates[Math.floor(random() * candidates.length)];
+        const action = (await decisionProvider.chooseCaptureAction(state, 'harkonnen', leaderId, outcome.loserFactionId)) === 'keep' ? 'keep' : 'kill';
+        battleEngine.applyCapture(state, outcome.loserFactionId, leaderId, action);
+        capture = { leaderId, from: outcome.loserFactionId, action };
+      }
+    }
+    battleEngine.returnAllCapturedIfNeeded(state);
+
+    // Plans are revealed after a battle in the physical game.
     const reveal = plan => ({
       forces: plan.forcesCommitted, spice: plan.spiceCommitted, leaderId: plan.leaderId,
-      cheapHero: Boolean(plan.cheapHeroCardId), weapon: plan.weaponCardId, defense: plan.defenseCardId
+      cheapHero: Boolean(plan.cheapHeroCardId), weapon: plan.weaponCardId, defense: plan.defenseCardId,
+      refused: plan.refused ?? null
     });
-    results.push({ territoryId, aggressorId, defenderId, prescience,
-      plans: { [aggressorId]: reveal(aggressorPlan), [defenderId]: reveal(defenderPlan) }, ...outcome });
+    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture,
+      plans: { [aggressorId]: reveal(plans[aggressorId]), [defenderId]: reveal(plans[defenderId]) }, ...outcome });
 
     battleSites = findBattleTerritories(state);
   }
