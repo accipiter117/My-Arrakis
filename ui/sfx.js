@@ -17,7 +17,8 @@ const SOUNDS = {
   ornithopter: '../assets/sfx/ornithopter.mp3?v=2',
   // Phase ambiences: seamless loops (WAV, since MP3 padding leaves a gap on every loop).
   revivalTanks: '../assets/sfx/revival-tanks.wav',
-  bidding: '../assets/sfx/bidding.wav'
+  bidding: '../assets/sfx/bidding.wav',
+  shipping: '../assets/sfx/shipping.wav'
 };
 const KEY = 'my-arrakis-sfx';
 const MIN_GAP_MS = 700;
