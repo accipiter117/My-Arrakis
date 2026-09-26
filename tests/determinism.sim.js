@@ -39,4 +39,27 @@ for (const seed of [11, 2026, 987654]) {
 console.log('\nTest 2: different seeds produce different games');
 assert(await playToEnd(1) !== await playToEnd(2), 'seeds 1 and 2 differ');
 
+console.log('\nTest 3: save mid-game, restore, and the rest of the game is identical');
+{
+  const { getRandomState, setRandomState } = await import('../js/random.js');
+  const seed = 4242;
+  const reference = await playToEnd(seed);
+  // Play to turn 4, snapshot state + random position, then finish.
+  const state = initializeGame({ activeFactionIds: ALL, playerCircleOrder: ALL, rulesConfig, seed,
+    spiceDeckData: spiceDeck, territoriesData: territories, treacheryDeckData: treacheryDeck, leadersData: leaders });
+  const ai = createStrategicAI({ leadersData: leaders, cardLookup });
+  await turnEngine.runSetupDecisions(state, ai);
+  phaseEngine.nextPhase(state);
+  const log = [];
+  while (state.meta.turn < 4) log.push(...await turnEngine.runFullTurn(state, ai, territories, cardLookup));
+  const saved = JSON.stringify({ state, rng: getRandomState(), log });
+  setRandomState(12345); // scramble, as a page reload would
+  const loaded = JSON.parse(saved);
+  setRandomState(loaded.rng);
+  const resumed = loaded.state;
+  const ai2 = createStrategicAI({ leadersData: leaders, cardLookup });
+  while (!resumed.victory.achieved) loaded.log.push(...await turnEngine.runFullTurn(resumed, ai2, territories, cardLookup));
+  assert(JSON.stringify({ state: resumed, log: loaded.log }) === reference, 'a game saved on turn 4 and resumed finishes exactly like the uninterrupted game');
+}
+
 console.log('\nAll determinism checks passed.');
