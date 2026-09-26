@@ -125,6 +125,10 @@
       {
         "id": "stormDamageBySector",
         "justification": "Standing in for the board's printed sectors (project owner's rule): each territory lies mostly in one storm sector, computed from this game's own map with the storm wedge's angles (tools/computeSectors.py, stormSector in data/territories.json). The storm destroys all forces and spice in every SAND territory whose sector it passes over or stops in. Stone territories and strongholds are immune; Imperial Basin is sheltered by the Shield Wall (rulebook); the Polar Sink is never in the storm; the Fremen lose half their forces, rounded up (advanced)."
+      },
+      {
+        "id": "bordersFromDrawnMap",
+        "justification": "What you see is what you can move across. Borders (adjacentDraft in data/territories.json, used for all movement, Fremen free shipping, worm rides and the AI) are computed from this game's own map outlines by tools/computeBorders.py: two territories border when they share at least 66px of edge. Every corner contact measured 60px or less and every real edge 72px or more, so the cut-off separates them cleanly. The original rulebook list is kept as adjacentBoard for reference."
       }
     ]
   },
