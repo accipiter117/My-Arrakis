@@ -48,8 +48,14 @@ export function createDiplomacy({ rng = random } = {}) {
     // About to win alone: an alliance would raise the bar to 4.
     if (mine.length >= 2) score -= 3;
 
-    // Trust: a record of breaking alliances counts against them.
-    score -= 3 * (state.meta.betrayals ?? []).filter(b => b.by === partner).length;
+    // Trust: a record of breaking alliances counts against them, and much
+    // more if they broke with ME. And no crawling straight back to a partner
+    // I only just left (an earlier version broke and re-formed the same
+    // alliance within one Nexus).
+    const betrayals = state.meta.betrayals ?? [];
+    score -= 3 * betrayals.filter(b => b.by === partner && b.of !== me).length;
+    score -= 8 * betrayals.filter(b => b.by === partner && b.of === me).length;
+    if (betrayals.some(b => b.by === me && b.of === partner && b.turn === state.meta.turn)) score -= 20;
 
     return score + rng() * 1.5;
   }
