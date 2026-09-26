@@ -23,7 +23,7 @@ const el = (tag, attrs = {}, parent) => {
   return node;
 };
 
-export function createBoard({ container, geometry, territoriesData, factionColors, onTap }) {
+export function createBoard({ container, geometry, territoriesData, factionColors, onTap, onZoom }) {
   const [cx, cy] = geometry.center;
   const radius = geometry.radius;
   const svg = el('svg', { viewBox: geometry.viewBox.join(' '), class: 'board', role: 'img', 'aria-label': 'Map of Arrakis' });
@@ -43,12 +43,86 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     el('line', { x1: cx + 70 * Math.cos(a), y1: cy + 70 * Math.sin(a), x2: cx + radius * Math.cos(a), y2: cy + radius * Math.sin(a) }, sectorLayer);
   }
 
+  // --- Zoom and pan -------------------------------------------------------
+  // Pinch (two fingers) zooms, one finger drags once zoomed, the wheel
+  // zooms on desktop. A pointer that moves more than a few pixels counts as
+  // a drag, and suppresses the territory tap that would otherwise follow.
+  const FULL = 1000, MIN_W = 260;
+  const view = { x: 0, y: 0, w: FULL };
+  let dragged = false;
+  const pointers = new Map();
+  let lastPinch = null;
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  function applyView() {
+    view.w = clamp(view.w, MIN_W, FULL);
+    view.x = clamp(view.x, 0, FULL - view.w);
+    view.y = clamp(view.y, 0, FULL - view.w);
+    svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.w}`);
+    onZoom?.(view.w < FULL - 1);
+  }
+  // Screen point to map coordinates (the SVG letterboxes to a square).
+  function toMap(clientX, clientY) {
+    const r = svg.getBoundingClientRect();
+    const size = Math.min(r.width, r.height);
+    const ox = r.left + (r.width - size) / 2, oy = r.top + (r.height - size) / 2;
+    return { x: view.x + ((clientX - ox) / size) * view.w, y: view.y + ((clientY - oy) / size) * view.w, size };
+  }
+  function zoomAt(mx, my, factor) {
+    const newW = clamp(view.w / factor, MIN_W, FULL);
+    const k = newW / view.w;
+    view.x = mx - (mx - view.x) * k;
+    view.y = my - (my - view.y) * k;
+    view.w = newW;
+    applyView();
+  }
+
+  svg.addEventListener('pointerdown', e => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY });
+    if (pointers.size === 1) dragged = false;
+  });
+  svg.addEventListener('pointermove', e => {
+    const p = pointers.get(e.pointerId);
+    if (!p) return;
+    if (Math.hypot(e.clientX - p.startX, e.clientY - p.startY) > 8) dragged = true;
+    if (pointers.size === 2) {
+      const [a, b] = [...pointers.values()];
+      p.x = e.clientX; p.y = e.clientY;
+      const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const mid = toMap((a.x + b.x) / 2, (a.y + b.y) / 2);
+      if (lastPinch) zoomAt(mid.x, mid.y, dist / lastPinch);
+      lastPinch = dist;
+      dragged = true;
+      return;
+    }
+    if (dragged && view.w < FULL) {
+      const { size } = toMap(e.clientX, e.clientY);
+      view.x -= ((e.clientX - p.x) / size) * view.w;
+      view.y -= ((e.clientY - p.y) / size) * view.w;
+      applyView();
+    }
+    p.x = e.clientX; p.y = e.clientY;
+  });
+  const release = e => {
+    pointers.delete(e.pointerId);
+    if (pointers.size < 2) lastPinch = null;
+    // Let this gesture's click be ignored, then accept taps again.
+    if (dragged) setTimeout(() => { if (!pointers.size) dragged = false; }, 50);
+  };
+  svg.addEventListener('pointerup', release);
+  svg.addEventListener('pointercancel', release);
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    const m = toMap(e.clientX, e.clientY);
+    zoomAt(m.x, m.y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+  }, { passive: false });
+
   const paths = {};
   for (const [id, geo] of Object.entries(geometry.territories)) {
     const type = territoriesData.territories[id]?.type ?? 'sand';
     const path = el('path', { d: geo.path, class: `territory territory--${type}`, 'data-id': id, tabindex: 0, role: 'button',
       'aria-label': territoriesData.territories[id]?.name ?? id }, territoryLayer);
-    path.addEventListener('click', () => onTap?.(id));
+    path.addEventListener('click', () => { if (!dragged) onTap?.(id); });
     path.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTap?.(id); } });
     paths[id] = path;
   }
@@ -111,5 +185,9 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     }
   }
 
-  return { render };
+  return {
+    render,
+    zoomBy: factor => zoomAt(view.x + view.w / 2, view.y + view.w / 2, factor),
+    resetZoom: () => { view.x = 0; view.y = 0; view.w = FULL; applyView(); }
+  };
 }
