@@ -13,7 +13,7 @@
   converted to MP3.
 
 - **Ornithopter flight** (`assets/sfx/ornithopter.mp3`): supplied by the
-  project owner. Loudness levelled.
+  project owner. Loudness levelled, then raised 80% at the project owner’s request.
 
 ## Game
 Based on the board game Dune (Gale Force Nine, 2019). A personal fan
