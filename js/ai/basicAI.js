@@ -113,7 +113,8 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     if (intel.element === 'number') {
       const forcesCommitted = Math.min(present, Math.max(plan.forcesCommitted, intel.value + 1));
       const starredForcesCommitted = Math.min(starredPresent, forcesCommitted);
-      const spiceCommitted = Math.max(0, Math.min(forcesCommitted, me.spice - 2));
+      // Fremen fight at full strength without spice (advanced), so they never pay it.
+      const spiceCommitted = factionId === 'fremen' ? 0 : Math.max(0, Math.min(forcesCommitted, me.spice - 2));
       const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
       return { ...plan, forcesCommitted, starredForcesCommitted, spiceCommitted,
                supportedStarredCount, supportedOrdinaryCount: spiceCommitted - supportedStarredCount };
@@ -192,6 +193,21 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const ally = own(state, allyId);
       const spare = Math.floor((own(state, 'emperor').spice - 6) / 2);
       return Math.max(0, Math.min(3, spare, (ally.revivalTanks ?? 0) - (ally.starredRevivalTanks ?? 0)));
+    },
+
+    // Bene Gesserit: always send a free advisor to the Polar Sink.
+    chooseAdvisor(state) {
+      return (own(state, 'gesserit').forces.reserve ?? 0) > 0;
+    },
+
+    // Spacing Guild: act last, having seen everyone else's shipments.
+    chooseGuildTiming() {
+      return null;
+    },
+
+    // Fremen: hold Sietch Tabr in strength, with pickets on both False Walls.
+    chooseFremenPlacement() {
+      return { sietchTabr: 6, falseWallSouth: 2, falseWallWest: 2 };
     },
 
     // Shed cards whose effects aren't in the game yet: they only block bidding.
@@ -374,7 +390,8 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
 
       const forcesCommitted = Math.min(present, Math.ceil(present * (isStronghold ? 0.75 : 0.5)));
       const starredForcesCommitted = Math.min(starredPresent, forcesCommitted);
-      const spiceCommitted = Math.max(0, Math.min(forcesCommitted, me.spice - 2));
+      // Fremen fight at full strength without spice (advanced), so they never pay it.
+      const spiceCommitted = factionId === 'fremen' ? 0 : Math.max(0, Math.min(forcesCommitted, me.spice - 2));
       const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
       const supportedOrdinaryCount = spiceCommitted - supportedStarredCount;
 
