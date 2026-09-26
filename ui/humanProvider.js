@@ -158,7 +158,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       const me = state.factions[factionId];
       const tanks = me.revivalTanks ?? 0;
       const starredTanks = me.starredRevivalTanks ?? 0;
-      const free = revivalEngine.freeRevivalAllowance(factionId);
+      const free = revivalEngine.freeRevivalAllowance(factionId, state);
       const leaderEligible = revivalEngine.isEligibleForLeaderRevival(state, factionId) && me.leaders.killed.length > 0;
       const hasGhola = me.treacheryHand.includes('ghola');
       if (tanks === 0 && !leaderEligible && !(hasGhola && me.leaders.killed.length)) return { forces: 0, starred: 0, leaderId: null };
@@ -386,6 +386,48 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           p.querySelector('[data-action="break"]').onclick = () => done(true);
           p.querySelector('[data-default-action]').onclick = () => done(false);
         });
+    },
+
+    chooseKaramaCancel(state, factionId, purpose, ctx) {
+      const place = territoryName(ctx.territoryId);
+      const what = {
+        voice: `Bene Gesserit use the Voice on you in ${place}: you ${ctx.voice?.command === 'play' ? 'must play' : 'must not play'} ${CATEGORY_NAMES[ctx.voice?.category] ?? 'a kind of card'}.`,
+        prescience: `Atreides are about to see part of your battle plan in ${place} (Prescience).`,
+        capture: `Harkonnen are about to capture your leader ${leaderLabel(ctx.leaderId)}.`
+      }[purpose];
+      return ask('Play Karama?',
+        `<p>${esc(what)}</p><p>Play a Karama card to cancel it. The card is then discarded.</p>
+         <div class="decision__actions">
+           <button class="btn btn--primary" data-action="karama">Play Karama</button>
+           <button class="btn" data-default-action>Let it happen</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="karama"]').onclick = () => done(true);
+          p.querySelector('[data-default-action]').onclick = () => done(false);
+        });
+    },
+
+    chooseAllyPledge(state, factionId, allyId) {
+      const spice = state.factions[factionId].spice;
+      const steps = [...new Set([0, 2, 4, 6, 8, 10, 15, 20, 30].filter(n => n <= spice).concat(spice))].sort((a, b) => a - b);
+      return ask('Help your ally this turn?',
+        `<p>You may pledge spice toward ${esc(factionName(allyId))}'s treachery cards and shipments this turn. They spend their own spice first; unused pledge stays yours.</p>
+         <dl class="facts"><dt>Your spice</dt><dd>${spice}</dd></dl>
+         <label class="field"><span>Pledge</span><select name="pledge">${options(steps.map(n => [n, n ? `${n} spice` : 'Nothing']), 0)}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'pledge')));
+    },
+
+    chooseEmperorAllyRevival(state, factionId, allyId) {
+      const ally = state.factions[allyId];
+      const max = Math.max(0, Math.min(3, (ally.revivalTanks ?? 0) - (ally.starredRevivalTanks ?? 0), Math.floor(state.factions.emperor.spice / 2)));
+      if (!max) return 0;
+      return ask('Revive forces for your ally?',
+        `<p>As the Emperor you may pay for up to 3 extra forces for ${esc(factionName(allyId))} this turn, beyond their normal limit, at 2 spice each.</p>
+         <dl class="facts"><dt>Your spice</dt><dd>${state.factions.emperor.spice}</dd><dt>Their tanks</dt><dd>${ally.revivalTanks ?? 0}</dd></dl>
+         <label class="field"><span>Revive</span><select name="n">${options(range(0, max).map(n => [n, n ? `${n} for ${n * 2} spice` : 'None']), 0)}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'n')));
     },
 
     chooseVoice(state, factionId, territoryId, targetId) {
