@@ -31,6 +31,9 @@ player shields in the physical game.
   cards, four traitors and captured leaders, Emperor bid income and Sardaukar,
   Fremen movement, Fedaykin and worm riding, Guild shipping, Bene Gesserit
   Prediction and Voice
+- Alliances: proposals and responses at each Nexus (human and Strategic AI),
+  alliance victory, and most shared ally advantages
+- Traitors: revealing is your choice, with the reveal shown as an event
 - Not yet: storm damage and First Player (awaiting sector data, see
   `docs/STORM_TODO.md`), strategic AI, alliances for the human player,
   Bene Gesserit advisors, Karama, Truthtrance, Weather Control and Family
