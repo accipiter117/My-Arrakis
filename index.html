@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26b">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26c">
 </head>
 <body>
   <header class="masthead">
@@ -67,20 +67,21 @@
     <label class="control-select">
       <span>Opponents</span>
       <select id="select-ai">
-        <option value="basic" selected>Basic AI</option>
+        <option value="strategic" selected>Strategic AI</option>
+        <option value="basic">Basic AI</option>
         <option value="passive">Passive (engine test)</option>
       </select>
     </label>
     <button id="btn-new-game" class="btn btn--primary">Start New Game</button>
     <button id="btn-step-phase" class="btn" disabled>Step One Phase</button>
     <button id="btn-run-turn" class="btn" disabled>Run Full Turn</button>
-    <span id="controls-note" class="controls-note">Basic AI plays legally but without real strategy yet. The game pauses whenever it needs a decision from you.</span>
+    <span id="controls-note" class="controls-note">Strategic AI spots who is close to winning and moves to stop them; deeper tactics are coming. The game pauses whenever it needs a decision from you.</span>
   </footer>
 
-  <p class="build-version">Version 2026-09-26b</p>
+  <p class="build-version">Version 2026-09-26c</p>
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-26b"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-26c"></script>
 </body>
 </html>
