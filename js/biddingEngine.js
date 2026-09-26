@@ -8,6 +8,7 @@
 // call the exact same canBid()/placeBid()/passBid() functions, so there is
 // no separate "AI cheats a little" code path.
 
+import { spendingPower, paySpice } from './allySupport.js';
 import { random } from './random.js';
 const DEFAULT_HAND_LIMIT = 4;
 
@@ -153,7 +154,7 @@ function canBid(state, factionId, amount) {
   if (!state.bidding?.active) return { ok: false, reason: 'No auction in progress.' };
   if (isAtHandLimit(state, factionId)) return { ok: false, reason: `${factionId} is at their hand limit and must pass.` };
   if (state.bidding.passedThisCard.includes(factionId)) return { ok: false, reason: `${factionId} has already passed on this card.` };
-  if (amount > state.factions[factionId].spice) return { ok: false, reason: 'Cannot bid more spice than currently held.' };
+  if (amount > spendingPower(state, factionId)) return { ok: false, reason: 'Cannot bid more spice than you hold (plus anything your ally has pledged).' };
   if (amount <= state.bidding.currentBid) return { ok: false, reason: 'Bid must exceed the current high bid.' };
   if (state.bidding.currentBid === 0 && amount < 1) return { ok: false, reason: 'Opening bid must be at least 1 spice.' };
   return { ok: true };
@@ -225,7 +226,7 @@ function resolveCurrentCard(state) {
 }
 
 function payForCard(state, buyerFactionId, amount) {
-  state.factions[buyerFactionId].spice -= amount;
+  paySpice(state, buyerFactionId, amount); // own spice first, then any ally pledge
 
   // Payment routing: Emperor redirect only applies when someone OTHER than
   // Emperor buys a normal-deck card. Richese's own cache cards are excluded
