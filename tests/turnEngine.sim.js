@@ -51,7 +51,7 @@ assert(gesseritPaid && gesseritPaid.amountReceived === 2, 'bene gesserit (always
 assert(charityEntry.result.every(r => r.factionId === 'gesserit' || r.factionId === undefined), 'no other faction claimed charity, they all started with more than 1 spice');
 
 console.log('\nTest 3: Bidding phase with a fully passive provider ends immediately, cards return to the deck');
-const deckSizeBeforeBidding = 26; // from setup.sim.js: 33 total - 7 dealt at start
+const deckSizeBeforeBidding = treacheryDeckData.cards.filter(c => !(rulesConfig.houseRules?.removeWorthlessCards && c.category === 'worthless')).length - 7; // cards in play, less 7 dealt at start
 assert(state.decks.treacheryDeck.length === deckSizeBeforeBidding, `no cards were actually won, deck should be back to ${deckSizeBeforeBidding}, got ${state.decks.treacheryDeck.length}`);
 
 console.log('\nTest 4: Storm position stays put on turn 1 (passive dial is 0-0 for the first storm, which is legal)');
