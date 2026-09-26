@@ -389,7 +389,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
       if (movementEngine.canCrossShip(state, 'guild', from, to, amount).ok) {
         movementEngine.executeCrossShip(state, 'guild', from, to, amount);
         results.push({ factionId, type: 'crossShip', from, to, amount });
-        await observe(decisionProvider, { type: 'move', factionId, from, to, amount, ornithopter: true }, state);
+        await observe(decisionProvider, { type: 'move', factionId, from, to, amount, crossShip: true }, state);
       }
     } else if (factionId === 'guild' && decision.retreat) {
       // Guild (advanced): ship forces back to reserves, 1 spice per 2 forces.
