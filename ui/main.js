@@ -361,7 +361,10 @@ function describe(entry) {
 
   switch (phase) {
     case 'storm':
-      return log(`Storm moved ${result.sectorsToMove} sector(s) to sector ${result.newPosition}. Damage not yet applied (awaiting sector data).`);
+      const d = result.damage;
+      const hurt = d ? [...d.losses.map(l => `${nameOf(l.factionId)} lost ${l.lost} in ${territoryNameOf(l.territoryId)}`),
+        ...d.spiceLost.map(x => `${x.amount} spice blown away in ${territoryNameOf(x.territoryId)}`)] : [];
+      return log(`Storm moved ${result.sectorsToMove} sector(s) to sector ${result.newPosition}.${hurt.length ? ` ${hurt.join('; ')}.` : ' No damage.'}`);
     case 'spiceBlow': {
       const text = result.placed.length
         ? result.placed.map(m => `${m.amount} spice in ${territoryNameOf(m.territoryId)}`).join(', ')
