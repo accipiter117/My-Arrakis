@@ -18,6 +18,7 @@ import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
 import { createPresenter } from './presenter.js';
+import { createMusic } from './music.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
@@ -432,7 +433,7 @@ function ensureBoard(data) {
     getViewer: () => humanFactionId
   });
   // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
-  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, get state() { return gameState; } };
+  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, get state() { return gameState; } };
 }
 
 function tapTerritory(id) {
@@ -642,6 +643,20 @@ $('zoom-reset').addEventListener('click', () => board?.resetZoom());
 // Decision panels outline legal choices on the map.
 document.addEventListener('board-highlight', e => { highlightIds = e.detail.ids ?? []; renderBoard(); });
 $('btn-run-turn').addEventListener('click', runTurn);
+
+// The score: two tracks in order, then cycling. Starts on the first tap,
+// since phones only allow audio to begin from one.
+const music = createMusic({
+  onChange: m => {
+    $('music-now').textContent = !m.enabled ? 'Music is off.' : m.playing ? `Now playing: ${m.title}` : 'Music starts with your first tap.';
+  }
+});
+$('select-music').value = music.settings.enabled ? 'on' : 'off';
+$('music-volume').value = String(music.settings.volume);
+$('select-music').addEventListener('change', e => music.setEnabled(e.target.value === 'on'));
+$('music-volume').addEventListener('input', e => music.setVolume(Number(e.target.value)));
+$('music-skip').addEventListener('click', () => music.skip());
+document.addEventListener('pointerdown', () => { if (music.settings.enabled) music.start(); }, { once: true });
 
 // Drifting spice motes over the desert (skipped if the device asks for reduced motion).
 if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
