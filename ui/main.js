@@ -153,9 +153,10 @@ function logEvent(e) {
   if (e.type === 'truthtrance') {
     const q = e.question.kind === 'isTraitor' ? `Is ${leaderNameOf(e.question.leaderId)} your traitor?`
       : e.question.kind === 'spiceAtLeast' ? `Do you have at least ${e.question.amount} spice?` : `Do you hold a ${e.question.category.replace(/([A-Z])/g, ' $1').toLowerCase()}?`;
-    addLog('battle', turn, `Truthtrance: ${nameOf(e.asker)} asked ${nameOf(e.target)} "${q}" Answer: ${e.answer ? 'yes' : 'no'}.`);
+    const where = e.territoryId ? ` before the battle in ${territoryNameOf(e.territoryId)}` : '';
+    addLog('battle', turn, `Truthtrance${where}: ${nameOf(e.asker)} asked ${nameOf(e.target)} "${q}" Answer: ${e.answer ? 'yes' : 'no'}.`);
   }
-  if (e.type === 'karama') addLog('battle', turn, `${nameOf(e.factionId)} played Karama to cancel ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[e.purpose]}.`);
+  if (e.type === 'karama') addLog('battle', turn, `${nameOf(e.factionId)} played Karama to cancel ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[e.purpose]}${e.territoryId ? ` in ${territoryNameOf(e.territoryId)}` : ''}.`);
   if (e.type === 'pledge') addLog('bidding', turn, `${nameOf(e.from)} pledged ${e.amount} spice to ally ${nameOf(e.to)} for this turn.`);
 }
 
