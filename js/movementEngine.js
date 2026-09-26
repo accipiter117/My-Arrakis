@@ -211,6 +211,36 @@ function executeMove(state, factionId, fromTerritoryId, toTerritoryId, amount, s
   return state;
 }
 
+// --- Fremen worm riding ------------------------------------------------------
+// After a Nexus, Fremen forces where a worm appeared may ride it to any one
+// territory, subject to storm and occupancy. It happens in the Spice Blow
+// phase and does not count as the Fremen's movement for the turn.
+
+function canRideWorm(state, fromTerritoryId, toTerritoryId) {
+  const fremen = state.factions.fremen;
+  if (!fremen || !(fremen.forces.onBoard[fromTerritoryId] > 0)) return { ok: false, reason: 'No Fremen forces there to ride.' };
+  if (!state.board.territories[toTerritoryId]) return { ok: false, reason: 'Unknown territory.' };
+  if (toTerritoryId === fromTerritoryId) return { ok: false, reason: 'Already there.' };
+  if (isStrongholdBlocked(state, toTerritoryId, 'fremen')) return { ok: false, reason: 'That stronghold already holds two other factions.' };
+  // TODO: riders may not leave or enter a sector in storm, once sector data exists.
+  return { ok: true };
+}
+
+function rideWorm(state, fromTerritoryId, toTerritoryId) {
+  const check = canRideWorm(state, fromTerritoryId, toTerritoryId);
+  if (!check.ok) throw new Error(check.reason);
+  const forces = state.factions.fremen.forces;
+  const amount = forces.onBoard[fromTerritoryId];
+  const starred = forces.starredOnBoard?.[fromTerritoryId] ?? 0;
+  delete forces.onBoard[fromTerritoryId];
+  forces.onBoard[toTerritoryId] = (forces.onBoard[toTerritoryId] ?? 0) + amount;
+  if (starred) {
+    delete forces.starredOnBoard[fromTerritoryId];
+    forces.starredOnBoard[toTerritoryId] = (forces.starredOnBoard[toTerritoryId] ?? 0) + starred;
+  }
+  return { from: fromTerritoryId, to: toTerritoryId, amount };
+}
+
 function resetTurnMovementFlags(state) {
   for (const factionId of Object.keys(state.factions)) {
     state.factions[factionId].hasMovedThisTurn = false;
@@ -219,6 +249,8 @@ function resetTurnMovementFlags(state) {
 }
 
 export {
+  canRideWorm,
+  rideWorm,
   hasOrnithopterAccess,
   moveRangeFor,
   isStrongholdBlocked,
