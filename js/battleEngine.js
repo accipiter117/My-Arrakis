@@ -126,6 +126,15 @@ function isLeaderAvailable(state, factionId, leaderId, territoryId) {
 
 // --- Strength calculation ------------------------------------------------
 
+// Advanced rule: Fremen forces count at full strength in battle without
+// spice. Applied wherever strength is computed, so every dialed Fremen force
+// counts as supported (and the Fremen never need to commit spice).
+function fremenFullStrength(factionId, plan) {
+  if (factionId !== 'fremen') return plan;
+  const starred = plan.starredForcesCommitted ?? 0;
+  return { ...plan, supportedStarredCount: starred, supportedOrdinaryCount: (plan.forcesCommitted ?? 0) - starred };
+}
+
 function calculateStrength(plan) {
   const {
     forcesCommitted, starredForcesCommitted = 0,
@@ -250,12 +259,12 @@ function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId
   // computing strength, both need faction/opponent/territory context that
   // calculateStrength itself deliberately stays ignorant of.
   const aggressorPlan = {
-    ...aggressorPlanInput,
+    ...fremenFullStrength(aggressorFactionId, aggressorPlanInput),
     starredUnitValue: starredUnitValueFor(aggressorFactionId, defenderFactionId),
     kwisatzHaderachBonus: kwisatzHaderachBonusFor(state, aggressorFactionId, territoryId, aggressorPlanInput)
   };
   const defenderPlan = {
-    ...defenderPlanInput,
+    ...fremenFullStrength(defenderFactionId, defenderPlanInput),
     starredUnitValue: starredUnitValueFor(defenderFactionId, aggressorFactionId),
     kwisatzHaderachBonus: kwisatzHaderachBonusFor(state, defenderFactionId, territoryId, defenderPlanInput)
   };
@@ -537,6 +546,7 @@ function resolveExplosion(state, territoryId, factionAId, factionBId) {
 }
 
 export {
+  fremenFullStrength,
   WEAPONS,
   DEFENSES,
   VOICE_CATEGORIES,
