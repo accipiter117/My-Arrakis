@@ -19,6 +19,11 @@ import * as battleEngine from '../js/battleEngine.js';
 
 const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
 const DEFENSES = ['poisonDefense', 'projectileDefense'];
+const CATEGORY_NAMES = {
+  poisonWeapon: 'a poison weapon', projectileWeapon: 'a projectile weapon', specialWeapon: 'a Lasgun',
+  poisonDefense: 'a poison defence (Snooper)', projectileDefense: 'a projectile defence (Shield)',
+  worthless: 'a worthless card', specialLeaderSubstitute: 'a Cheap Hero'
+};
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const options = (pairs, selected) => pairs.map(([v, label]) =>
@@ -309,6 +314,57 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         });
     },
 
+    chooseVoice(state, factionId, territoryId, targetId) {
+      const categories = Object.entries(CATEGORY_NAMES);
+      return ask(`The Voice: battle in ${territoryName(territoryId)}`,
+        `<p>Command ${esc(factionName(targetId))} to play, or not to play, one kind of card. If they can't comply, they play as they wish.</p>
+         <label class="field"><span>Command</span><select name="command">${options([['notPlay', 'Must NOT play'], ['play', 'MUST play']], 'notPlay')}</select></label>
+         <label class="field"><span>Card</span><select name="category">${options(categories, 'poisonDefense')}</select></label>
+         <div class="decision__actions">
+           <button class="btn btn--primary" data-action="voice">Use the Voice</button>
+           <button class="btn" data-default-action>Stay silent</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="voice"]').onclick = () => done({ command: field(p, 'command').value, category: field(p, 'category').value });
+          p.querySelector('[data-default-action]').onclick = () => done(null);
+        });
+    },
+
+    chooseCardsToDiscard(state, factionId, played) {
+      const rows = played.map(id => `<label class="choice"><input type="checkbox" name="discard" value="${esc(id)}"${cardLookup[id]?.category === 'worthless' ? ' checked' : ''}> <span>Discard ${esc(cardName(id))}</span></label>`).join('');
+      return ask('You won the battle',
+        `<p>You may keep or discard each card you played. Unticked cards stay in your hand.</p>
+         <div class="choices">${rows}</div>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () =>
+          done([...p.querySelectorAll('input[name="discard"]:checked')].map(i => i.value)));
+    },
+
+    chooseCaptureAction(state, factionId, leaderId, fromId) {
+      return ask('Captured leader',
+        `<p>You captured <strong>${esc(leaderLabel(leaderId))}</strong> from ${esc(factionName(fromId))}.</p>
+         <p>Kill them now for 2 spice, or keep them to lead one of your battles before they return home. A captured leader stays loyal to ${esc(factionName(fromId))}: if you use them against ${esc(factionName(fromId))}, they can turn traitor.</p>
+         <div class="decision__actions">
+           <button class="btn" data-action="keep">Keep</button>
+           <button class="btn btn--primary" data-default-action>Kill for 2 spice</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="keep"]').onclick = () => done('keep');
+          p.querySelector('[data-default-action]').onclick = () => done('kill');
+        });
+    },
+
+    chooseWormRide(state, factionId, from) {
+      const destinations = Object.keys(state.board.territories)
+        .filter(id => movementEngine.canRideWorm(state, from, id).ok)
+        .sort((a, b) => territoryName(a).localeCompare(territoryName(b)));
+      return ask('Ride Shai-Hulud',
+        `<p>A worm rose in ${esc(territoryName(from))}. Your ${state.factions.fremen.forces.onBoard[from]} forces there were not eaten, and may ride it to any one territory.</p>
+         <label class="field"><span>Ride to</span><select name="to">${options([['', 'Stay where we are'], ...destinations.map(id => [id, territoryName(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'to').value || null));
+    },
+
     choosePrescienceElement(state, factionId, territoryId, opponentId) {
       return ask(`Prescience: battle in ${territoryName(territoryId)}`,
         `<p>Before you plan, ${esc(factionName(opponentId))} must show you one part of their battle plan. Which do you want to see?</p>
@@ -322,22 +378,30 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           done(p.querySelector('input[name="element"]:checked').value));
     },
 
-    chooseBattlePlan(state, factionId, territoryId, opponentId, intel) {
+    chooseBattlePlan(state, factionId, territoryId, opponentId, intel, voice) {
       const me = state.factions[factionId];
       const present = me.forces.onBoard[territoryId] ?? 0;
       const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
       const theirs = state.factions[opponentId].forces.onBoard[territoryId] ?? 0;
       const hand = me.treacheryHand.map(id => ({ id, category: cardLookup[id]?.category }));
-      const leaders = me.leaders.available.slice().sort((a, b) => (leader[b]?.fightingValue ?? 0) - (leader[a]?.fightingValue ?? 0));
+      // Leaders who already fought in another territory this turn can't fight here.
+      const leaders = me.leaders.available.filter(id => battleEngine.isLeaderAvailable(state, factionId, id, territoryId))
+        .sort((a, b) => (leader[b]?.fightingValue ?? 0) - (leader[a]?.fightingValue ?? 0));
       const heroes = hand.filter(c => c.category === 'specialLeaderSubstitute');
       const leaderOptions = [
         ...leaders.map(id => [`leader:${id}`, leaderLabel(id)]),
         ...heroes.map(c => [`hero:${c.id}`, `${cardName(c.id)} (0)`]),
         ['', 'None available']
       ];
-      const weaponOptions = [['', 'No weapon'], ...hand.filter(c => WEAPONS.includes(c.category)).map(c => [c.id, cardName(c.id)])];
-      const defenseOptions = [['', 'No defence'], ...hand.filter(c => DEFENSES.includes(c.category)).map(c => [c.id, cardName(c.id)])];
-      const kh = me.specialFactionState?.kwisatzHaderachActive;
+      // Worthless cards may be played in either slot as a bluff (and to get rid of them).
+      const label = c => c.category === 'worthless' ? `${cardName(c.id)} (worthless bluff)` : cardName(c.id);
+      const weaponOptions = [['', 'No weapon'], ...hand.filter(c => WEAPONS.includes(c.category) || c.category === 'worthless').map(c => [c.id, label(c)])];
+      const defenseOptions = [['', 'No defence'], ...hand.filter(c => DEFENSES.includes(c.category) || c.category === 'worthless').map(c => [c.id, label(c)])];
+      const voiceNote = voice
+        ? `<p class="decision__error">The Voice: you ${voice.command === 'play' ? 'must play' : 'must not play'} ${esc(CATEGORY_NAMES[voice.category] ?? voice.category)}${voice.command === 'play' ? ' if you hold one' : ''}. Your plan will be adjusted to obey.</p>` : '';
+      // Offered only if active and not already used in another territory this phase.
+      const kh = me.specialFactionState?.kwisatzHaderachActive &&
+        [null, undefined, territoryId].includes(me.specialFactionState?.kwisatzHaderachUsedInTerritoryThisPhase);
 
       const revealed = !intel ? '' : (() => {
         const v = intel.value;
@@ -350,7 +414,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         return `<p class="decision__intel">Prescience: ${esc(factionName(opponentId))} is playing <strong>${esc(what)}</strong>.</p>`;
       })();
       return ask(`Battle in ${territoryName(territoryId)}`,
-        `${revealed}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
+        `${voiceNote}${revealed}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
          <dt>Your forces here</dt><dd>${present}${starredPresent ? ` (${starredPresent} starred)` : ''}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
          <p>The side with the higher total wins; ties go to the aggressor. Forces you dial are lost even if you win. If you lose, you lose every force here. Each dialed force counts fully only if backed by 1 spice.</p>
          <label class="field"><span>Forces to dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
@@ -384,7 +448,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           };
           const check = () => {
             const plan = build();
-            const result = battleEngine.canDeclareBattlePlan(state, territoryId, factionId, plan);
+            const result = battleEngine.canDeclareBattlePlan(state, territoryId, factionId, plan, cardLookup);
             const warn = cardLookup[plan.weaponCardId]?.category === 'specialWeapon' && cardLookup[plan.defenseCardId]?.category === 'projectileDefense'
               ? ' Warning: a lasgun with your own shield explodes, destroying everything here.' : '';
             const strength = battleEngine.calculateStrength({ ...plan, starredUnitValue: battleEngine.starredUnitValueFor(factionId, opponentId), leaderWasKilled: false, kwisatzHaderachBonus: plan.useKwisatzHaderach ? 2 : 0 });
