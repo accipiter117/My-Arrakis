@@ -18,12 +18,17 @@
         "maxValue": 8
       },
       "adjacentDraft": [
+        "oldGap",
         "rockOutcroppings",
-        "tsimpo",
-        "oldGap"
+        "tsimpo"
       ],
       "stormSector": 9,
-      "stormShare": 0.71
+      "stormShare": 0.71,
+      "adjacentBoard": [
+        "oldGap",
+        "rockOutcroppings",
+        "tsimpo"
+      ]
     },
     "oldGap": {
       "name": "Old Gap",
@@ -33,12 +38,17 @@
         "maxValue": 6
       },
       "adjacentDraft": [
-        "brokenLand",
+        "arrakeen",
         "basin",
-        "arrakeen"
+        "brokenLand"
       ],
       "stormSector": 8,
-      "stormShare": 0.95
+      "stormShare": 0.95,
+      "adjacentBoard": [
+        "arrakeen",
+        "basin",
+        "brokenLand"
+      ]
     },
     "tsimpo": {
       "name": "Tsimpo",
@@ -47,14 +57,20 @@
         "present": false
       },
       "adjacentDraft": [
-        "imperialBasin",
-        "carthag",
         "brokenLand",
-        "haggaBasin",
-        "plasticBasin"
+        "carthag",
+        "plasticBasin",
+        "rockOutcroppings"
       ],
       "stormSector": 10,
-      "stormShare": 0.59
+      "stormShare": 0.59,
+      "adjacentBoard": [
+        "brokenLand",
+        "carthag",
+        "haggaBasin",
+        "imperialBasin",
+        "plasticBasin"
+      ]
     },
     "basin": {
       "name": "Basin",
@@ -63,12 +79,17 @@
         "present": false
       },
       "adjacentDraft": [
+        "arrakeen",
         "oldGap",
-        "sihayaRidge",
-        "arrakeen"
+        "sihayaRidge"
       ],
       "stormSector": 7,
-      "stormShare": 0.99
+      "stormShare": 0.99,
+      "adjacentBoard": [
+        "arrakeen",
+        "oldGap",
+        "sihayaRidge"
+      ]
     },
     "rockOutcroppings": {
       "name": "Rock Outcroppings",
@@ -78,13 +99,19 @@
         "maxValue": 6
       },
       "adjacentDraft": [
+        "bightOfTheCliff",
         "brokenLand",
         "plasticBasin",
-        "bightOfTheCliff"
+        "tsimpo"
       ],
       "notes": "Spice blow missed in the original board-photo read, added after cross-referencing the independent spice deck card list, which explicitly lists 'Rock Outcroppings (6)'.",
       "stormSector": 11,
-      "stormShare": 0.58
+      "stormShare": 0.58,
+      "adjacentBoard": [
+        "bightOfTheCliff",
+        "brokenLand",
+        "plasticBasin"
+      ]
     },
     "plasticBasin": {
       "name": "Plastic Basin",
@@ -93,13 +120,20 @@
         "present": false
       },
       "adjacentDraft": [
+        "haggaBasin",
         "rockOutcroppings",
-        "tsimpo",
         "sietchTabr",
-        "haggaBasin"
+        "theGreatFlat",
+        "tsimpo"
       ],
       "stormSector": 11,
-      "stormShare": 0.75
+      "stormShare": 0.75,
+      "adjacentBoard": [
+        "haggaBasin",
+        "rockOutcroppings",
+        "sietchTabr",
+        "tsimpo"
+      ]
     },
     "sietchTabr": {
       "name": "Sietch Tabr",
@@ -108,12 +142,17 @@
         "present": false
       },
       "adjacentDraft": [
-        "plasticBasin",
         "bightOfTheCliff",
-        "funeralPlain"
+        "funeralPlain",
+        "plasticBasin"
       ],
       "stormSector": 12,
-      "stormShare": 0.86
+      "stormShare": 0.86,
+      "adjacentBoard": [
+        "bightOfTheCliff",
+        "funeralPlain",
+        "plasticBasin"
+      ]
     },
     "carthag": {
       "name": "Carthag",
@@ -122,13 +161,19 @@
         "present": false
       },
       "adjacentDraft": [
-        "tsimpo",
-        "imperialBasin",
+        "arsunt",
         "haggaBasin",
-        "arsunt"
+        "imperialBasin",
+        "tsimpo"
       ],
       "stormSector": 9,
-      "stormShare": 0.73
+      "stormShare": 0.73,
+      "adjacentBoard": [
+        "arsunt",
+        "haggaBasin",
+        "imperialBasin",
+        "tsimpo"
+      ]
     },
     "arrakeen": {
       "name": "Arrakeen",
@@ -137,14 +182,20 @@
         "present": false
       },
       "adjacentDraft": [
-        "oldGap",
         "basin",
         "imperialBasin",
-        "rimWallWest",
-        "sihayaRidge"
+        "oldGap",
+        "rimWallWest"
       ],
       "stormSector": 8,
-      "stormShare": 0.63
+      "stormShare": 0.63,
+      "adjacentBoard": [
+        "basin",
+        "imperialBasin",
+        "oldGap",
+        "rimWallWest",
+        "sihayaRidge"
+      ]
     },
     "rimWallWest": {
       "name": "Rim Wall West",
@@ -154,12 +205,18 @@
       },
       "adjacentDraft": [
         "arrakeen",
-        "imperialBasin",
+        "holeInTheRock",
         "shieldWall",
-        "holeInTheRock"
+        "sihayaRidge"
       ],
       "stormSector": 7,
-      "stormShare": 0.95
+      "stormShare": 0.95,
+      "adjacentBoard": [
+        "arrakeen",
+        "holeInTheRock",
+        "imperialBasin",
+        "shieldWall"
+      ]
     },
     "sihayaRidge": {
       "name": "Sihaya Ridge",
@@ -170,11 +227,16 @@
       },
       "adjacentDraft": [
         "basin",
-        "arrakeen",
-        "garaKulon"
+        "garaKulon",
+        "rimWallWest"
       ],
       "stormSector": 7,
-      "stormShare": 0.65
+      "stormShare": 0.65,
+      "adjacentBoard": [
+        "arrakeen",
+        "basin",
+        "garaKulon"
+      ]
     },
     "haggaBasin": {
       "name": "Hagga Basin",
@@ -184,13 +246,18 @@
         "maxValue": 6
       },
       "adjacentDraft": [
-        "tsimpo",
-        "plasticBasin",
+        "arsunt",
         "carthag",
-        "arsunt"
+        "plasticBasin"
       ],
       "stormSector": 10,
-      "stormShare": 0.61
+      "stormShare": 0.61,
+      "adjacentBoard": [
+        "arsunt",
+        "carthag",
+        "plasticBasin",
+        "tsimpo"
+      ]
     },
     "imperialBasin": {
       "name": "Imperial Basin",
@@ -200,17 +267,24 @@
       },
       "notes": "Per rulebook: the one sand territory storm damage does NOT apply to.",
       "adjacentDraft": [
-        "arsunt",
-        "polarSink",
-        "rimWallWest",
         "arrakeen",
-        "falseWallEast",
+        "arsunt",
         "carthag",
-        "tsimpo",
+        "falseWallEast",
         "shieldWall"
       ],
       "stormSector": 8,
-      "stormShare": 0.68
+      "stormShare": 0.68,
+      "adjacentBoard": [
+        "arrakeen",
+        "arsunt",
+        "carthag",
+        "falseWallEast",
+        "polarSink",
+        "rimWallWest",
+        "shieldWall",
+        "tsimpo"
+      ]
     },
     "shieldWall": {
       "name": "Shield Wall",
@@ -219,15 +293,22 @@
         "present": false
       },
       "adjacentDraft": [
-        "rimWallWest",
         "holeInTheRock",
-        "theMinorErg",
-        "falseWallEast",
+        "imperialBasin",
         "pastyMesa",
-        "imperialBasin"
+        "rimWallWest",
+        "theMinorErg"
       ],
       "stormSector": 6,
-      "stormShare": 0.57
+      "stormShare": 0.57,
+      "adjacentBoard": [
+        "falseWallEast",
+        "holeInTheRock",
+        "imperialBasin",
+        "pastyMesa",
+        "rimWallWest",
+        "theMinorErg"
+      ]
     },
     "holeInTheRock": {
       "name": "Hole in the Rock",
@@ -236,12 +317,17 @@
         "present": false
       },
       "adjacentDraft": [
+        "garaKulon",
         "rimWallWest",
-        "shieldWall",
-        "garaKulon"
+        "shieldWall"
       ],
       "stormSector": 6,
-      "stormShare": 0.92
+      "stormShare": 0.92,
+      "adjacentBoard": [
+        "garaKulon",
+        "rimWallWest",
+        "shieldWall"
+      ]
     },
     "garaKulon": {
       "name": "Gara Kulon",
@@ -250,12 +336,17 @@
         "present": false
       },
       "adjacentDraft": [
-        "sihayaRidge",
         "holeInTheRock",
-        "pastyMesa"
+        "pastyMesa",
+        "sihayaRidge"
       ],
       "stormSector": 6,
-      "stormShare": 0.9
+      "stormShare": 0.9,
+      "adjacentBoard": [
+        "holeInTheRock",
+        "pastyMesa",
+        "sihayaRidge"
+      ]
     },
     "bightOfTheCliff": {
       "name": "Bight of the Cliff",
@@ -264,12 +355,17 @@
         "present": false
       },
       "adjacentDraft": [
-        "sietchTabr",
+        "funeralPlain",
         "rockOutcroppings",
-        "funeralPlain"
+        "sietchTabr"
       ],
       "stormSector": 12,
-      "stormShare": 0.85
+      "stormShare": 0.85,
+      "adjacentBoard": [
+        "funeralPlain",
+        "rockOutcroppings",
+        "sietchTabr"
+      ]
     },
     "funeralPlain": {
       "name": "Funeral Plain",
@@ -284,7 +380,12 @@
         "theGreatFlat"
       ],
       "stormSector": 13,
-      "stormShare": 0.7
+      "stormShare": 0.7,
+      "adjacentBoard": [
+        "bightOfTheCliff",
+        "sietchTabr",
+        "theGreatFlat"
+      ]
     },
     "theGreatFlat": {
       "name": "The Great Flat",
@@ -295,11 +396,17 @@
       },
       "adjacentDraft": [
         "funeralPlain",
+        "plasticBasin",
         "theGreaterFlat",
-        "windPassNorth"
+        "windPass"
       ],
       "stormSector": 13,
-      "stormShare": 0.84
+      "stormShare": 0.84,
+      "adjacentBoard": [
+        "funeralPlain",
+        "theGreaterFlat",
+        "windPassNorth"
+      ]
     },
     "arsunt": {
       "name": "Arsunt",
@@ -308,15 +415,22 @@
         "present": false
       },
       "adjacentDraft": [
-        "windPass",
+        "carthag",
         "haggaBasin",
         "imperialBasin",
-        "windPassNorth",
-        "carthag",
-        "polarSink"
+        "polarSink",
+        "windPass"
       ],
       "stormSector": 9,
-      "stormShare": 0.4
+      "stormShare": 0.4,
+      "adjacentBoard": [
+        "carthag",
+        "haggaBasin",
+        "imperialBasin",
+        "polarSink",
+        "windPass",
+        "windPassNorth"
+      ]
     },
     "falseWallEast": {
       "name": "False Wall East",
@@ -325,14 +439,20 @@
         "present": false
       },
       "adjacentDraft": [
+        "hargPass",
         "imperialBasin",
-        "shieldWall",
-        "theMinorErg",
         "polarSink",
-        "hargPass"
+        "theMinorErg"
       ],
       "stormSector": 6,
-      "stormShare": 0.42
+      "stormShare": 0.42,
+      "adjacentBoard": [
+        "hargPass",
+        "imperialBasin",
+        "polarSink",
+        "shieldWall",
+        "theMinorErg"
+      ]
     },
     "theMinorErg": {
       "name": "The Minor Erg",
@@ -342,14 +462,21 @@
         "maxValue": 8
       },
       "adjacentDraft": [
-        "shieldWall",
-        "pastyMesa",
         "falseWallEast",
+        "falseWallSouth",
         "hargPass",
-        "falseWallSouth"
+        "pastyMesa",
+        "shieldWall"
       ],
       "stormSector": 5,
-      "stormShare": 0.52
+      "stormShare": 0.52,
+      "adjacentBoard": [
+        "falseWallEast",
+        "falseWallSouth",
+        "hargPass",
+        "pastyMesa",
+        "shieldWall"
+      ]
     },
     "pastyMesa": {
       "name": "Pasty Mesa",
@@ -358,14 +485,23 @@
         "present": false
       },
       "adjacentDraft": [
+        "falseWallSouth",
         "garaKulon",
-        "theMinorErg",
         "redChasm",
-        "tueksSietch",
-        "shieldWall"
+        "shieldWall",
+        "southMesa",
+        "theMinorErg",
+        "tueksSietch"
       ],
       "stormSector": 5,
-      "stormShare": 0.53
+      "stormShare": 0.53,
+      "adjacentBoard": [
+        "garaKulon",
+        "redChasm",
+        "shieldWall",
+        "theMinorErg",
+        "tueksSietch"
+      ]
     },
     "redChasm": {
       "name": "Red Chasm",
@@ -379,7 +515,11 @@
         "southMesa"
       ],
       "stormSector": 5,
-      "stormShare": 0.6
+      "stormShare": 0.6,
+      "adjacentBoard": [
+        "pastyMesa",
+        "southMesa"
+      ]
     },
     "theGreaterFlat": {
       "name": "The Greater Flat",
@@ -388,12 +528,17 @@
         "present": false
       },
       "adjacentDraft": [
-        "theGreatFlat",
+        "falseWallWest",
         "habbanyaErg",
-        "falseWallWest"
+        "theGreatFlat"
       ],
       "stormSector": 14,
-      "stormShare": 0.99
+      "stormShare": 0.99,
+      "adjacentBoard": [
+        "falseWallWest",
+        "habbanyaErg",
+        "theGreatFlat"
+      ]
     },
     "habbanyaErg": {
       "name": "Habbanya Erg",
@@ -403,12 +548,17 @@
         "maxValue": 8
       },
       "adjacentDraft": [
-        "theGreaterFlat",
+        "falseWallWest",
         "habbanyaSietch",
-        "falseWallWest"
+        "theGreaterFlat"
       ],
       "stormSector": 15,
-      "stormShare": 0.53
+      "stormShare": 0.53,
+      "adjacentBoard": [
+        "falseWallWest",
+        "habbanyaSietch",
+        "theGreaterFlat"
+      ]
     },
     "falseWallWest": {
       "name": "False Wall West",
@@ -417,14 +567,21 @@
         "present": false
       },
       "adjacentDraft": [
-        "theGreaterFlat",
-        "windPassNorth",
-        "habbanyaErg",
         "cielagoWest",
-        "windPass"
+        "habbanyaErg",
+        "theGreaterFlat",
+        "windPass",
+        "windPassNorth"
       ],
       "stormSector": 15,
-      "stormShare": 0.56
+      "stormShare": 0.56,
+      "adjacentBoard": [
+        "cielagoWest",
+        "habbanyaErg",
+        "theGreaterFlat",
+        "windPass",
+        "windPassNorth"
+      ]
     },
     "windPass": {
       "name": "Wind Pass",
@@ -434,14 +591,21 @@
       },
       "adjacentDraft": [
         "arsunt",
-        "windPassNorth",
-        "polarSink",
         "falseWallWest",
-        "cielagoNorth"
+        "polarSink",
+        "theGreatFlat",
+        "windPassNorth"
       ],
       "notes": "Originally read as having a 6-value spice blow from the board photo. The independent spice deck card list instead attributes that value to Wind Pass North, and the two labels sit close enough together on the board that a misattribution either direction is plausible. Deferring to the dedicated card list here; worth a final glance at the physical board to be certain.",
       "stormSector": 14,
-      "stormShare": 0.39
+      "stormShare": 0.39,
+      "adjacentBoard": [
+        "arsunt",
+        "cielagoNorth",
+        "falseWallWest",
+        "polarSink",
+        "windPassNorth"
+      ]
     },
     "windPassNorth": {
       "name": "Wind Pass North",
@@ -451,15 +615,21 @@
         "maxValue": 6
       },
       "adjacentDraft": [
-        "arsunt",
+        "cielagoNorth",
         "falseWallWest",
-        "windPass",
         "polarSink",
-        "theGreatFlat"
+        "windPass"
       ],
       "notes": "See note on Wind Pass, the spice blow value at this position was originally attributed to the neighbouring Wind Pass territory instead.",
       "stormSector": 16,
-      "stormShare": 0.56
+      "stormShare": 0.56,
+      "adjacentBoard": [
+        "arsunt",
+        "falseWallWest",
+        "polarSink",
+        "theGreatFlat",
+        "windPass"
+      ]
     },
     "polarSink": {
       "name": "Polar Sink",
@@ -469,16 +639,24 @@
       },
       "notes": "Never in storm. No battles occur here. Free haven for all factions.",
       "adjacentDraft": [
-        "imperialBasin",
         "arsunt",
         "cielagoNorth",
-        "windPass",
-        "windPassNorth",
         "falseWallEast",
-        "hargPass"
+        "hargPass",
+        "windPass",
+        "windPassNorth"
       ],
       "stormSector": 0,
-      "stormShare": 0.1
+      "stormShare": 0.1,
+      "adjacentBoard": [
+        "arsunt",
+        "cielagoNorth",
+        "falseWallEast",
+        "hargPass",
+        "imperialBasin",
+        "windPass",
+        "windPassNorth"
+      ]
     },
     "hargPass": {
       "name": "Harg Pass",
@@ -487,14 +665,21 @@
         "present": false
       },
       "adjacentDraft": [
-        "theMinorErg",
         "cielagoNorth",
-        "polarSink",
+        "falseWallEast",
         "falseWallSouth",
-        "falseWallEast"
+        "polarSink",
+        "theMinorErg"
       ],
       "stormSector": 2,
-      "stormShare": 0.43
+      "stormShare": 0.43,
+      "adjacentBoard": [
+        "cielagoNorth",
+        "falseWallEast",
+        "falseWallSouth",
+        "polarSink",
+        "theMinorErg"
+      ]
     },
     "falseWallSouth": {
       "name": "False Wall South",
@@ -503,15 +688,24 @@
         "present": false
       },
       "adjacentDraft": [
-        "theMinorErg",
-        "hargPass",
-        "tueksSietch",
-        "southMesa",
         "cielagoEast",
-        "cielagoNorth"
+        "cielagoNorth",
+        "hargPass",
+        "pastyMesa",
+        "southMesa",
+        "theMinorErg",
+        "tueksSietch"
       ],
       "stormSector": 2,
-      "stormShare": 0.62
+      "stormShare": 0.62,
+      "adjacentBoard": [
+        "cielagoEast",
+        "cielagoNorth",
+        "hargPass",
+        "southMesa",
+        "theMinorErg",
+        "tueksSietch"
+      ]
     },
     "tueksSietch": {
       "name": "Tuek's Sietch",
@@ -521,11 +715,16 @@
       },
       "adjacentDraft": [
         "falseWallSouth",
-        "southMesa",
-        "pastyMesa"
+        "pastyMesa",
+        "southMesa"
       ],
       "stormSector": 3,
-      "stormShare": 0.98
+      "stormShare": 0.98,
+      "adjacentBoard": [
+        "falseWallSouth",
+        "pastyMesa",
+        "southMesa"
+      ]
     },
     "southMesa": {
       "name": "South Mesa",
@@ -536,13 +735,20 @@
       },
       "notes": "The '10' spice icon sits near the Tuek's Sietch/South Mesa boundary on the photo, assigned here provisionally, worth confirming which territory it's actually inside.",
       "adjacentDraft": [
-        "redChasm",
-        "tueksSietch",
+        "cielagoEast",
         "falseWallSouth",
-        "cielagoEast"
+        "pastyMesa",
+        "redChasm",
+        "tueksSietch"
       ],
       "stormSector": 4,
-      "stormShare": 0.44
+      "stormShare": 0.44,
+      "adjacentBoard": [
+        "cielagoEast",
+        "falseWallSouth",
+        "redChasm",
+        "tueksSietch"
+      ]
     },
     "habbanyaSietch": {
       "name": "Habbanya Sietch",
@@ -551,12 +757,17 @@
         "present": false
       },
       "adjacentDraft": [
+        "cielagoWest",
         "habbanyaErg",
-        "habbanyaRidgeFlat",
-        "cielagoWest"
+        "habbanyaRidgeFlat"
       ],
       "stormSector": 15,
-      "stormShare": 0.93
+      "stormShare": 0.93,
+      "adjacentBoard": [
+        "cielagoWest",
+        "habbanyaErg",
+        "habbanyaRidgeFlat"
+      ]
     },
     "habbanyaRidgeFlat": {
       "name": "Habbanya Ridge Flat",
@@ -566,12 +777,17 @@
         "maxValue": 10
       },
       "adjacentDraft": [
-        "habbanyaSietch",
         "cielagoWest",
+        "habbanyaSietch",
         "meridian"
       ],
       "stormSector": 16,
-      "stormShare": 0.9
+      "stormShare": 0.9,
+      "adjacentBoard": [
+        "cielagoWest",
+        "habbanyaSietch",
+        "meridian"
+      ]
     },
     "cielagoWest": {
       "name": "Cielago West",
@@ -580,14 +796,21 @@
         "present": false
       },
       "adjacentDraft": [
-        "falseWallWest",
-        "habbanyaSietch",
-        "habbanyaRidgeFlat",
         "cielagoDepression",
-        "cielagoNorth"
+        "cielagoNorth",
+        "falseWallWest",
+        "habbanyaRidgeFlat",
+        "habbanyaSietch"
       ],
       "stormSector": 16,
-      "stormShare": 0.78
+      "stormShare": 0.78,
+      "adjacentBoard": [
+        "cielagoDepression",
+        "cielagoNorth",
+        "falseWallWest",
+        "habbanyaRidgeFlat",
+        "habbanyaSietch"
+      ]
     },
     "cielagoNorth": {
       "name": "Cielago North",
@@ -597,15 +820,23 @@
         "maxValue": 8
       },
       "adjacentDraft": [
-        "hargPass",
-        "windPass",
-        "polarSink",
         "cielagoDepression",
         "cielagoWest",
-        "falseWallSouth"
+        "falseWallSouth",
+        "hargPass",
+        "polarSink",
+        "windPassNorth"
       ],
       "stormSector": 0,
-      "stormShare": 0.48
+      "stormShare": 0.48,
+      "adjacentBoard": [
+        "cielagoDepression",
+        "cielagoWest",
+        "falseWallSouth",
+        "hargPass",
+        "polarSink",
+        "windPass"
+      ]
     },
     "cielagoDepression": {
       "name": "Cielago Depression",
@@ -614,14 +845,21 @@
         "present": false
       },
       "adjacentDraft": [
-        "cielagoWest",
-        "cielagoNorth",
-        "meridian",
         "cielagoEast",
-        "cielagoSouth"
+        "cielagoNorth",
+        "cielagoSouth",
+        "cielagoWest",
+        "meridian"
       ],
       "stormSector": 0,
-      "stormShare": 0.46
+      "stormShare": 0.46,
+      "adjacentBoard": [
+        "cielagoEast",
+        "cielagoNorth",
+        "cielagoSouth",
+        "cielagoWest",
+        "meridian"
+      ]
     },
     "cielagoEast": {
       "name": "Cielago East",
@@ -631,12 +869,18 @@
       },
       "adjacentDraft": [
         "cielagoDepression",
-        "southMesa",
+        "cielagoSouth",
         "falseWallSouth",
-        "cielagoSouth"
+        "southMesa"
       ],
       "stormSector": 1,
-      "stormShare": 0.84
+      "stormShare": 0.84,
+      "adjacentBoard": [
+        "cielagoDepression",
+        "cielagoSouth",
+        "falseWallSouth",
+        "southMesa"
+      ]
     },
     "meridian": {
       "name": "Meridian",
@@ -645,12 +889,17 @@
         "present": false
       },
       "adjacentDraft": [
-        "habbanyaRidgeFlat",
         "cielagoDepression",
-        "cielagoSouth"
+        "cielagoSouth",
+        "habbanyaRidgeFlat"
       ],
       "stormSector": 17,
-      "stormShare": 0.66
+      "stormShare": 0.66,
+      "adjacentBoard": [
+        "cielagoDepression",
+        "cielagoSouth",
+        "habbanyaRidgeFlat"
+      ]
     },
     "cielagoSouth": {
       "name": "Cielago South",
@@ -660,12 +909,17 @@
         "maxValue": 12
       },
       "adjacentDraft": [
-        "meridian",
         "cielagoDepression",
-        "cielagoEast"
+        "cielagoEast",
+        "meridian"
       ],
       "stormSector": 0,
-      "stormShare": 0.78
+      "stormShare": 0.78,
+      "adjacentBoard": [
+        "cielagoDepression",
+        "cielagoEast",
+        "meridian"
+      ]
     }
   },
   "stormStart": {
