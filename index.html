@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26h">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-26i">
 </head>
 <body>
   <div class="app">
@@ -21,6 +21,7 @@
         <span id="status-phase" class="topbar__phase">No game</span>
       </div>
       <div class="topbar__pills">
+        <span id="status-ally" class="pill pill--ally" hidden>—</span>
         <span id="status-spice" class="pill pill--spice" hidden>—</span>
         <span id="status-storm" class="pill">Storm —</span>
       </div>
@@ -89,7 +90,7 @@
       </div>
       <p class="sheet__note" id="save-note">Games save automatically after every phase.</p>
       <p class="sheet__note">The game pauses whenever a decision is yours. Tap any territory for details. Add <code>?seed=N</code> to the address to replay a game.</p>
-      <p class="build-version">Version 2026-09-26h</p>
+      <p class="build-version">Version 2026-09-26i</p>
     </div>
   </section>
 
@@ -114,6 +115,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-26h"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-26i"></script>
 </body>
 </html>
