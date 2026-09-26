@@ -412,8 +412,8 @@ function describe(entry) {
 // --- Board ---------------------------------------------------------------
 
 const FACTION_COLORS = {
-  atreides: '#2f5233', harkonnen: '#7a1f1f', emperor: '#221c14',
-  fremen: '#2b6f86', guild: '#b5561f', gesserit: '#4b2e5a'
+  atreides: '#3f7047', harkonnen: '#9c2a24', emperor: '#66707e',
+  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72'
 };
 
 function ensureBoard(data) {
@@ -642,6 +642,21 @@ $('zoom-reset').addEventListener('click', () => board?.resetZoom());
 // Decision panels outline legal choices on the map.
 document.addEventListener('board-highlight', e => { highlightIds = e.detail.ids ?? []; renderBoard(); });
 $('btn-run-turn').addEventListener('click', runTurn);
+
+// Drifting spice motes over the desert (skipped if the device asks for reduced motion).
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const motes = $('motes');
+  for (let i = 0; i < 16; i++) {
+    const m = document.createElement('span');
+    m.className = 'mote';
+    m.style.left = `${Math.random() * 100}%`;
+    m.style.top = `${40 + Math.random() * 60}%`;
+    m.style.setProperty('--dx', `${(Math.random() - 0.3) * 120}px`);
+    m.style.animationDuration = `${9 + Math.random() * 10}s`;
+    m.style.animationDelay = `${-Math.random() * 18}s`;
+    motes.appendChild(m);
+  }
+}
 
 // Show the map straight away, and the menu so a first game is one tap away.
 loadAllData().then(data => { ensureBoard(data); render(); }).catch(err => addLog('error', '—', `Failed to load the map: ${err.message}`));
