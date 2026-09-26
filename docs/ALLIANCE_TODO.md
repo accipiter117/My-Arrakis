@@ -1,45 +1,25 @@
-# Alliance "Shared Advantages": Outstanding TODOs
+# Alliances: status
 
-The core alliance relationship (form, break, one-per-faction limit, the
-post-formation same-territory rule, and victory sharing) is built in
-`js/allianceEngine.js` and `js/victoryEngine.js`. What's NOT built yet is
-the long list of faction-specific abilities the rulebook grants once
-allied, each one lives inside a different phase engine and needs its own
-hook rather than a single central one. Tracked here so they don't get
-lost.
+## Built
 
-## Universal (any two allies)
+- Nexus diplomacy in turn order: break an alliance, propose, accept or reject
+  (js/turnEngine.js runNexusDiplomacy), for human and AI alike
+- AI diplomacy (js/ai/diplomacy.js) for the Strategic AI; the Basic AI stays
+  unaligned as the easier opponent
+- Public record of betrayals, which lowers trust in future offers
+- Alliance victory (4 strongholds held between the allies)
+- Allies never battle each other, and may not move, ship or ride a worm
+  into each other's territory (except the Polar Sink)
+- Newly allied factions sharing a territory: the overlap penalty
+- Shared advantages: Guild half-price shipping for its ally, Atreides
+  Prescience in the ally's battles, Bene Gesserit Voice in the ally's
+  battles, Harkonnen traitors usable against the ally's opponent, Fremen
+  protecting the ally from worms
 
-- **Bidding**: allies may pay some or all of each other's Treachery Card
-  cost, letting a faction effectively bid more spice than they hold alone.
-  Needs a hook in `biddingEngine.js`'s `payForCard()`.
-- **Movement**: allies may pay for each other's shipments. Needs a hook in
-  `movementEngine.js`'s `executeShipment()`.
+## Still to build
 
-## Faction-specific
-
-- **Atreides**: may force an ally's opponent to reveal one Battle Plan
-  element on the ally's behalf (their core ability, extended to allies).
-  Needs a hook in `battleEngine.js`.
-- **Emperor**: may pay (directly to the bank) for up to 3 extra forces or
-  spice-cost leader revival for an ally, on top of the ally's own normal
-  revival. Needs a hook in `revivalEngine.js`.
-- **Fremen**: may choose to protect (or not) allied forces from being
-  devoured by a worm, and may grant an ally 3 free force revivals during
-  Revival. Needs hooks in both `spiceEngine.js` (the devour logic) and
-  `revivalEngine.js`.
-- **Spacing Guild**: allies ship and cross-ship at the Guild's half-price
-  rate rather than standard rate. Needs a hook in `movementEngine.js`'s
-  `shipmentCostPerForce()`.
-- **Bene Gesserit**: may Voice an ally's opponent, not just their own.
-  Needs a hook in `battleEngine.js` wherever Voice itself gets implemented
-  (Voice isn't built at all yet, separate from this alliance-specific list).
-- **Harkonnen**: Traitor Cards they hold may be used against an ally's
-  opponent, not just their own. Needs a hook in `battleEngine.js`'s
-  traitor-check logic.
-
-None of these are silently broken right now, they simply don't exist yet,
-alliances function correctly without them, just without the extra
-cross-faction assistance the rulebook allows. Worth picking off
-individually as their underlying phase engines get revisited, rather than
-building all seven in one pass.
+- Allies paying for each other's treachery card bids and shipments
+- Emperor paying for up to 3 extra force revivals for the ally
+- Fremen granting the ally 3 free force revivals
+- AI breaking alliances: allowed, but its threshold is cautious and it has
+  not yet done so in simulation; revisit when tuning the Strategic AI
