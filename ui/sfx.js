@@ -14,7 +14,7 @@
 const SOUNDS = {
   wormRoar: '../assets/sfx/worm-roar.mp3',
   shipArrival: '../assets/sfx/ship-arrival.mp3',
-  ornithopter: '../assets/sfx/ornithopter.mp3'
+  ornithopter: '../assets/sfx/ornithopter.mp3?v=2'
 };
 const KEY = 'my-arrakis-sfx';
 const MIN_GAP_MS = 700;
