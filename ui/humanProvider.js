@@ -39,12 +39,25 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
   // Shows a form and resolves with whatever `bind` passes to done().
   function ask(title, html, bind) {
     return new Promise(resolve => {
-      panel.innerHTML = `<h2 class="decision__title">${esc(title)}</h2><div class="decision__body">${html}</div>`;
+      panel.innerHTML = `<div class="decision__head"><h2 class="decision__title">${esc(title)}</h2>
+        <button class="icon-btn decision__toggle" aria-label="Shrink this panel to see the map">▾</button></div>
+        <div class="decision__body">${html}</div>`;
+      panel.classList.remove('decision-panel--collapsed');
+      // Shrink to the title bar to see (and tap) the map, tap again to return.
+      const toggle = panel.querySelector('.decision__toggle');
+      const flip = () => {
+        const collapsed = panel.classList.toggle('decision-panel--collapsed');
+        toggle.textContent = collapsed ? '▴' : '▾';
+        toggle.setAttribute('aria-label', collapsed ? 'Expand this panel' : 'Shrink this panel to see the map');
+      };
+      toggle.onclick = flip;
+      panel.querySelector('.decision__title').onclick = () => { if (panel.classList.contains('decision-panel--collapsed')) flip(); };
       panel.hidden = false;
       onWaiting?.(true);
       const done = value => {
         panel._cleanup?.();
         panel._cleanup = null;
+        panel.classList.remove('decision-panel--collapsed');
         panel.hidden = true;
         panel.innerHTML = '';
         onWaiting?.(false);
@@ -206,7 +219,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
            <label class="field"><span>From</span><select name="moveFrom">${options(fromOptions, '')}</select></label>
            <label class="field"><span>To</span><select name="moveTo"><option value="">Choose a starting territory</option></select></label>
            <label class="field"><span>Forces</span><input type="number" name="moveAmount" min="1" value="1"></label>
-           <p class="decision__note">Your shipment happens first, then your move.</p>
+           <p class="decision__note">Your shipment happens first, then your move. Tip: tap ▾ to see the map, where legal choices are outlined; tapping a territory fills this in.</p>
          </fieldset>
          ${me.treacheryHand.includes('hajr') ? `<fieldset><legend>Hajr: an extra move (uses the card)</legend>
            <label class="field"><span>From</span><select name="hajrFrom">${options(fromOptions.map(([v, l]) => [v, v ? l : 'Keep the card']), '')}</select></label>
@@ -226,7 +239,17 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
               : '<option value="">Choose a starting territory</option>';
             if (from) field(p, 'moveAmount').value = me.forces.onBoard[from];
           };
+          // Outline legal choices on the map: where this group can move
+          // once one is chosen, otherwise where the shipment can land.
+          const highlight = () => {
+            const from = field(p, 'moveFrom').value;
+            const ids = from
+              ? movementEngine.reachableTerritories(state, factionId, from, range_)
+              : territoryIds.filter(id => movementEngine.canShip(state, factionId, id, Math.max(1, num(p, 'shipAmount'))).ok);
+            document.dispatchEvent(new CustomEvent('board-highlight', { detail: { ids } }));
+          };
           const check = () => {
+            highlight();
             const problems = [];
             const shipTo = field(p, 'shipTo').value;
             const costEl = p.querySelector('[data-for="ship"]');
@@ -261,7 +284,10 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             check();
           };
           document.addEventListener('territory-tap', onTap);
-          p._cleanup = () => document.removeEventListener('territory-tap', onTap);
+          p._cleanup = () => {
+            document.removeEventListener('territory-tap', onTap);
+            document.dispatchEvent(new CustomEvent('board-highlight', { detail: { ids: [] } }));
+          };
           if (field(p, 'hajrFrom')) field(p, 'hajrFrom').onchange = () => {
             const from = field(p, 'hajrFrom').value;
             const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, range_) : [];
