@@ -67,9 +67,13 @@ function resolvePile(state, pileKey) {
         // Turn 1 exception: worms are set aside entirely, no devour, no Nexus,
         // reshuffled back into the deck once the whole phase ends.
         setAsideWorms.push(card);
+        (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'wormSetAside' });
         continue;
       }
 
+      const discard = state.decks[`spiceDiscard${pileKey}`];
+      const top = discard[discard.length - 1];
+      (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'worm', devoured: top?.type === 'territory' ? top.id : null });
       devourTopOfPile(state, pileKey);
       state.decks[`spiceDiscard${pileKey}`].push(card);
       triggeredNexus = true;
@@ -79,6 +83,7 @@ function resolvePile(state, pileKey) {
     // Territory card: place spice (unless the territory's sector is in
     // storm, per the rulebook, but sector/storm state isn't final yet).
     placeSpiceBlow(state, card, pileKey);
+    (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'territory', territoryId: card.id, amount: card.maxValue });
     state.decks[`spiceDiscard${pileKey}`].push(card);
     break; // this pile is done for the phase
   }
@@ -130,6 +135,7 @@ function devourTopOfPile(state, pileKey) {
 
 function resolveSpiceBlowPhase(state) {
   state.nexus.wormTerritories = [];
+  state.nexus.draws = []; // every card drawn this phase, in order, for presentation
   const resultA = resolvePile(state, 'A');
   const resultB = resolvePile(state, 'B');
 
