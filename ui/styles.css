@@ -156,6 +156,10 @@ strong { color: var(--gold); }
 .watch-item--info { border-left-color: var(--gold); background: rgba(212, 169, 79, 0.08); }
 .watch-item--mine { border-left-color: var(--gold); background: rgba(212, 169, 79, 0.18); }
 
+.pill--ally { cursor: pointer; }
+.alliance-box { padding: 0.5rem 0.65rem; margin-bottom: 0.5rem; border-left: 3px solid var(--faction-gesserit); background: rgba(94, 58, 114, 0.18); font-size: 12px; }
+.alliance-box ul { margin: 0.2rem 0 0.45rem; padding-left: 1rem; }
+
 /* Faction guide */
 .guide { border: 1px solid #3a2b1c; margin-bottom: 0.45rem; background: var(--slab-2); }
 .guide summary { cursor: pointer; padding: 0.55rem 0.65rem; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.05em; list-style: none; }
