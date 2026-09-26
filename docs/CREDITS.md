@@ -18,6 +18,8 @@
 - **Revival ambience** (`assets/sfx/revival-tanks.wav`, the Tleilaxu tanks) and
   **Bidding ambience** (`assets/sfx/bidding.wav`): supplied by the project
   owner. Made into seamless loops (half-second crossfade), levelled, mono.
+- **Shipment and Movement ambience** (`assets/sfx/shipping.wav`): supplied by the
+  project owner as a loop. Seam smoothed (30 ms), level matched, mono.
 
 ## Faction counters
 - `assets/counters/*.png`: commissioned by the project owner (generated with ChatGPT to a brief based on the novels' heraldry: the Atreides red hawk, Harkonnen blue griffin and Corrino golden lion; the Fremen crysknife, Guild Heighliner and Bene Gesserit eye and gom jabbar). Cut out and resized for the game.
