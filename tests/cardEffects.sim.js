@@ -2,7 +2,7 @@
 // Run with: node tests/cardEffects.sim.js
 
 import fs from 'fs';
-import { canPlayHajr, playHajr, canPlayGhola, playGhola } from '../js/cardEffects.js';
+import { canPlayHajr, playHajr, canPlayGhola, playGhola, canDiscardUnbuilt, discardUnbuilt } from '../js/cardEffects.js';
 import { executeMove } from '../js/movementEngine.js';
 
 const territoriesData = JSON.parse(fs.readFileSync('./data/territories.json', 'utf8'));
@@ -59,5 +59,14 @@ state = makeState();
 assert(canPlayGhola(state, 'fremen', { forces: 6 }).ok === false, 'more than 5 refused');
 state.factions.fremen.revivalTanks = 2; state.factions.fremen.starredRevivalTanks = 0;
 assert(canPlayGhola(state, 'fremen', { forces: 3 }).ok === false, 'more than the tanks hold refused');
+
+console.log('\nTest 5: only cards whose effects are not built yet can be discarded freely');
+state = makeState();
+state.factions.fremen.treacheryHand = ['karama1', 'chaumas', 'baliset'];
+assert(canDiscardUnbuilt(state, 'fremen', 'karama1').ok, 'Karama can be discarded');
+assert(!canDiscardUnbuilt(state, 'fremen', 'chaumas').ok, 'a working weapon cannot');
+assert(!canDiscardUnbuilt(state, 'fremen', 'baliset').ok, 'a worthless card cannot (it is shed by playing it in battle)');
+discardUnbuilt(state, 'fremen', 'karama1');
+assert(!state.factions.fremen.treacheryHand.includes('karama1') && state.decks.treacheryDiscard.includes('karama1'), 'Karama moved to the discard pile');
 
 console.log('\nAll card effect checks passed.');
