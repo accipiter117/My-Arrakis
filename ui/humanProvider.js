@@ -346,7 +346,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <div class="choices">${rows}</div>
          <div class="decision__actions">
            <button class="btn" data-action="propose">Propose</button>
-           <button class="btn btn--primary" data-default-action>No proposal</button>
+           <button class="btn" data-default-action>No proposal</button>
          </div>`,
         (p, done) => {
           p.querySelector('[data-action="propose"]').onclick = () => done(p.querySelector('input[name="partner"]:checked')?.value ?? null);
@@ -367,7 +367,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <p>Allied, you win together, and neither of you may enter the other's territories (except the Polar Sink).</p>
          <div class="decision__actions">
            <button class="btn" data-action="accept">Accept</button>
-           <button class="btn btn--primary" data-default-action>Reject</button>
+           <button class="btn" data-default-action>Reject</button>
          </div>`,
         (p, done) => {
           p.querySelector('[data-action="accept"]').onclick = () => done(true);
@@ -380,7 +380,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         `<p>You are allied with <strong>${esc(factionName(ally))}</strong>. Breaking it is public, and the other factions will remember it when you next seek an ally.</p>
          <div class="decision__actions">
            <button class="btn" data-action="break">Break the alliance</button>
-           <button class="btn btn--primary" data-default-action>Keep it</button>
+           <button class="btn" data-default-action>Keep it</button>
          </div>`,
         (p, done) => {
           p.querySelector('[data-action="break"]').onclick = () => done(true);
@@ -529,11 +529,14 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         }[intel.element];
         return `<p class="decision__intel">Prescience: ${esc(factionName(opponentId))} is playing <strong>${esc(what)}</strong>.</p>`;
       })();
+      const knownTheirs = Object.entries(state.meta.knownCards ?? {}).filter(([, f]) => f === opponentId).map(([id]) => `${cardName(id)} (${(CATEGORY_NAMES[cardLookup[id]?.category] ?? 'a special card').replace(/^an? /, '').replace(/ \(.*\)$/, '')})`);
+      const knownNote = knownTheirs.length
+        ? `<p class="decision__known">Known in ${esc(factionName(opponentId))}'s hand (revealed in battle and kept): <strong>${esc(knownTheirs.join(', '))}</strong></p>` : '';
       const myTraitors = (me.traitorHand ?? []).map(id => `${leaderLabel(id)}, ${factionName(leader[id]?.faction)}`);
       const traitorNote = myTraitors.length
         ? `<p class="decision__note">Your traitor${myTraitors.length > 1 ? 's' : ''}: ${esc(myTraitors.join('; '))}. If ${esc(factionName(opponentId))} plays ${myTraitors.length > 1 ? 'one of them' : 'them'}, you'll be offered the reveal.</p>` : '';
       return ask(`Battle in ${territoryName(territoryId)}`,
-        `${voiceNote}${revealed}${traitorNote}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
+        `${voiceNote}${revealed}${knownNote}${traitorNote}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
          <dt>Your forces here</dt><dd>${present}${starredPresent ? ` (${starredPresent} starred)` : ''}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
          <p>The side with the higher total wins; ties go to the aggressor. Forces you dial are lost even if you win. If you lose, you lose every force here. Each dialed force counts fully only if backed by 1 spice.</p>
          <label class="field"><span>Forces to dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
