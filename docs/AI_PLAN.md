@@ -229,6 +229,15 @@ forces, cards or visibility.
   (simple hill-climbing on win rate against a fixed field). Balance problems
   get investigated first, never "fixed" by nerfing a faction (brief 37).
 
+## Progress
+
+- Step 1 (knowledge): public card knowledge built (state.meta.knownCards);
+  spice ledger and a public event log still to do.
+- Step 2 (strategy): done, js/ai/strategicAI.js.
+- Step 3 (battle brain): done, js/ai/battleBrain.js, +51% game wins.
+- Step 7 (diplomacy): done for AI and human, js/ai/diplomacy.js.
+- Steps 4, 5, 6 and 8: next (see docs/ROADMAP.md).
+
 ## 7. Build order
 
 1. **Engine support:** public event log; knowledge model (cards, spice
