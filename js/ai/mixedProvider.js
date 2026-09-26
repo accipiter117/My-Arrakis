@@ -27,6 +27,10 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
 
     // The human discards from their Hand sheet whenever they like; only the AI is asked here.
     chooseDiscards: (state, factionId, dead) => (factionId === humanFactionId ? [] : ai.chooseDiscards?.(state, factionId, dead) ?? []),
+    chooseTruthtrance: (state, f, t, o) => (f === humanFactionId ? null : ai.chooseTruthtrance?.(state, f, t, o) ?? null), // the human asks from their Hand
+    chooseKaramaCancel: (state, f, purpose, ctx) => pick(f).chooseKaramaCancel(state, f, purpose, ctx),
+    chooseAllyPledge: (state, f, ally) => pick(f).chooseAllyPledge(state, f, ally),
+    chooseEmperorAllyRevival: (state, f, ally) => pick(f).chooseEmperorAllyRevival(state, f, ally),
     // Diplomacy: each faction decides for itself, human or AI.
     chooseBreakAlliance: (state, factionId, ally) => pick(factionId).chooseBreakAlliance(state, factionId, ally),
     chooseAllianceProposal: (state, factionId) => pick(factionId).chooseAllianceProposal(state, factionId),
