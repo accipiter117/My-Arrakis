@@ -208,6 +208,8 @@ async function runBiddingPhase(state, decisionProvider) {
   while (state.bidding?.active) {
     const cardIndex = state.bidding.currentCardIndex;
     const cardId = state.bidding.cardsUpForBid[cardIndex];
+    // cardId travels with the event; the UI reveals it only to Atreides.
+    await observe(decisionProvider, { type: 'auctionStart', cardId, index: cardIndex, total: state.bidding.cardsUpForBid.length }, state);
     const opener = biddingEngine.determineOpeningBidder(state);
     const order = (state.meta.turnOrder ?? []).filter(id => !biddingEngine.isAtHandLimit(state, id));
     let idx = Math.max(0, order.indexOf(opener));
@@ -224,8 +226,10 @@ async function runBiddingPhase(state, decisionProvider) {
       const bid = await decisionProvider.chooseBid(state, factionId, cardId, state.bidding.currentBid);
       if (bid && biddingEngine.canBid(state, factionId, bid).ok) {
         biddingEngine.placeBid(state, factionId, bid);
+        await observe(decisionProvider, { type: 'bid', factionId, amount: bid }, state);
       } else {
         biddingEngine.passBid(state, factionId);
+        await observe(decisionProvider, { type: 'pass', factionId }, state);
       }
     }
 
@@ -233,6 +237,8 @@ async function runBiddingPhase(state, decisionProvider) {
     const price = state.bidding.currentBid;
     biddingEngine.resolveCurrentCard(state);
     results.push(winner ? { winner, price } : { unsold: true, cardsReturned: state.bidding.cardsUpForBid.length - cardIndex });
+    await observe(decisionProvider, winner ? { type: 'auctionWon', factionId: winner, price, bonus: winner === 'harkonnen' }
+      : { type: 'auctionUnsold', returned: state.bidding.cardsUpForBid.length - cardIndex }, state);
   }
 
   return results;
