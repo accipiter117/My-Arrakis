@@ -33,10 +33,7 @@ const swept = sectorsSwept(16, 4);
 assert(JSON.stringify(swept) === JSON.stringify([17, 0, 1, 2]), `expected [17,0,1,2], got ${JSON.stringify(swept)}`);
 
 console.log('\nTest 5: sector-dependent functions fail loudly rather than silently no-op-ing');
-let damageResult;
-try { applyStormDamage({}, [1, 2, 3], null); damageResult = 'ran silently'; }
-catch (e) { damageResult = e.message.startsWith('NOT_IMPLEMENTED') ? 'threw clearly' : 'threw unclear error'; }
-assert(damageResult === 'threw clearly', 'applyStormDamage refuses to silently no-op without sector data');
+// Storm damage is now implemented and tested in tests/stormDamage.sim.js.
 
 let stormCheckResult;
 try { isTerritoryPartiallyInStorm('arrakeen', 5, null); stormCheckResult = 'ran silently'; }
