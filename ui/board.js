@@ -177,7 +177,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   }
   for (const [id, geo] of Object.entries(geometry.territories)) label(id, geo);
 
-  function render(state, { selected = null, highlight = [] } = {}) {
+  function render(state, { selected = null, highlight = [], foreseen = null } = {}) {
     for (const [id, path] of Object.entries(paths)) {
       path.classList.toggle('territory--selected', id === selected);
       path.classList.toggle('territory--highlight', highlight.includes(id));
@@ -196,6 +196,16 @@ export function createBoard({ container, geometry, territoriesData, factionColor
 
     tokenLayer.replaceChildren();
     if (!state) return;
+
+    // Atreides Prescience: a ghost of the spice still to come (only drawn for
+    // an Atreides player, who alone has seen the top of the Spice Deck).
+    if (foreseen?.territoryId && geometry.territories[foreseen.territoryId]) {
+      const [fx, fy] = geometry.territories[foreseen.territoryId].label;
+      const g = el('g', { class: 'token token--foreseen', transform: `translate(${fx},${fy - 44})` }, tokenLayer);
+      el('rect', { x: -16, y: -16, width: 32, height: 32, rx: 5, transform: 'rotate(45)', class: 'token__foreseen-bg' }, g);
+      const t = el('text', { class: 'token__count token__count--foreseen', y: 6 }, g);
+      t.textContent = `${foreseen.amount ?? ''}?`;
+    }
 
     const spice = {};
     for (const m of state.board.spiceBlowMarkers) spice[m.territoryId] = (spice[m.territoryId] ?? 0) + m.amount;
