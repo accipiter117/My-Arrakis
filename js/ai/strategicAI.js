@@ -12,11 +12,13 @@
 
 import { createBasicAI } from './basicAI.js';
 import * as movementEngine from '../movementEngine.js';
+import { createDiplomacy } from './diplomacy.js';
 
 const BLOCKS_FREMEN_AT_TUEKS = ['harkonnen', 'atreides', 'emperor', 'richese'];
 
 export function createStrategicAI(options) {
   const base = createBasicAI(options);
+  const diplomacy = createDiplomacy({ rng: options.rng });
 
   const strongholds = state => Object.keys(state.board.territories)
     .filter(id => state.board.territories[id].type === 'stronghold');
@@ -153,6 +155,10 @@ export function createStrategicAI(options) {
   return {
     ...base,
     name: 'Strategic AI',
+
+    chooseAllianceProposal: (state, me) => diplomacy.propose(state, me),
+    chooseAllianceResponse: (state, me, proposer) => diplomacy.respond(state, me, proposer),
+    chooseBreakAlliance: (state, me, ally) => diplomacy.shouldBreak(state, me, ally),
 
     assessThreats,
 
