@@ -85,6 +85,9 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     if (!leaderId) return 0;
     const captured = state.factions.harkonnen?.specialFactionState?.captured ?? {};
     if (captured[leaderId] === opp) return 1; // a captured leader stays loyal to its owner
+    // A Truthtrance answer is certain (only for the opponent's own traitors).
+    const truth = (state.meta.truths ?? []).filter(t => t.asker === me && t.target === opp && t.question.kind === 'isTraitor' && t.question.leaderId === leaderId).pop();
+    if (truth && allyOf(state, opp) !== 'harkonnen') return truth.answer ? 1 : 0;
     const holders = [opp, allyOf(state, opp) === 'harkonnen' ? 'harkonnen' : null].filter(Boolean);
     const cardsHeld = holders.reduce((n, f) => n + (f === 'harkonnen' ? 4 : 1), 0);
     const pool = 30 - (state.factions[me].traitorHand?.length ?? 0);
