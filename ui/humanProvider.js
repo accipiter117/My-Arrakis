@@ -43,6 +43,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       panel.hidden = false;
       onWaiting?.(true);
       const done = value => {
+        panel._cleanup?.();
+        panel._cleanup = null;
         panel.hidden = true;
         panel.innerHTML = '';
         onWaiting?.(false);
@@ -247,6 +249,19 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             btn.disabled = problems.length > 0;
           };
           field(p, 'moveFrom').onchange = () => { refreshDestinations(); check(); };
+          // Tapping the map fills the form: a reachable destination for the
+          // chosen group, else one of my territories as the starting point,
+          // else a shipment destination.
+          const hasOption = (name, id) => [...field(p, name).options].some(o => o.value === id);
+          const onTap = e => {
+            const id = e.detail.id;
+            if (field(p, 'moveFrom').value && hasOption('moveTo', id)) field(p, 'moveTo').value = id;
+            else if (!field(p, 'moveFrom').value && (me.forces.onBoard[id] ?? 0) > 0 && hasOption('moveFrom', id)) { field(p, 'moveFrom').value = id; refreshDestinations(); }
+            else if (hasOption('shipTo', id)) field(p, 'shipTo').value = id;
+            check();
+          };
+          document.addEventListener('territory-tap', onTap);
+          p._cleanup = () => document.removeEventListener('territory-tap', onTap);
           if (field(p, 'hajrFrom')) field(p, 'hajrFrom').onchange = () => {
             const from = field(p, 'hajrFrom').value;
             const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, range_) : [];
