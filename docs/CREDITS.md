@@ -22,6 +22,9 @@
 ## Faction counters
 - `assets/counters/*.png`: commissioned by the project owner (generated with ChatGPT to a brief based on the novels' heraldry: the Atreides red hawk, Harkonnen blue griffin and Corrino golden lion; the Fremen crysknife, Guild Heighliner and Bene Gesserit eye and gom jabbar). Cut out and resized for the game.
 
+## Ships and sandworm
+- `assets/ships/*.png`: commissioned by the project owner (generated with ChatGPT to a brief based on the novels). Cut out and resized for the game.
+
 ## Game
 Based on the board game Dune (Gale Force Nine, 2019). A personal fan
 project; the map, interface and artwork are original.
