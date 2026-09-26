@@ -29,6 +29,17 @@ function moveRangeFor(state, factionId) {
   return 1;
 }
 
+function allyOf(state, factionId) {
+  return (state.alliances ?? []).find(a => a.factions.includes(factionId))?.factions.find(f => f !== factionId) ?? null;
+}
+
+// Allies may never share a territory, except the Polar Sink.
+function allyOccupies(state, factionId, territoryId) {
+  if (territoryId === 'polarSink') return false;
+  const ally = allyOf(state, factionId);
+  return Boolean(ally && (state.factions[ally]?.forces.onBoard[territoryId] ?? 0) > 0);
+}
+
 function isStrongholdBlocked(state, territoryId, movingFactionId) {
   const territoryType = state.board.territories[territoryId]?.type;
   if (territoryType !== 'stronghold') return false;
@@ -75,7 +86,8 @@ function shipmentCostPerForce(state, factionId, destinationTerritoryId) {
     ? state.rulesConfig.official.shippingCostPerForce.toStronghold
     : state.rulesConfig.official.shippingCostPerForce.toOtherTerritory;
 
-  if (factionId === 'guild') {
+  // The Guild ships at half price, and so does the Guild's ally (alliance advantage).
+  if (factionId === 'guild' || allyOf(state, factionId) === 'guild') {
     return baseCost * state.rulesConfig.official.guildShippingDiscount;
   }
 
@@ -101,6 +113,9 @@ function canShip(state, factionId, destinationTerritoryId, amount) {
   }
   if (isStrongholdBlocked(state, destinationTerritoryId, factionId)) {
     return { ok: false, reason: 'Stronghold already occupied by two other factions.' };
+  }
+  if (allyOccupies(state, factionId, destinationTerritoryId)) {
+    return { ok: false, reason: 'Your ally already has forces there; allies may only share the Polar Sink.' };
   }
   // TODO: return { ok: false, reason: 'Destination sector is in storm.' }
   // once isSectorInStormCheck(destinationTerritoryId) is real.
@@ -222,6 +237,7 @@ function canRideWorm(state, fromTerritoryId, toTerritoryId) {
   if (!state.board.territories[toTerritoryId]) return { ok: false, reason: 'Unknown territory.' };
   if (toTerritoryId === fromTerritoryId) return { ok: false, reason: 'Already there.' };
   if (isStrongholdBlocked(state, toTerritoryId, 'fremen')) return { ok: false, reason: 'That stronghold already holds two other factions.' };
+  if (allyOccupies(state, 'fremen', toTerritoryId)) return { ok: false, reason: 'Your ally already has forces there.' };
   // TODO: riders may not leave or enter a sector in storm, once sector data exists.
   return { ok: true };
 }
