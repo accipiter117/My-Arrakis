@@ -99,6 +99,7 @@ code { font-family: var(--font-data); font-size: 0.9em; }
   white-space: nowrap;
 }
 .pill--spice { background: var(--spice); color: var(--ink); }
+.pill--ally { background: var(--faction-gesserit); color: var(--parchment); }
 
 .phase-track {
   display: flex;
@@ -360,6 +361,8 @@ code { font-family: var(--font-data); font-size: 0.9em; }
 .decision__note { color: var(--ink-soft); font-style: italic; }
 .decision__cost { font-family: var(--font-data); font-size: 11.5px; color: var(--gold); font-weight: 700; }
 .decision__error { font-size: 12px; color: var(--rust); font-weight: 600; border-left: 3px solid var(--rust); padding-left: 0.5rem; }
+.decision__traitor { background: #1c120b; color: var(--parchment); padding: 0.45rem 0.6rem; border-radius: var(--radius); border-left: 3px solid var(--rust); }
+.decision__traitor strong { color: #f2c96b; }
 .decision__intel { background: var(--faction-atreides); color: var(--parchment); padding: 0.45rem 0.6rem; border-radius: var(--radius); }
 .decision-panel fieldset { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 0.5rem; padding: 0.35rem 0.6rem 0.2rem; }
 .decision-panel legend { font-weight: 600; font-size: 11.5px; padding: 0 0.3rem; }
@@ -414,6 +417,22 @@ code { font-family: var(--font-data); font-size: 0.9em; }
   color: var(--parchment);
   background: repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.06) 0 10px, transparent 10px 22px), linear-gradient(170deg, #b0552f, #6e2616);
 }
+/* Traitor: black, rust edge, gold name */
+.event-card--traitor {
+  color: var(--parchment);
+  background: radial-gradient(circle at 50% 0%, #4a1a12, #120c07 70%);
+  border-color: var(--rust);
+  box-shadow: 0 0 0 3px rgba(156, 59, 36, 0.35), 0 14px 38px rgba(0, 0, 0, 0.55);
+}
+.event-card--traitor .event-card__eyebrow { color: #e0735a; font-size: 12px; font-weight: 700; }
+.event-card--traitor .event-card__title { color: #f2c96b; }
+/* Nexus: parchment with a deep border and a gold seal */
+.event-card--nexus {
+  color: var(--ink);
+  background: radial-gradient(circle at 50% 118%, rgba(217, 163, 58, 0.55) 0 22%, transparent 23%), var(--parchment);
+  border-color: var(--faction-gesserit);
+}
+.event-card--nexus .event-card__title { font-size: 20px; }
 /* Battle: parchment with both revealed plans */
 .event-card--battle { color: var(--ink); background: var(--parchment); width: min(88%, 330px); text-align: left; }
 .event-card--battle .event-card__eyebrow { text-align: center; }
