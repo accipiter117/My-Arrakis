@@ -348,6 +348,17 @@ async function runNexusDiplomacy(state, decisionProvider) {
   return events;
 }
 
+// Public knowledge of who holds which treachery card (revealed in battle and
+// kept). Referee bookkeeping: entries drop once a card leaves that hand,
+// which always happens publicly (discarded, played and lost, used up).
+function recordKnownCards(state, holder, cardIds) {
+  const known = state.meta.knownCards = state.meta.knownCards ?? {};
+  for (const id of cardIds) if (id && holder && state.factions[holder].treacheryHand.includes(id)) known[id] = holder;
+  for (const [id, f] of Object.entries(known)) {
+    if (!state.factions[f]?.treacheryHand.includes(id)) delete known[id];
+  }
+}
+
 // Lets the UI present each event as it happens (cards, sweeps, marches).
 // Awaited so play only continues once the presentation has finished.
 async function observe(decisionProvider, event, state) {
@@ -409,6 +420,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       }
     }
     const voiceFor = f => (voice?.target === f ? voice : null);
+    // Public facts about this battle (Voice is spoken aloud at the table).
+    state.meta.currentBattle = { territoryId, aggressorId, defenderId, voice };
 
     // Every plan is made to obey any Voice, then checked against the rules;
     // a plan that breaks them is replaced by a minimal legal one.
@@ -471,6 +484,11 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       }
     }
 
+    // Public card knowledge: cards the winner played and kept are now known
+    // to be in their hand. Known cards that have since been discarded or
+    // used are forgotten. The AI reads only this record, never real hands.
+    recordKnownCards(state, winner, winner ? [plans[winner].weaponCardId, plans[winner].defenseCardId, plans[winner].cheapHeroCardId] : []);
+
     // 4. A captured leader Harkonnen used goes home after one battle.
     if (fighting.includes('harkonnen') && plans.harkonnen.leaderId) battleEngine.returnCapturedLeader(state, plans.harkonnen.leaderId);
 
@@ -501,6 +519,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
   }
 
   state.meta.lastBattleParticipants = Array.from(participants).slice(0, 2);
+  delete state.meta.currentBattle;
   return results;
 }
 
