@@ -94,7 +94,7 @@ strong { color: var(--gold); }
 
 .topbar {
   position: relative;
-  z-index: 25; /* above sheet backdrops: the menu is always one tap away */
+  z-index: 40; /* above sheets and backdrops: menu and hand are always one tap away */
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -132,7 +132,40 @@ strong { color: var(--gold); }
   clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
 }
 .pill--spice { background: linear-gradient(180deg, #f08d3e, #b95a1c); color: #1a0d05; border-color: #f3a15e; box-shadow: 0 0 10px var(--spice-glow); }
+.pill--hand { cursor: pointer; background: linear-gradient(180deg, var(--slab-3), var(--slab)); color: var(--sand); border-color: var(--bronze-bright); font-family: var(--font-data); }
 .pill--ally { background: var(--faction-gesserit); color: var(--sand); border-color: #8d63a3; }
+
+/* Victory watch: a warning strip under the top bar */
+.watch {
+  display: flex; align-items: center; gap: 0.5rem; width: 100%; flex: none; text-align: left;
+  border: none; border-bottom: 1px solid var(--bronze); padding: 0.4rem 0.7rem; font-size: 11.5px; cursor: pointer;
+  background: linear-gradient(90deg, rgba(178, 65, 42, 0.45), rgba(178, 65, 42, 0.12)); color: var(--sand);
+}
+.watch[hidden] { display: none; }
+.watch strong { color: #ffd2c2; }
+.watch__icon { color: #ff9a7a; font-size: 13px; }
+.watch__more { margin-left: auto; font-family: var(--font-data); font-size: 10px; color: var(--sand-soft); }
+.watch--critical { background: linear-gradient(90deg, rgba(178, 65, 42, 0.8), rgba(178, 65, 42, 0.3)); animation: watch-pulse 1.8s ease-in-out infinite; }
+@keyframes watch-pulse { 50% { filter: brightness(1.25); } }
+.watch--info { background: linear-gradient(90deg, rgba(212, 169, 79, 0.25), transparent); }
+.watch--info .watch__icon, .watch--info strong { color: var(--gold); }
+.watch--mine { background: linear-gradient(90deg, rgba(212, 169, 79, 0.55), rgba(212, 169, 79, 0.15)); }
+.watch--mine strong, .watch--mine .watch__icon { color: #fff1c6; }
+.watch-item { padding: 0.45rem 0.6rem; margin-bottom: 0.4rem; border-left: 3px solid var(--blood); background: rgba(178, 65, 42, 0.12); font-size: 12px; }
+.watch-item span { color: var(--sand-soft); font-size: 11.5px; }
+.watch-item--info { border-left-color: var(--gold); background: rgba(212, 169, 79, 0.08); }
+.watch-item--mine { border-left-color: var(--gold); background: rgba(212, 169, 79, 0.18); }
+
+/* Faction guide */
+.guide { border: 1px solid #3a2b1c; margin-bottom: 0.45rem; background: var(--slab-2); }
+.guide summary { cursor: pointer; padding: 0.55rem 0.65rem; font-family: var(--font-display); font-weight: 700; letter-spacing: 0.05em; list-style: none; }
+.guide summary::-webkit-details-marker { display: none; }
+.guide summary em { display: block; font-family: var(--font-body); font-weight: 400; font-style: italic; font-size: 11.5px; letter-spacing: 0; color: var(--sand-soft); margin-top: 2px; }
+.guide[open] summary { border-bottom: 1px solid #3a2b1c; }
+.guide__start { margin: 0.5rem 0.65rem 0; font-size: 11.5px; color: var(--sand-soft); }
+.guide h4 { margin: 0.6rem 0.65rem 0.2rem; font-family: var(--font-data); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--spice); }
+.guide ul { margin: 0 0.65rem 0.5rem; padding-left: 1rem; font-size: 12px; }
+.guide li { margin: 0.2rem 0; }
 
 /* Phase track: an engraved band */
 .phase-track {
@@ -314,7 +347,8 @@ strong { color: var(--gold); }
 
 /* --- Sheets: slabs that rise from the ground ----------------------------------- */
 
-.scrim { position: fixed; inset: 0; background: rgba(6, 3, 1, 0.55); z-index: 20; backdrop-filter: blur(1.5px); }
+.scrim { position: fixed; inset: 0; background: rgba(6, 3, 1, 0.55); z-index: 32; backdrop-filter: blur(1.5px); }
+.sheet { z-index: 35 !important; } /* above an open decision panel (30): check your hand mid-decision */
 .sheet, .decision-panel {
   position: fixed;
   left: 0;
