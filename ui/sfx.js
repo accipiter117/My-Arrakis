@@ -8,11 +8,13 @@
 // Credits (see docs/CREDITS.md):
 //   worm-roar.mp3    "Beast Roar" by barrypirro, CC0, https://freesound.org/s/530573/
 //   ship-arrival.mp3 "Spaceship flight" by BloodPixelHero, CC BY 4.0, https://freesound.org/s/572623/
-//   (both trimmed, faded and loudness-levelled for the game)
+//   ornithopter.mp3  provided by the project owner (loudness-levelled)
+//   (the first two trimmed, faded and loudness-levelled for the game)
 
 const SOUNDS = {
   wormRoar: '../assets/sfx/worm-roar.mp3',
-  shipArrival: '../assets/sfx/ship-arrival.mp3'
+  shipArrival: '../assets/sfx/ship-arrival.mp3',
+  ornithopter: '../assets/sfx/ornithopter.mp3'
 };
 const KEY = 'my-arrakis-sfx';
 const MIN_GAP_MS = 700;
