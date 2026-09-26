@@ -25,16 +25,12 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseCaptureAction: (state, factionId, leaderId, fromId) => pick(factionId).chooseCaptureAction(state, factionId, leaderId, fromId),
     chooseWormRide: (state, factionId, from) => pick(factionId).chooseWormRide(state, factionId, from),
 
-    // Alliance decisions are made table-wide at a Nexus. Human diplomacy
-    // isn't built yet, so the AI decides for the AI factions only, and any
-    // proposal that would drag the human into (or out of) an alliance
-    // without their say is dropped.
-    async chooseAllianceActions(state) {
-      const actions = await ai.chooseAllianceActions(state);
-      return {
-        form: (actions.form ?? []).filter(pair => !pair.includes(humanFactionId)),
-        breakFrom: (actions.breakFrom ?? []).filter(f => f !== humanFactionId)
-      };
-    }
+    // Diplomacy: each faction decides for itself, human or AI.
+    chooseBreakAlliance: (state, factionId, ally) => pick(factionId).chooseBreakAlliance(state, factionId, ally),
+    chooseAllianceProposal: (state, factionId) => pick(factionId).chooseAllianceProposal(state, factionId),
+    chooseAllianceResponse: (state, factionId, proposer) => pick(factionId).chooseAllianceResponse(state, factionId, proposer),
+    // The holder of the traitor card decides (for an ally, that's Harkonnen).
+    chooseRevealTraitor: (state, holder, leaderId, territoryId, againstId, forFaction) =>
+      pick(holder).chooseRevealTraitor(state, holder, leaderId, territoryId, againstId, forFaction)
   };
 }
