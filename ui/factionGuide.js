@@ -13,7 +13,7 @@ export const FACTION_GUIDE = {
       'Battle Prescience: before each battle, see one part of the opponent’s plan (leader, weapon, defence or troops dialled). Works in an ally’s battles too.',
       'Spice foresight: sees where the next Spice Blow lands (or that a worm is coming) right after each Spice Blow.',
       'Auction foresight: sees every treachery card before bidding on it.',
-      'Kwisatz Haderach: after losing 7 troops in battle, adds +2 to one battle each turn.'
+      'Kwisatz Haderach: after losing 7 troops in battle, adds +2 to one battle each turn, and the leader it goes with can never turn traitor.'
     ],
     push: [
       'Ask for the element that changes your plan: their defence tells you which weapon gets through; their leader tells you whether your traitor fires.',
@@ -71,11 +71,12 @@ export const FACTION_GUIDE = {
   fremen: {
     title: 'The Fremen',
     tagline: 'The desert is theirs. They win by lasting.',
-    start: '10 troops near Sietch Tabr, 10 in reserve including 3 Fedaykin, 3 spice. 3 free revivals a turn.',
+    start: '10 troops split as you choose between Sietch Tabr, False Wall South and False Wall West; 10 in reserve including 3 Fedaykin; 3 spice. 3 free revivals a turn.',
     powers: [
       'Move 2 territories (3 with ornithopters); ship free onto the Great Flat or within two territories of it.',
       'Worms never eat Fremen troops (or their ally’s); Fremen caught by a worm may ride it anywhere on the map.',
       'Fedaykin: 3 elite troops worth 2 each in battle.',
+      'Fremen troops fight at full strength without spice: never pay to back them in battle.',
       'Control the storm: they secretly foresee the next Storm card.',
       'Special victory on the last turn: Sietch Tabr and Habbanya Sietch held by the Fremen (or empty), and no Harkonnen, Atreides or Emperor troops in Tuek’s Sietch.'
     ],
@@ -97,6 +98,8 @@ export const FACTION_GUIDE = {
     start: 'Tuek’s Sietch with 5 troops, 15 in reserve, 5 spice. 1 free revival a turn.',
     powers: [
       'Ships at half price (rounded up); so does the Guild’s ally.',
+      'May ship troops across the planet (territory to territory) or back to reserves (1 spice per 2 troops) instead of from reserves.',
+      'May take its Shipment and Movement turn at any point in the order, for example last, after seeing everyone else move.',
       'Receives the spice other factions pay to ship.',
       'Special victory: if nobody has won by the end of the last turn, the Guild win, together with their ally.'
     ],
@@ -118,7 +121,9 @@ export const FACTION_GUIDE = {
     powers: [
       'Secret Prediction: name a faction and a turn at the start. If that faction wins on that turn (even with Bene Gesserit as its ally), Bene Gesserit win alone instead. Doesn’t count for the Fremen or Guild special victories.',
       'The Voice: before a battle, command the opponent to play, or not to play, one kind of card. Works in an ally’s battles too.',
-      'Not yet in this version: advisors, and their Karama powers.'
+      'Spiritual Advisors: whenever another faction ships in from off-planet, place 1 troop in the Polar Sink for free.',
+      'Any worthless card can be played as a Karama.',
+      'Not yet in this version: advisors as peaceful, non-fighting troops.'
     ],
     push: [
       'Help your predicted faction win on exactly the predicted turn, and slow them down if they are early.',
