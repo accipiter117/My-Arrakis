@@ -232,6 +232,12 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
            <label class="field"><span>Forces</span><input type="number" name="hajrAmount" min="1" value="1"></label>
            <p class="decision__note">Made after your normal move. Checked again when it happens.</p>
          </fieldset>` : ''}
+         ${factionId === 'guild' ? `<fieldset><legend>Guild: or ship on the planet instead</legend>
+           <label class="field"><span>Type</span><select name="gType">${options([['', 'Ship from reserves (above)'], ['cross', 'Across the planet'], ['retreat', 'Back to reserves (1 spice per 2)']], '')}</select></label>
+           <label class="field"><span>From</span><select name="gFrom">${options(Object.entries(me.forces.onBoard).map(([id, n]) => [id, `${territoryName(id)} (${n})`]), Object.keys(me.forces.onBoard)[0])}</select></label>
+           <label class="field"><span>To</span><select name="gTo">${options(territoryIds.map(id => [id, territoryName(id)]), territoryIds[0])}</select></label>
+           <label class="field"><span>Forces</span><input type="number" name="gAmount" min="1" value="1"></label>
+         </fieldset>` : ''}
          <p class="decision__error" hidden></p>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => {
@@ -273,6 +279,14 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
                 if (!r.ok) problems.push(`Movement: ${r.reason}`);
               }
             }
+            const gType = field(p, 'gType')?.value;
+            if (gType) {
+              if (field(p, 'shipTo').value) problems.push('Choose either a shipment from reserves or a Guild planet shipment, not both.');
+              const r = gType === 'cross'
+                ? movementEngine.canCrossShip(state, 'guild', field(p, 'gFrom').value, field(p, 'gTo').value, num(p, 'gAmount'))
+                : movementEngine.canRetreatToReserves(state, 'guild', field(p, 'gFrom').value, num(p, 'gAmount'));
+              if (!r.ok) problems.push(`Guild shipment: ${r.reason}`);
+            }
             setError(p, problems.join(' ') || null);
             btn.disabled = problems.length > 0;
           };
@@ -307,6 +321,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             done({
               shipment: shipTo ? { territoryId: shipTo, amount: num(p, 'shipAmount') } : null,
               movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount') } : null,
+              crossShip: field(p, 'gType')?.value === 'cross' ? { from: field(p, 'gFrom').value, to: field(p, 'gTo').value, amount: num(p, 'gAmount') } : null,
+              retreat: field(p, 'gType')?.value === 'retreat' ? { from: field(p, 'gFrom').value, amount: num(p, 'gAmount') } : null,
               hajrMove: field(p, 'hajrFrom')?.value
                 ? { from: field(p, 'hajrFrom').value, to: field(p, 'hajrTo').value, amount: num(p, 'hajrAmount') } : null
             });
@@ -386,6 +402,50 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           p.querySelector('[data-action="break"]').onclick = () => done(true);
           p.querySelector('[data-default-action]').onclick = () => done(false);
         });
+    },
+
+    chooseFremenPlacement(state) {
+      const sel = (name, v) => `<select name="${name}">${options(range(0, 10).map(n => [n, n]), v)}</select>`;
+      return ask('Place your forces',
+        `<p>Split your 10 starting forces between these three territories as you choose.</p>
+         <label class="field"><span>Sietch Tabr</span>${sel('st', 10)}</label>
+         <label class="field"><span>False Wall South</span>${sel('fs', 0)}</label>
+         <label class="field"><span>False Wall West</span>${sel('fw', 0)}</label>
+         <p class="decision__error" hidden></p>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Place forces</button></div>`,
+        (p, done) => {
+          const btn = p.querySelector('[data-default-action]');
+          const check = () => {
+            const total = num(p, 'st') + num(p, 'fs') + num(p, 'fw');
+            setError(p, total === 10 ? null : `That places ${total}; it must be exactly 10.`);
+            btn.disabled = total !== 10;
+          };
+          p.querySelectorAll('select').forEach(el => el.onchange = check);
+          check();
+          btn.onclick = () => done({ sietchTabr: num(p, 'st'), falseWallSouth: num(p, 'fs'), falseWallWest: num(p, 'fw') });
+        });
+    },
+
+    chooseAdvisor(state, factionId, shipperId) {
+      return ask('Spiritual Advisor',
+        `<p>${esc(factionName(shipperId))} just shipped in from off-planet. You may place 1 force from your reserves in the Polar Sink, free.</p>
+         <div class="decision__actions">
+           <button class="btn" data-action="yes">Place an advisor</button>
+           <button class="btn" data-default-action>Not this time</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="yes"]').onclick = () => done(true);
+          p.querySelector('[data-default-action]').onclick = () => done(false);
+        });
+    },
+
+    chooseGuildTiming(state, others) {
+      const choices = [[0, 'First, before everyone'], ...others.slice(0, -1).map((f, i) => [i + 1, `After ${factionName(f)}`]), [others.length, 'Last, after everyone']];
+      return ask('When will the Guild act?',
+        `<p>As the Spacing Guild you may take your shipment and movement at any point in the order this turn. Acting last lets you see everyone else's moves first.</p>
+         <label class="field"><span>Act</span><select name="pos">${options(choices, others.length)}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'pos')));
     },
 
     chooseKaramaCancel(state, factionId, purpose, ctx) {
@@ -541,7 +601,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <p>The side with the higher total wins; ties go to the aggressor. Forces you dial are lost even if you win. If you lose, you lose every force here. Each dialed force counts fully only if backed by 1 spice.</p>
          <label class="field"><span>Forces to dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
          ${starredPresent ? `<label class="field"><span>Of which starred</span><select name="starred">${options(range(0, starredPresent).map(n => [n, n]), 0)}</select></label>` : ''}
-         <label class="field"><span>Spice to back them</span><select name="spice">${options(range(0, Math.min(present, me.spice)).map(n => [n, n]), 0)}</select></label>
+         ${factionId === 'fremen' ? '<p class="decision__note">Fremen fight at full strength without spice: no need to commit any.</p><input type="hidden" name="spice" value="0">'
+           : `<label class="field"><span>Spice to back them</span><select name="spice">${options(range(0, Math.min(present, me.spice)).map(n => [n, n]), 0)}</select></label>`}
          <label class="field"><span>Leader</span><select name="leader">${options(leaderOptions, leaderOptions[0][0])}</select></label>
          <label class="field"><span>Weapon</span><select name="weapon">${options(weaponOptions, '')}</select></label>
          <label class="field"><span>Defence</span><select name="defense">${options(defenseOptions, '')}</select></label>
@@ -573,7 +634,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const result = battleEngine.canDeclareBattlePlan(state, territoryId, factionId, plan, cardLookup);
             const warn = cardLookup[plan.weaponCardId]?.category === 'specialWeapon' && cardLookup[plan.defenseCardId]?.category === 'projectileDefense'
               ? ' Warning: a lasgun with your own shield explodes, destroying everything here.' : '';
-            const strength = battleEngine.calculateStrength({ ...plan, starredUnitValue: battleEngine.starredUnitValueFor(factionId, opponentId), leaderWasKilled: false, kwisatzHaderachBonus: plan.useKwisatzHaderach ? 2 : 0 });
+            const strength = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(factionId, plan), starredUnitValue: battleEngine.starredUnitValueFor(factionId, opponentId), leaderWasKilled: false, kwisatzHaderachBonus: plan.useKwisatzHaderach ? 2 : 0 });
             p.querySelector('[data-for="strength"]').textContent = `Your total if your leader survives: ${strength}.${warn}`;
             setError(p, result.ok ? null : result.reason);
             btn.disabled = !result.ok;
