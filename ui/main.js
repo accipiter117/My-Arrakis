@@ -168,6 +168,7 @@ function checkVictory() {
   const winners = gameState.victory.winningFactions.map(f => FACTION_NAMES[f] ?? f).join(' & ');
   const youWon = humanFactionId && gameState.victory.winningFactions.includes(humanFactionId);
   addLog('victory', gameState.meta.turn, `Game over: ${winners} win (${gameState.victory.method}).${humanFactionId ? (youWon ? ' You won.' : ' You lost.') : ''}`);
+  openSheet('log');
 }
 
 function setBusy(value) {
@@ -176,9 +177,14 @@ function setBusy(value) {
 }
 
 function setWaiting(waiting) {
-  $('status-phase').classList.toggle('status-chip--waiting', waiting);
-  if (waiting) $('status-phase').textContent = 'Your decision';
-  else render();
+  const phase = $('status-phase');
+  phase.classList.toggle('topbar__phase--waiting', waiting);
+  if (waiting) {
+    phase.textContent = 'Your decision';
+    closeSheets(); // the decision panel needs the screen
+  } else {
+    render();
+  }
 }
 
 function shuffleArray(array) {
@@ -290,11 +296,12 @@ function ensureBoard(data) {
 }
 
 function tapTerritory(id) {
-  selectedTerritory = id;
+  // Tapping the selected territory again dismisses its card.
+  selectedTerritory = selectedTerritory === id && !$('territory-info').hidden ? null : id;
   renderBoard();
   renderTerritoryInfo();
   // An open decision panel (e.g. shipment) can use the tap to fill a field.
-  document.dispatchEvent(new CustomEvent('territory-tap', { detail: { id } }));
+  if (selectedTerritory) document.dispatchEvent(new CustomEvent('territory-tap', { detail: { id } }));
 }
 
 function renderBoard() {
@@ -302,18 +309,22 @@ function renderBoard() {
 }
 
 function renderTerritoryInfo() {
-  const info = $('territory-info');
-  if (!selectedTerritory || !territoriesData) return;
+  const card = $('territory-info');
+  // Keep the map clear while a decision panel covers the bottom of the screen.
+  if (!selectedTerritory || !territoriesData || !$('decision-panel').hidden) { card.hidden = true; return; }
   const t = territoriesData.territories[selectedTerritory];
-  const type = { sand: 'Sand', rock: 'Rock', stronghold: 'Stronghold', polarSink: 'Polar Sink (safe haven, no battles)' }[t.type] ?? t.type;
+  const type = { sand: 'Sand', rock: 'Rock', stronghold: 'Stronghold', polarSink: 'Polar Sink, safe haven' }[t.type] ?? t.type;
   const spice = gameState ? gameState.board.spiceBlowMarkers.filter(m => m.territoryId === selectedTerritory).reduce((a, m) => a + m.amount, 0) : 0;
   const occupants = gameState ? Object.entries(gameState.factions)
     .filter(([, f]) => (f.forces.onBoard[selectedTerritory] ?? 0) > 0)
-    .map(([id, f]) => `<li>${nameOf(id)}: ${f.forces.onBoard[selectedTerritory]} forces${f.forces.starredOnBoard?.[selectedTerritory] ? ` (${f.forces.starredOnBoard[selectedTerritory]} starred)` : ''}</li>`) : [];
+    .map(([id, f]) => `<li><span class="faction-chip" style="background:var(${FACTION_DISPLAY[id].colorVar})"></span>${nameOf(id)} ${f.forces.onBoard[selectedTerritory]}${f.forces.starredOnBoard?.[selectedTerritory] ? ` (${f.forces.starredOnBoard[selectedTerritory]}★)` : ''}</li>`) : [];
   const neighbours = (t.adjacentDraft ?? []).map(territoryNameOf).sort().join(', ');
-  info.innerHTML = `<strong>${t.name}</strong>, ${type}${spice ? `, <strong>${spice} spice</strong>` : ''}
-    ${occupants.length ? `<ul>${occupants.join('')}</ul>` : '<br>Unoccupied.'}
-    <br><em>Borders:</em> ${neighbours}`;
+  card.innerHTML = `<button class="icon-btn" aria-label="Close" data-card-close>✕</button>
+    <strong>${t.name}</strong> · ${type}${spice ? ` · <strong>${spice} spice</strong>` : ''}
+    ${occupants.length ? `<ul>${occupants.join('')}</ul>` : '<div>Unoccupied</div>'}
+    <div class="borders">Borders: ${neighbours}</div>`;
+  card.querySelector('[data-card-close]').onclick = () => { selectedTerritory = null; renderBoard(); renderTerritoryInfo(); };
+  card.hidden = false;
 }
 
 function render() {
@@ -334,17 +345,22 @@ function render() {
 }
 
 function renderStatus() {
-  if ($('status-phase').classList.contains('status-chip--waiting')) return;
+  if ($('status-phase').classList.contains('topbar__phase--waiting')) return;
+  const spicePill = $('status-spice');
   if (!gameState) {
-    $('status-turn').textContent = '—';
-    $('status-phase').textContent = 'No game started';
-    $('status-storm').textContent = 'Storm: —';
+    $('status-turn').textContent = '';
+    $('status-phase').textContent = 'No game';
+    $('status-storm').textContent = 'Storm —';
+    spicePill.hidden = true;
     return;
   }
-  $('status-turn').textContent = `Turn ${gameState.meta.turn}`;
+  $('status-turn').textContent = `T${gameState.meta.turn}`;
   const phase = phaseEngine.currentPhase(gameState);
-  $('status-phase').textContent = gameState.victory.achieved ? 'Game Over' : (PHASE_LABELS[phase] ?? phase);
-  $('status-storm').textContent = `Storm: sector ${gameState.board.stormPosition ?? '—'}`;
+  $('status-phase').textContent = gameState.victory.achieved ? 'Game over' : (PHASE_LABELS[phase] ?? phase);
+  $('status-storm').textContent = `Storm ${gameState.board.stormPosition ?? '—'}`;
+  const me = humanFactionId && gameState.factions[humanFactionId];
+  spicePill.hidden = !me;
+  if (me) spicePill.textContent = `${me.spice} spice`;
 }
 
 function renderPhaseTrack() {
@@ -352,109 +368,81 @@ function renderPhaseTrack() {
   track.innerHTML = '';
   if (!gameState) return;
   const currentIdx = phaseEngine.PHASE_ORDER.indexOf(phaseEngine.currentPhase(gameState));
+  let activeEl = null;
   for (const [idx, phase] of phaseEngine.PHASE_ORDER.entries()) {
-    if (phase === 'setup') continue;
+    if (phase === 'setup' || phase === 'victoryCheck' || phase === 'nexus') continue;
     const step = document.createElement('span');
     step.className = 'phase-track__step';
-    if (idx === currentIdx) step.classList.add('phase-track__step--active');
+    if (idx === currentIdx) { step.classList.add('phase-track__step--active'); activeEl = step; }
     else if (idx < currentIdx) step.classList.add('phase-track__step--done');
     step.textContent = PHASE_LABELS[phase] ?? phase;
     track.appendChild(step);
   }
+  // Keep the current phase in view on a narrow screen.
+  if (activeEl) track.scrollLeft = activeEl.offsetLeft - track.clientWidth / 2 + activeEl.clientWidth / 2;
 }
 
 function renderHand() {
-  const panel = $('hand-panel');
   const me = humanFactionId && gameState?.factions[humanFactionId];
-  panel.hidden = !me;
+  $('dock-hand').hidden = !me;
   if (!me) return;
   const cards = me.treacheryHand.length
     ? me.treacheryHand.map(id => `<li>${cardNameOf(id)} <em>${(cardLookup[id]?.category ?? '').replace(/([A-Z])/g, ' $1').toLowerCase()}</em></li>`).join('')
     : '<li class="empty-note">No treachery cards.</li>';
   const traitors = (me.traitorHand ?? []).map(id => `${leaderNameOf(id)} (${nameOf(leadersById[id]?.faction)})`).join(', ') || 'None';
-  $('hand-heading').textContent = `Your hand: ${FACTION_NAMES[humanFactionId]}`;
+  const leaders = me.leaders.available.map(id => `${leaderNameOf(id)} ${leadersById[id]?.fightingValue ?? ''}`).join(', ') || 'None';
+  $('hand-heading').textContent = `Your hand · ${FACTION_NAMES[humanFactionId]}`;
   $('hand-body').innerHTML = `
     <ul class="hand-list">${cards}</ul>
     <p class="hand-meta"><strong>Traitor:</strong> ${traitors}</p>
+    <p class="hand-meta"><strong>Leaders:</strong> ${leaders}</p>
     ${me.specialFactionState?.prediction ? `<p class="hand-meta"><strong>Prediction:</strong> ${nameOf(me.specialFactionState.prediction.factionId)} on turn ${me.specialFactionState.prediction.turn}</p>` : ''}`;
 }
 
 function renderFactions() {
   const grid = $('factions-grid');
-  if (!gameState) {
-    grid.innerHTML = '<p class="empty-note">Start a game to see faction status here.</p>';
-    return;
-  }
-  grid.innerHTML = '';
-  for (const factionId of ALL_FACTIONS) {
-    const faction = gameState.factions[factionId];
-    if (!faction) continue;
-    const display = FACTION_DISPLAY[factionId];
-    const hidden = humanFactionId && factionId !== humanFactionId;
+  if (!gameState) { grid.innerHTML = '<p class="empty-note">No game yet.</p>'; return; }
+  const rows = ALL_FACTIONS.filter(f => gameState.factions[f]).map(f => {
+    const faction = gameState.factions[f];
+    const hidden = humanFactionId && f !== humanFactionId;
     const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
-    const card = document.createElement('div');
-    card.className = 'faction-card' + (factionId === humanFactionId ? ' faction-card--you' : '');
-    card.innerHTML = `
-      <div class="faction-card__name">
-        <span class="faction-chip" style="background:var(${display.colorVar})"></span>
-        ${display.name}${factionId === humanFactionId ? ' <span class="you-tag">You</span>' : ''}
-      </div>
-      <dl class="faction-card__stats">
-        <dt>Spice</dt><dd>${hidden ? '?' : faction.spice}</dd>
-        <dt>Treachery</dt><dd>${faction.treacheryHand.length}</dd>
-        <dt>Traitor</dt><dd>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</dd>
-        <dt>Reserve</dt><dd>${faction.forces.reserve}</dd>
-        <dt>On board</dt><dd>${onBoard}</dd>
-        <dt>Leaders</dt><dd>${faction.leaders.available.length} / ${faction.leaders.available.length + faction.leaders.killed.length}</dd>
-      </dl>`;
-    grid.appendChild(card);
-  }
+    return `<tr${f === humanFactionId ? ' class="is-you"' : ''}>
+      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}</td>
+      <td>${hidden ? '?' : faction.spice}</td><td>${faction.treacheryHand.length}</td><td>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</td>
+      <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
+  }).join('');
+  grid.innerHTML = `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderTerritories() {
   const wrap = $('territories-table-wrap');
-  if (!gameState) {
-    wrap.innerHTML = '<p class="empty-note">Start a game to see the board here.</p>';
-    return;
-  }
+  if (!gameState) { wrap.innerHTML = '<p class="empty-note">No game yet.</p>'; return; }
   const rows = [];
-  for (const factionId of ALL_FACTIONS) {
-    const faction = gameState.factions[factionId];
+  for (const f of ALL_FACTIONS) {
+    const faction = gameState.factions[f];
     if (!faction) continue;
-    for (const [territoryId, amount] of Object.entries(faction.forces.onBoard)) {
-      rows.push({ territoryId, factionId, amount, starred: faction.forces.starredOnBoard?.[territoryId] ?? 0 });
-    }
+    for (const [t, n] of Object.entries(faction.forces.onBoard)) rows.push({ t, f, n, s: faction.forces.starredOnBoard?.[t] ?? 0 });
   }
-  const spice = {};
-  for (const m of gameState.board.spiceBlowMarkers) spice[m.territoryId] = (spice[m.territoryId] ?? 0) + m.amount;
-  rows.sort((a, b) => territoryNameOf(a.territoryId).localeCompare(territoryNameOf(b.territoryId)));
-  if (!rows.length) {
-    wrap.innerHTML = '<p class="empty-note">No forces on the board yet.</p>';
-    return;
-  }
-  wrap.innerHTML = `
-    <table class="territories-table">
-      <thead><tr><th>Territory</th><th>Faction</th><th>Forces</th><th>Spice</th></tr></thead>
-      <tbody>${rows.map(r => `
-        <tr${r.factionId === humanFactionId ? ' class="row--you"' : ''}>
-          <td>${territoryNameOf(r.territoryId)}</td>
-          <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[r.factionId].colorVar})"></span> ${FACTION_DISPLAY[r.factionId].name}</td>
-          <td>${r.amount}${r.starred ? ` (${r.starred}★)` : ''}</td>
-          <td>${spice[r.territoryId] ?? '—'}</td>
-        </tr>`).join('')}
-      </tbody>
-    </table>`;
+  rows.sort((a, b) => territoryNameOf(a.t).localeCompare(territoryNameOf(b.t)));
+  wrap.innerHTML = rows.length ? `<table class="ftable"><tbody>${rows.map(r => `
+    <tr${r.f === humanFactionId ? ' class="is-you"' : ''}><td>${territoryNameOf(r.t)}</td>
+    <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[r.f].colorVar})"></span>${FACTION_DISPLAY[r.f].name}</td>
+    <td>${r.n}${r.s ? ` (${r.s}★)` : ''}</td></tr>`).join('')}</tbody></table>` : '<p class="empty-note">No forces on the board.</p>';
 }
 
 function renderLog() {
   const log = $('turn-log');
+  const ticker = $('ticker');
   if (!logEntries.length) {
     log.innerHTML = '<li class="empty-note">Nothing has happened yet.</li>';
+    ticker.textContent = 'Open the menu ☰ to start a game.';
     return;
   }
   log.innerHTML = logEntries.slice().reverse()
     .map(e => `<li><span class="log-phase">${PHASE_LABELS[e.phase] ?? e.phase}</span>T${e.turn}: ${escapeHTML(e.text)}</li>`)
     .join('');
+  const last = logEntries[logEntries.length - 1];
+  ticker.innerHTML = `<span class="ticker__phase">${escapeHTML(PHASE_LABELS[last.phase] ?? last.phase)}</span>${escapeHTML(last.text)}`;
 }
 
 function escapeHTML(str) {
@@ -463,10 +451,38 @@ function escapeHTML(str) {
   return div.innerHTML;
 }
 
-$('btn-new-game').addEventListener('click', startNewGame);
-// Show the map straight away, before any game starts.
-loadAllData().then(data => { ensureBoard(data); render(); }).catch(err => addLog('error', '—', `Failed to load the map: ${err.message}`));
+// --- Sheets: summoned only when needed -------------------------------------
+
+function openSheet(name) {
+  closeSheets();
+  const sheet = document.querySelector(`.sheet[data-name="${name}"]`);
+  if (!sheet) return;
+  sheet.hidden = false;
+  $('scrim').hidden = false;
+  document.querySelectorAll('.dock__btn[data-sheet]').forEach(b => b.classList.toggle('dock__btn--active', b.dataset.sheet === name));
+}
+
+function closeSheets() {
+  document.querySelectorAll('.sheet').forEach(s => { s.hidden = true; });
+  $('scrim').hidden = true;
+  document.querySelectorAll('.dock__btn[data-sheet]').forEach(b => b.classList.remove('dock__btn--active'));
+}
+
+document.querySelectorAll('.dock__btn[data-sheet]').forEach(btn => btn.addEventListener('click', () => {
+  const sheet = document.querySelector(`.sheet[data-name="${btn.dataset.sheet}"]`);
+  if (sheet && !sheet.hidden) closeSheets(); else openSheet(btn.dataset.sheet);
+}));
+document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', closeSheets));
+$('scrim').addEventListener('click', closeSheets);
+$('btn-menu').addEventListener('click', () => openSheet('menu'));
+$('ticker').addEventListener('click', () => openSheet('log'));
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+
+$('btn-new-game').addEventListener('click', () => { closeSheets(); startNewGame(); });
 $('btn-step-phase').addEventListener('click', stepPhase);
 $('btn-run-turn').addEventListener('click', runTurn);
 
+// Show the map straight away, and the menu so a first game is one tap away.
+loadAllData().then(data => { ensureBoard(data); render(); }).catch(err => addLog('error', '—', `Failed to load the map: ${err.message}`));
 render();
+openSheet('menu');
