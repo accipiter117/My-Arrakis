@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-27b">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-27c">
 </head>
 <body>
   <div class="app">
@@ -21,7 +21,7 @@
         <span id="status-phase" class="topbar__phase">No game</span>
       </div>
       <div class="topbar__pills">
-        <span id="status-ally" class="pill pill--ally" hidden>—</span>
+        <button id="status-ally" class="pill pill--ally" hidden aria-label="What your ally gives you">—</button>
         <span id="status-spice" class="pill pill--spice" hidden>—</span>
         <span id="status-storm" class="pill">Storm —</span>
         <button id="topbar-hand" class="pill pill--hand" hidden aria-label="Your hand">Hand</button>
@@ -123,7 +123,7 @@
         <p>Ornithopter flight: supplied for the game by its creator.</p>
         <p>Based on the board game Dune (Gale Force Nine, 2019). A personal fan project; map and art are original.</p>
       </details>
-      <p class="build-version">Version 2026-09-27b</p>
+      <p class="build-version">Version 2026-09-27c</p>
     </div>
   </section>
 
@@ -171,6 +171,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-09-27b"></script>
+  <script type="module" src="./ui/main.js?v=2026-09-27c"></script>
 </body>
 </html>
