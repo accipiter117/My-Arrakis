@@ -210,6 +210,10 @@ async function runSpiceBlowPhase(state, decisionProvider) {
 }
 
 function runCharityPhase(state) {
+  // Charity is once per turn: clear last turn's claims first. (An earlier
+  // version never reset this, so each faction could claim only once per
+  // game; Bene Gesserit starved for want of their 2 spice a turn.)
+  choamCharityEngine.resetCharityFlags(state);
   // No real decision here, claiming charity has no downside, so this runs
   // for real rather than going through the decision provider at all.
   const results = [];
