@@ -305,6 +305,11 @@ async function runBiddingPhase(state, decisionProvider) {
 async function runRevivalPhase(state, decisionProvider) {
   const results = [];
   for (const factionId of Object.keys(state.factions)) {
+    const faction = state.factions[factionId];
+    // Only factions with something they could revive take a visible turn.
+    const canAct = (faction.revivalTanks ?? 0) > 0 || faction.leaders.killed.length > 0 || faction.treacheryHand.includes('ghola');
+    const tanksBefore = faction.revivalTanks ?? 0, deadBefore = faction.leaders.killed.length;
+    if (canAct) await observe(decisionProvider, { type: 'turnStart', phase: 'revival', factionId }, state);
     const decision = await decisionProvider.chooseRevival(state, factionId);
     if (decision.forces > 0 && revivalEngine.canReviveForces(state, factionId, decision.forces, decision.starred).ok) {
       results.push(revivalEngine.reviveForces(state, factionId, decision.forces, decision.starred));
@@ -322,6 +327,10 @@ async function runRevivalPhase(state, decisionProvider) {
           revivalEngine.canReviveLeader(state, factionId, decision.leaderId, decision.leaderFightingValue).ok) {
         results.push(revivalEngine.reviveLeader(state, factionId, decision.leaderId, decision.leaderFightingValue));
       }
+    }
+    if (canAct) {
+      const forces = tanksBefore - (faction.revivalTanks ?? 0), leaders = deadBefore - faction.leaders.killed.length;
+      await observe(decisionProvider, { type: 'turnEnd', phase: 'revival', factionId, acted: forces > 0 || leaders > 0, forces, leaders }, state);
     }
   }
   // Alliance advantage: the Emperor may pay for up to 3 extra forces for their ally.
@@ -354,6 +363,8 @@ async function runShipmentMovementPhase(state, decisionProvider) {
   }
 
   for (const factionId of order) {
+    await observe(decisionProvider, { type: 'turnStart', phase: 'shipment', factionId }, state);
+    const resultsBefore = results.length;
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
     if (decision.shipment) {
       const { territoryId, amount } = decision.shipment;
@@ -407,6 +418,8 @@ async function runShipmentMovementPhase(state, decisionProvider) {
       results.push({ factionId, type: 'movement', from, to, amount, card: 'hajr', ornithopter });
       await observe(decisionProvider, { type: 'move', factionId, from, to, amount, card: 'hajr', ornithopter }, state);
     }
+    const acted = results.slice(resultsBefore).some(r => r.factionId === factionId);
+    await observe(decisionProvider, { type: 'turnEnd', phase: 'shipment', factionId, acted }, state);
   }
 
   // Enforce the alliance overlap penalty (see allianceEngine.js) now that
