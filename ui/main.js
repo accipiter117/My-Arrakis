@@ -16,6 +16,7 @@ import { createStrategicAI } from '../js/ai/strategicAI.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
+import { getRandomState, setRandomState } from '../js/random.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
 
@@ -49,6 +50,11 @@ let humanFactionId = null;
 let busy = false;
 let board = null;
 let selectedTerritory = null;
+let aiChoice = 'strategic';
+let highlightIds = [];
+
+const SAVE_KEY = 'my-arrakis-save-v1';
+const AI_NAMES = { strategic: 'Strategic AI', basic: 'Basic AI', passive: 'Passive' };
 
 // --- Data --------------------------------------------------------------
 
@@ -99,28 +105,18 @@ async function startNewGame() {
       seed: Number(new URLSearchParams(location.search).get('seed')) || undefined
     });
 
-    const aiChoice = $('select-ai').value;
-    const ai = aiChoice === 'strategic' ? createStrategicAI({ leadersData: data.leaders, cardLookup })
-      : aiChoice === 'basic' ? createBasicAI({ leadersData: data.leaders, cardLookup })
-      : turnEngine.passiveDecisionProvider;
-    decisionProvider = humanFactionId
-      ? createMixedProvider({
-          humanFactionId, ai,
-          human: createHumanProvider({
-            panel: $('decision-panel'), leadersData: data.leaders, cardLookup,
-            territoriesData: data.territories, factionNames: FACTION_NAMES, onWaiting: setWaiting
-          })
-        })
-      : ai;
+    aiChoice = $('select-ai').value;
+    decisionProvider = buildProvider(data);
 
     logEntries = [];
     const who = humanFactionId ? `You play ${FACTION_NAMES[humanFactionId]}` : 'Spectating';
-    addLog('setup', 1, `New game (seed ${gameState.meta.seed}). ${who}; opponents: ${{ strategic: 'Strategic AI', basic: 'Basic AI', passive: 'Passive' }[aiChoice]}.`);
+    addLog('setup', 1, `New game (seed ${gameState.meta.seed}). ${who}; opponents: ${AI_NAMES[aiChoice]}.`);
     render();
 
     const setup = await turnEngine.runSetupDecisions(gameState, decisionProvider);
     addLog('setup', 1, `Traitors chosen by ${setup.traitors.length} factions (Harkonnen keeps all four).${setup.prediction ? ' Bene Gesserit has sealed a secret Prediction.' : ''}`);
     phaseEngine.nextPhase(gameState);
+    saveGame();
   } catch (err) {
     addLog('error', '—', `Failed to start game: ${err.message}`);
     console.error(err);
@@ -129,11 +125,119 @@ async function startNewGame() {
   }
 }
 
+// --- Providers, saving and resuming -----------------------------------------
+
+function buildProvider(data) {
+  const ai = aiChoice === 'strategic' ? createStrategicAI({ leadersData: data.leaders, cardLookup })
+    : aiChoice === 'basic' ? createBasicAI({ leadersData: data.leaders, cardLookup })
+    : turnEngine.passiveDecisionProvider;
+  return humanFactionId
+    ? createMixedProvider({
+        humanFactionId, ai,
+        human: createHumanProvider({
+          panel: $('decision-panel'), leadersData: data.leaders, cardLookup,
+          territoriesData: data.territories, factionNames: FACTION_NAMES, onWaiting: setWaiting
+        })
+      })
+    : ai;
+}
+
+// Saved at phase boundaries only, together with the random stream's
+// position, so a resumed game plays on exactly as it would have.
+function snapshot() {
+  return { version: 1, savedAt: new Date().toISOString(), state: gameState, rng: getRandomState(),
+           log: logEntries, humanFactionId, aiChoice };
+}
+
+function saveGame() {
+  if (!gameState) return;
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot()));
+  } catch (err) {
+    console.warn('Could not save the game', err); // private browsing or storage full
+  }
+  renderMenu();
+}
+
+function readSave() {
+  try {
+    const save = JSON.parse(localStorage.getItem(SAVE_KEY));
+    return save?.version === 1 && save.state ? save : null;
+  } catch {
+    return null;
+  }
+}
+
+async function resumeGame(save) {
+  if (!save || busy) return;
+  setBusy(true);
+  try {
+    const data = await loadAllData();
+    territoriesData = data.territories;
+    ensureBoard(data);
+    gameState = save.state;
+    setRandomState(save.rng);
+    logEntries = save.log ?? [];
+    humanFactionId = save.humanFactionId ?? null;
+    aiChoice = save.aiChoice ?? 'strategic';
+    decisionProvider = buildProvider(data);
+    const phase = PHASE_LABELS[phaseEngine.currentPhase(gameState)] ?? phaseEngine.currentPhase(gameState);
+    addLog('setup', gameState.meta.turn, `Game resumed at turn ${gameState.meta.turn}, ${phase}.`);
+    saveGame();
+  } catch (err) {
+    addLog('error', '—', `Could not resume: ${err.message}`);
+    console.error(err);
+  } finally {
+    setBusy(false);
+  }
+}
+
+function exportSave() {
+  if (!gameState) return;
+  const blob = new Blob([JSON.stringify(snapshot(), null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `my-arrakis-turn${gameState.meta.turn}-seed${gameState.meta.seed}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+async function importSave(file) {
+  try {
+    const save = JSON.parse(await file.text());
+    if (save?.version !== 1 || !save.state) throw new Error('not a My Arrakis save file');
+    closeSheets();
+    await resumeGame(save);
+  } catch (err) {
+    $('save-note').textContent = `Import failed: ${err.message}`;
+  }
+}
+
+function timeAgo(iso) {
+  const mins = Math.round((Date.now() - new Date(iso)) / 60000);
+  return mins < 1 ? 'just now' : mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} h ago` : `${Math.round(mins / 1440)} days ago`;
+}
+
+function renderMenu() {
+  const save = readSave();
+  // Offer Continue for an unfinished saved game that isn't the one on screen.
+  const onScreen = gameState && save && save.state.meta.seed === gameState.meta.seed && !gameState.victory.achieved;
+  const resumable = save && !save.state.victory?.achieved && !onScreen;
+  const btn = $('btn-continue');
+  btn.hidden = !resumable;
+  if (resumable) {
+    const who = save.humanFactionId ? FACTION_NAMES[save.humanFactionId] : 'Spectating';
+    btn.textContent = `Continue: turn ${save.state.meta.turn} · ${who} · ${timeAgo(save.savedAt)}`;
+  }
+  $('btn-export').disabled = !gameState;
+}
+
 async function stepPhase() {
   if (!gameState || gameState.victory.achieved || busy) return;
   setBusy(true);
   try {
     describe(await turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup));
+    saveGame();
     checkVictory();
   } catch (err) {
     addLog('error', gameState.meta.turn, err.message);
@@ -152,6 +256,7 @@ async function runTurn() {
     const startTurn = gameState.meta.turn;
     while (!gameState.victory.achieved && gameState.meta.turn === startTurn) {
       describe(await turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup));
+      saveGame(); // after every completed phase, so a reload never loses more than one phase
       render();
     }
     checkVictory();
@@ -168,6 +273,7 @@ function checkVictory() {
   const winners = gameState.victory.winningFactions.map(f => FACTION_NAMES[f] ?? f).join(' & ');
   const youWon = humanFactionId && gameState.victory.winningFactions.includes(humanFactionId);
   addLog('victory', gameState.meta.turn, `Game over: ${winners} win (${gameState.victory.method}).${humanFactionId ? (youWon ? ' You won.' : ' You lost.') : ''}`);
+  saveGame();
   openSheet('log');
 }
 
@@ -291,7 +397,8 @@ function ensureBoard(data) {
   territoriesData = territoriesData ?? data.territories;
   board = createBoard({
     container: $('board'), geometry: data.geometry, territoriesData: data.territories,
-    factionColors: FACTION_COLORS, onTap: tapTerritory
+    factionColors: FACTION_COLORS, onTap: tapTerritory,
+    onZoom: zoomed => { $('zoom-reset').hidden = !zoomed; }
   });
 }
 
@@ -305,7 +412,7 @@ function tapTerritory(id) {
 }
 
 function renderBoard() {
-  board?.render(gameState, { selected: selectedTerritory });
+  board?.render(gameState, { selected: selectedTerritory, highlight: highlightIds });
 }
 
 function renderTerritoryInfo() {
@@ -479,10 +586,19 @@ $('ticker').addEventListener('click', () => openSheet('log'));
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
 
 $('btn-new-game').addEventListener('click', () => { closeSheets(); startNewGame(); });
+$('btn-continue').addEventListener('click', () => { closeSheets(); resumeGame(readSave()); });
+$('btn-export').addEventListener('click', exportSave);
+$('input-import').addEventListener('change', e => { if (e.target.files[0]) importSave(e.target.files[0]); e.target.value = ''; });
 $('btn-step-phase').addEventListener('click', stepPhase);
+$('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
+$('zoom-out').addEventListener('click', () => board?.zoomBy(1 / 1.5));
+$('zoom-reset').addEventListener('click', () => board?.resetZoom());
+// Decision panels outline legal choices on the map.
+document.addEventListener('board-highlight', e => { highlightIds = e.detail.ids ?? []; renderBoard(); });
 $('btn-run-turn').addEventListener('click', runTurn);
 
 // Show the map straight away, and the menu so a first game is one tap away.
 loadAllData().then(data => { ensureBoard(data); render(); }).catch(err => addLog('error', '—', `Failed to load the map: ${err.message}`));
 render();
+renderMenu();
 openSheet('menu');
