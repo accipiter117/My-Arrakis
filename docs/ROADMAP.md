@@ -19,6 +19,10 @@ A living plan: what's done, what's next, and why. Updated as work lands.
 - **Presentation:** original generated map, zoom/pan, event cards (storm,
   spice, worm, battle, traitor, alliances), marching and gliding troops,
   live auctions with bids going round the table.
+- **Look and feel:** "Arrakis at dusk", an original theme drawn from the
+  book's world: basalt slabs with wind-cut corners, spice-orange light,
+  textured sand, rock and stronghold stone, a bronze sector bezel, a
+  churning storm, two moons and drifting spice.
 - **App:** single-screen mobile layout, sheets, auto-save and resume,
   export/import, seeded replay (?seed=N), debug hook (?debug=1).
 
