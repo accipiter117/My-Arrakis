@@ -298,6 +298,60 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     return g;
   }
 
+  // --- Arrivals from off-world ------------------------------------------------------
+  // Each faction's ship (assets/ships/<faction>.png, drawn in 2.5D facing right)
+  // flies in carrying its counter; the Fremen instead arrive by sandworm.
+  const SHIP = 170;          // ship sprite size (board units)
+  const CRUISE = 80;         // flying height above the ground shadow
+  const shipUrl = f => new URL(`../assets/ships/${f}.png`, import.meta.url).href;
+  for (const f of Object.keys(factionColors)) { const img = new Image(); img.src = shipUrl(f); } // preload
+
+  async function flyShip({ faction, count, from, to, ms = 1200, landMs = 450 }) {
+    const [x1, y1] = from, [x2, y2] = to;
+    const facing = x2 < x1 ? -1 : 1; // sprites face right; mirror when flying left
+    const g = el('g', { class: 'fx-ship' }, fxLayer);
+    const shadow = el('ellipse', { rx: 56, ry: 15, class: 'fx-ship__shadow' }, g);
+    const badge = el('g', {}, g);
+    drawCounter(badge, faction, count);
+    const craft = el('g', {}, g);
+    el('image', { href: shipUrl(faction), x: -SHIP / 2, y: -SHIP / 2, width: SHIP, height: SHIP, transform: `scale(${facing},1)` }, craft);
+    const place = (x, y, alt, t = 0) => {
+      shadow.setAttribute('transform', `translate(${x},${y + 6}) scale(${0.7 + 0.3 * (1 - alt / CRUISE)})`);
+      shadow.setAttribute('opacity', 0.25 + 0.35 * (1 - alt / CRUISE));
+      craft.setAttribute('transform', `translate(${x},${y - alt})`);
+      badge.setAttribute('transform', `translate(${x},${y - alt + 30 * (1 - t)}) scale(${0.8 + 0.2 * t})`);
+    };
+    // Cruise in from beyond the rim.
+    await tween(ms, t => { const e = ease(t); place(x1 + (x2 - x1) * e, y1 + (y2 - y1) * e, CRUISE); });
+    // Descend, set the troops down, and lift away.
+    await tween(landMs, t => {
+      place(x2, y2, CRUISE * (1 - t), t);
+      craft.setAttribute('opacity', 1 - t * t);
+    });
+    g.remove();
+  }
+
+  // Shai-Hulud rises out of the sand at the destination, delivers the Fremen, and sinks.
+  async function wormDelivers({ count, at, ms = 1800 }) {
+    const [x, y] = at;
+    const g = el('g', { class: 'fx-worm-rise', transform: `translate(${x},${y + 16})` }, fxLayer);
+    const body = el('g', {}, g);
+    el('image', { href: shipUrl('fremen'), x: -SHIP / 2, y: -SHIP + 8, width: SHIP, height: SHIP }, body);
+    const badge = el('g', { opacity: 0 }, g);
+    drawCounter(badge, 'fremen', count);
+    const rings = worm(null, ms, [x, y], false); // sand rings only: the sprite is the worm
+    await tween(ms, t => {
+      // Rise (first 35%), hold, then sink (last 35%).
+      const s = t < 0.35 ? ease(t / 0.35) : t > 0.65 ? 1 - ease((t - 0.65) / 0.35) : 1;
+      body.setAttribute('transform', `scale(1,${Math.max(0.001, s)})`);
+      body.setAttribute('opacity', Math.min(1, s * 1.5));
+      badge.setAttribute('opacity', t > 0.4 ? Math.min(1, (t - 0.4) * 5) : 0);
+      badge.setAttribute('transform', `translate(0,${-6 * (1 - Math.min(1, (t - 0.4) * 3))})`);
+    });
+    await rings;
+    g.remove();
+  }
+
   // Walk a token through a list of points, hopping between them.
   async function animateToken({ color, count, points, msPerHop = 380, hop = 14 }) {
     const g = makeGhost(color, count);
@@ -313,18 +367,18 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   }
 
   // Shai-Hulud: sand rings spread and a maw opens, then closes.
-  async function worm(territoryId, ms = 1300) {
-    const [x, y] = labelPoint(territoryId);
+  async function worm(territoryId, ms = 1300, at = null, withMaw = true) {
+    const [x, y] = at ?? labelPoint(territoryId);
     const g = el('g', { class: 'fx-worm', transform: `translate(${x},${y})` }, fxLayer);
     const rings = [0, 1, 2].map(() => el('circle', { r: 0, class: 'fx-worm__ring' }, g));
-    const maw = el('circle', { r: 0, class: 'fx-worm__maw' }, g);
+    const maw = withMaw ? el('circle', { r: 0, class: 'fx-worm__maw' }, g) : null;
     await tween(ms, t => {
       rings.forEach((ring, i) => {
         const rt = Math.max(0, Math.min(1, t * 1.4 - i * 0.2));
         ring.setAttribute('r', 20 + rt * 90);
         ring.setAttribute('opacity', 1 - rt);
       });
-      maw.setAttribute('r', Math.sin(Math.PI * t) * 42);
+      maw?.setAttribute('r', Math.sin(Math.PI * t) * 42);
     });
     g.remove();
   }
@@ -346,6 +400,8 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     pathBetween,
     offBoardPoint,
     animateToken,
+    flyShip,
+    wormDelivers,
     worm,
     pulse,
     zoomBy: factor => zoomAt(view.x + view.w / 2, view.y + view.w / 2, factor),
