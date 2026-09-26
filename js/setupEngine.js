@@ -101,7 +101,12 @@ function setupSpiceDeck(state, spiceDeckData, territoriesData, rngShuffle) {
 }
 
 function setupTreacheryDeck(state, treacheryDeckData, rngShuffle) {
-  state.decks.treacheryDeck = rngShuffle(treacheryDeckData.cards.map(c => c.id));
+  // House rule (data/rulesConfig.json houseRules.removeWorthlessCards): the
+  // five worthless cards can be left out of the deck.
+  const leaveOut = state.rulesConfig.houseRules?.removeWorthlessCards;
+  state.decks.treacheryDeck = rngShuffle(treacheryDeckData.cards
+    .filter(c => !(leaveOut && c.category === 'worthless'))
+    .map(c => c.id));
   state.decks.treacheryDiscard = [];
   return state;
 }
