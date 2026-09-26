@@ -48,8 +48,11 @@ let busy = false;
 
 // --- Data --------------------------------------------------------------
 
+// Resolve data paths from this module's own location, not the page's.
+// fetch() resolves relative URLs against the page, which broke on GitHub
+// Pages where the site lives under /My-Arrakis/ rather than at the root.
 async function loadJSON(path) {
-  const response = await fetch(path);
+  const response = await fetch(new URL(path, import.meta.url));
   if (!response.ok) throw new Error(`Failed to load ${path}: ${response.status} ${response.statusText}`);
   return response.json();
 }
