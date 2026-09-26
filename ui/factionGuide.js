@@ -21,6 +21,7 @@ export const FACTION_GUIDE = {
       'Move onto foreseen spice before anyone else knows it is coming.',
       'Hold Arrakeen: it gives ornithopters (move 3) and is often the stronghold that decides the game.'
     ],
+    ally: ['Prescience in the ally’s battles: they see one part of the opponent’s plan before fighting.'],
     counter: [
       'Vary your battle plans and carry both defence types, so a single revealed element doesn’t sink you.',
       'Atreides are thin on troops: sustained pressure on Arrakeen wears them down.',
@@ -42,6 +43,7 @@ export const FACTION_GUIDE = {
       'Keep strong captured leaders to fight with, but never against their original owner (they turn traitor).',
       'Use Carthag’s ornithopters to strike wherever their traitors’ owners are fighting.'
     ],
+    ally: ['Harkonnen traitors work in the ally’s battles: if the opponent plays a leader Harkonnen holds as a traitor, it can be revealed for an outright win.'],
     counter: [
       'Lead with a Cheap Hero or a low-value leader against them: less to lose to a traitor, and nothing to capture.',
       'Avoid needless battles with Harkonnen; each one risks a traitor and a captured leader.',
@@ -62,6 +64,7 @@ export const FACTION_GUIDE = {
       'Spend freely: the Emperor’s income comes from everyone else’s bidding.',
       'Push auction prices up to drain rivals, since their spending funds you.'
     ],
+    ally: ['The Emperor can pay for up to 3 extra revivals for the ally each turn, beyond the normal limit.'],
     counter: [
       'Bid less, or let the Emperor overpay: every spice you pay at auction goes to them.',
       'Fight the Sardaukar with the Fremen, where they count as ordinary troops.',
@@ -86,6 +89,7 @@ export const FACTION_GUIDE = {
       'Use free shipping and worm rides to appear where others can’t reach.',
       'Save Fedaykin for the battles that decide a sietch.'
     ],
+    ally: ['Worms never eat the ally’s troops.', 'The ally revives 3 troops free each turn.', 'The ally shares the Fremen special victory.'],
     counter: [
       'On the last turns, one Harkonnen, Atreides or Emperor troop in Tuek’s Sietch blocks their special victory.',
       'Occupy a sietch late: any other faction in Sietch Tabr or Habbanya Sietch also blocks it.',
@@ -108,6 +112,7 @@ export const FACTION_GUIDE = {
       'Deny whoever is closest to winning; a game with no winner is a Guild win.',
       'Make allies: your default victory is shared, which makes you an attractive partner late on.'
     ],
+    ally: ['The ally ships at half price.', 'The ally shares the Guild’s “nobody won” victory at the end of the game.'],
     counter: [
       'Someone has to actually win: coordinate to push a real victory before the last turn.',
       'Ship less or move by land where you can: every shipment pays the Guild.',
@@ -130,6 +135,7 @@ export const FACTION_GUIDE = {
       'Use the Voice on the card that decides the battle: forbid the defence your weapon needs to beat.',
       'Stay small and unthreatening; your strength is in other people’s battles.'
     ],
+    ally: ['The Voice in the ally’s battles.', 'Careful: if the ally wins on the turn Bene Gesserit secretly predicted for them, Bene Gesserit win alone instead.'],
     counter: [
       'Their Prediction is secret: be wary of a faction that seems oddly helped along.',
       'Carry more than one kind of weapon and defence, so the Voice can’t strip your whole plan.',
@@ -137,5 +143,12 @@ export const FACTION_GUIDE = {
     ]
   }
 };
+
+// True of every alliance.
+export const ALLIANCE_BASICS = [
+  'You win together with 4 strongholds between you.',
+  'You can pledge spice to help pay for each other’s cards and shipments.',
+  'You cannot move into each other’s territories (except the Polar Sink), and you never fight each other.'
+];
 
 export const GUIDE_ORDER = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
