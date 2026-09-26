@@ -352,6 +352,11 @@ strong { color: var(--gold); }
 .sheet__note { color: var(--sand-dim); font-size: 11.5px; margin: 0.45rem 0; }
 .build-version { font-family: var(--font-data); font-size: 9.5px; letter-spacing: 0.1em; color: #5c4b34; margin: 0.7rem 0 0; }
 
+/* Music controls */
+.row-field input[type="range"] { width: 58%; accent-color: var(--spice); }
+.music-now { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.6rem; font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.06em; color: var(--sand-dim); }
+.music-now .icon-btn { width: 30px; height: 30px; font-size: 12px; }
+
 /* Title block in the menu */
 .title-block { text-align: center; padding: 0.4rem 0 0.8rem; border-bottom: 1px solid #3a2b1c; margin-bottom: 0.8rem; }
 .title-block__name {
