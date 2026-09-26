@@ -103,6 +103,29 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
       renderReal();
     },
 
+    async traitor(e) {
+      const html = `<div class="event-card__eyebrow">Traitor!</div>
+        <div class="event-card__title">${esc(names.leader(e.leaderId))}</div>
+        <div class="event-card__detail">was secretly in ${esc(names.faction(e.revealedBy))}'s pay.
+        ${esc(names.faction(e.forFaction))} wins in ${esc(names.territory(e.territoryId))}, losing nothing.</div>`;
+      const shown = showCard('traitor', html, 2400);
+      if (speed()) await board.pulse(e.territoryId, 'battle', scaled(1100));
+      await shown;
+    },
+
+    async allianceFormed(e) {
+      await showCard('nexus', card('Alliance', `${names.faction(e.proposer)} & ${names.faction(e.target)}`,
+        'They now win together with 4 strongholds between them.'), 2000);
+    },
+
+    async allianceRejected(e) {
+      await showCard('nexus', card('Alliance refused', names.faction(e.target), `turned down ${esc(names.faction(e.proposer))}.`), 1300);
+    },
+
+    async allianceBroken(e) {
+      await showCard('nexus', card('Alliance broken', names.faction(e.by), `breaks with ${esc(names.faction(e.of))}.`), 1800);
+    },
+
     async battle(e) {
       const side = f => {
         const p = e.plans[f];
