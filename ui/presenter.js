@@ -172,7 +172,10 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
         if (speed()) sfx?.play('wormRoar');
         const shown = showCard('worm', card('Shai-Hulud', 'A worm rises',
           `${e.devoured ? `It devours <strong>${esc(names.territory(e.devoured))}</strong>: spice and troops there are lost (Fremen are spared). ` : ''}A Nexus follows.`), 3200);
-        if (speed() && e.devoured) await board.worm(e.devoured, scaled(1300));
+        if (speed() && e.devoured) {
+          const [x, y] = board.labelPoint(e.devoured);
+          await board.wormDelivers({ at: [x, y + 14], ms: scaled(1800) });
+        }
         await shown;
       } else {
         await showCard('worm', card('Shai-Hulud', 'Set aside', 'Worms drawn on the first turn return to the deck.'), 2200);
@@ -186,7 +189,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       const at = [lx, ly + 14]; // where the counter sits in the territory
       if (e.factionId === 'fremen') {
         // The Fremen come from the deep desert: Shai-Hulud brings them.
-        sfx?.play('wormRoar');
+        sfx?.play('wormDelivery');
         await board.wormDelivers({ count: e.amount, at, ms: scaled(1800) });
       } else {
         // Everyone else ships in from off-world: their ship flies in and lands.
@@ -199,11 +202,15 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     async move(e, state) {
       if (!speed()) return;
       renderDisplay(displayWithout(state, e.factionId, e.to, e.amount));
-      if (e.ornithopter) {
-        // Ornithopters: one smooth, high flight straight to the destination.
+      const ground = id => { const [x, y] = board.labelPoint(id); return [x, y + 14]; };
+      if (e.crossShip) {
+        // The Guild ships across the planet: its Heighliner lifts off and sets down.
+        sfx?.play('shipArrival');
+        await board.flyShip({ faction: e.factionId, count: e.amount, from: ground(e.from), to: ground(e.to), ms: scaled(1100), landMs: scaled(400), takeoffMs: scaled(350) });
+      } else if (e.ornithopter) {
+        // Ornithopters: the faction's 'thopter lifts the troops out and sets them down.
         sfx?.play('ornithopter');
-        await board.animateToken({ color: factionColors[e.factionId], count: e.amount,
-          points: [board.labelPoint(e.from), board.labelPoint(e.to)], msPerHop: scaled(1300), hop: 70 });
+        await board.flyThopter({ faction: e.factionId, count: e.amount, from: ground(e.from), to: ground(e.to), ms: scaled(1100), landMs: scaled(400), takeoffMs: scaled(350) });
       } else {
         // On foot: marching territory by territory.
         const route = board.pathBetween(e.from, e.to).map(board.labelPoint);
