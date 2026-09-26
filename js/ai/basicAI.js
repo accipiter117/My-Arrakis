@@ -159,6 +159,11 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return false;
     },
 
+    // Shed cards whose effects aren't in the game yet: they only block bidding.
+    chooseDiscards(state, factionId, dead) {
+      return dead;
+    },
+
     // Always spring a traitor: the battle is won outright at no cost.
     chooseRevealTraitor() {
       return true;
