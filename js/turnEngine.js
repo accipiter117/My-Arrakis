@@ -132,15 +132,30 @@ async function runStormPhase(state, decisionProvider) {
     ? (state.meta.turnOrder ?? []).slice(0, 2) // placeholder pending player-circle sectors, see docs/STORM_TODO.md
     : (state.meta.lastBattleParticipants ?? (state.meta.turnOrder ?? []).slice(0, 2));
 
-  const dialA = await decisionProvider.chooseStormDial(state, dialers[0], isFirstStorm);
-  const dialB = await decisionProvider.chooseStormDial(state, dialers[1], isFirstStorm);
-  const sectorsToMove = isFirstStorm
-    ? stormEngine.rollFirstStormMovement(dialA, dialB)
-    : stormEngine.rollSubsequentStormMovement(dialA, dialB);
+  // How far the storm moves:
+  //   First storm: two players dial 0-20 each.
+  //   Afterwards, with the Fremen in play (advanced rules): the Storm card
+  //   the Fremen secretly previewed last turn is revealed.
+  //   Afterwards, without the Fremen: the last two battlers dial 1-3 each.
+  const useStormDeck = !isFirstStorm && Boolean(state.factions.fremen);
+  let dials = null, stormCard = null, sectorsToMove;
+  if (useStormDeck) {
+    stormCard = state.board.nextStormCard ?? stormEngine.drawStormCard(random);
+    sectorsToMove = stormCard;
+  } else {
+    const dialA = await decisionProvider.chooseStormDial(state, dialers[0], isFirstStorm);
+    const dialB = await decisionProvider.chooseStormDial(state, dialers[1], isFirstStorm);
+    dials = [dialA, dialB];
+    sectorsToMove = isFirstStorm
+      ? stormEngine.rollFirstStormMovement(dialA, dialB)
+      : stormEngine.rollSubsequentStormMovement(dialA, dialB);
+  }
 
   const previousPosition = state.board.stormPosition ?? 0;
   state.board.stormPosition = stormEngine.advanceStormPosition(previousPosition, sectorsToMove);
-  await observe(decisionProvider, { type: 'storm', from: previousPosition, to: state.board.stormPosition, sectors: sectorsToMove, dials: [dialA, dialB], first: isFirstStorm }, state);
+  // The Fremen shuffle every Storm card back and secretly preview next turn's.
+  if (state.factions.fremen) state.board.nextStormCard = stormEngine.drawStormCard(random);
+  await observe(decisionProvider, { type: 'storm', from: previousPosition, to: state.board.stormPosition, sectors: sectorsToMove, dials, stormCard, first: isFirstStorm }, state);
 
   // First Player is genuinely blocked on player-circle sector data (see
   // docs/STORM_TODO.md), but leaving state.meta.firstPlayer as null broke
@@ -478,6 +493,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       }
     }
 
+    const forcesBefore = Object.fromEntries(fighting.map(f => [f, state.factions[f].forces.onBoard[territoryId] ?? 0]));
     const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, plans[aggressorId], plans[defenderId], cardLookup, traitorCalls);
     for (const f of fighting) if (plans[f].leaderId) state.battle.leaderTerritory[plans[f].leaderId] = territoryId;
 
@@ -519,7 +535,11 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const reveal = plan => ({
       forces: plan.forcesCommitted, spice: plan.spiceCommitted, leaderId: plan.leaderId,
       cheapHero: Boolean(plan.cheapHeroCardId), weapon: plan.weaponCardId, defense: plan.defenseCardId,
-      refused: plan.refused ?? null
+      refused: plan.refused ?? null,
+      // Everything needed to replay the arithmetic for the player.
+      starred: plan.starredForcesCommitted ?? 0, supportedStarred: plan.supportedStarredCount ?? 0,
+      supportedOrdinary: plan.supportedOrdinaryCount ?? 0, leaderValue: plan.leaderFightingValue ?? 0,
+      kwisatzHaderach: Boolean(plan.useKwisatzHaderach), forcesPresent: forcesBefore[plan === plans[aggressorId] ? aggressorId : defenderId]
     });
     results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor,
       plans: { [aggressorId]: reveal(plans[aggressorId]), [defenderId]: reveal(plans[defenderId]) }, ...outcome });
