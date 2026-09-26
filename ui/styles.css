@@ -445,6 +445,14 @@ table.territories-table {
 .decision__actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
 .decision__actions .btn { min-height: 44px; flex: 1 1 8rem; }
 
+.build-version {
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  color: var(--ink-soft);
+  padding: 0 1.5rem 1rem;
+  margin: 0;
+}
+
 /* --- Accessibility baseline --- */
 
 :focus-visible {
