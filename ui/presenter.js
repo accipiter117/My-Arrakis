@@ -110,6 +110,14 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
         await wait(90);
       }
       renderReal();
+      // What the storm destroyed on the sand it crossed.
+      const d = e.damage;
+      if (d && (d.losses.length || d.spiceLost.length)) {
+        d.territories.forEach(t => board.pulse(t, 'battle', scaled(900)));
+        const lines = [...d.losses.map(l => `${esc(names.faction(l.factionId))} lose <strong>${l.lost}</strong> in ${esc(names.territory(l.territoryId))}`),
+          ...d.spiceLost.map(x => `<strong>${x.amount}</strong> spice blown away in ${esc(names.territory(x.territoryId))}`)];
+        await showCard('storm', `<div class="event-card__eyebrow">Storm damage</div><div class="event-card__detail">${lines.join('<br>')}</div>`, 3000);
+      }
     },
 
     async spiceCard(e) {
