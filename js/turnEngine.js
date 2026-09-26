@@ -56,6 +56,10 @@ const passiveDecisionProvider = {
     const other = Object.keys(state.factions).find(f => f !== factionId);
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
+  // Keeps every card.
+  chooseDiscards() {
+    return [];
+  },
   // Always reveals a traitor when it can.
   chooseRevealTraitor() {
     return true;
@@ -178,6 +182,7 @@ async function runStormPhase(state, decisionProvider) {
 
 async function runSpiceBlowPhase(state, decisionProvider) {
   spiceEngine.resolveSpiceBlowPhase(state);
+  if (state.factions.atreides) delete state.factions.atreides.specialFactionState.foreseenSpice; // now drawn
   for (const draw of state.nexus.draws ?? []) await observe(decisionProvider, { type: 'spiceCard', ...draw }, state);
   // Snapshot what was placed now, later phases (collection, worms) can
   // remove these markers before anything reads the log.
@@ -217,6 +222,17 @@ function runCharityPhase(state) {
 }
 
 async function runBiddingPhase(state, decisionProvider) {
+  // Before the auction, anyone holding cards whose effects aren't built yet
+  // may discard them (so a full hand of dead cards can bid again).
+  if (decisionProvider.chooseDiscards) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      const dead = state.factions[f].treacheryHand.filter(id => cardEffects.UNBUILT_CARDS.includes(id));
+      if (!dead.length) continue;
+      for (const id of (await decisionProvider.chooseDiscards(state, f, dead)) ?? []) {
+        if (cardEffects.canDiscardUnbuilt(state, f, id).ok) cardEffects.discardUnbuilt(state, f, id);
+      }
+    }
+  }
   biddingEngine.startBiddingPhase(state);
   const results = [];
 
@@ -287,6 +303,15 @@ async function runRevivalPhase(state, decisionProvider) {
 
 async function runShipmentMovementPhase(state, decisionProvider) {
   const results = [];
+  // Atreides Prescience: during Shipment and Movement, Atreides may look at
+  // the top card of the Spice Deck (the next card drawn). Private knowledge,
+  // kept until that card is drawn.
+  if (state.factions.atreides) {
+    const top = state.decks.spiceDeck[state.decks.spiceDeck.length - 1];
+    state.factions.atreides.specialFactionState.foreseenSpice = top
+      ? { type: top.type, territoryId: top.type === 'territory' ? top.id : null, amount: top.maxValue ?? null }
+      : { reshuffle: true };
+  }
   const turnOrder = state.meta.turnOrder ?? Object.keys(state.factions);
 
   for (const factionId of turnOrder) {
