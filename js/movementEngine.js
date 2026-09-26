@@ -265,7 +265,60 @@ function resetTurnMovementFlags(state) {
   return state;
 }
 
+// --- Spacing Guild, advanced: cross-ship and ship back to reserves --------------
+// Instead of shipping from reserves, the Guild may ship forces from one
+// territory to another (the normal Guild rate for the destination), or from a
+// territory back to reserves at 1 spice per 2 forces (rounded up).
+function canCrossShip(state, factionId, from, to, amount) {
+  if (factionId !== 'guild') return { ok: false, reason: 'Only the Spacing Guild can ship across the planet.' };
+  const here = state.factions.guild.forces.onBoard[from] ?? 0;
+  if (amount < 1 || amount > here) return { ok: false, reason: 'Not that many Guild forces there.' };
+  if (from === to || !state.board.territories[to]) return { ok: false, reason: 'Choose a different territory.' };
+  if (isStrongholdBlocked(state, to, 'guild')) return { ok: false, reason: 'Stronghold already occupied by two other factions.' };
+  if (allyOccupies(state, 'guild', to)) return { ok: false, reason: 'Your ally already has forces there.' };
+  const totalCost = Math.ceil(shipmentCostPerForce(state, 'guild', to) * amount);
+  if (totalCost > spendingPower(state, 'guild')) return { ok: false, reason: 'Not enough spice.' };
+  return { ok: true, totalCost };
+}
+
+function executeCrossShip(state, factionId, from, to, amount) {
+  const check = canCrossShip(state, factionId, from, to, amount);
+  if (!check.ok) throw new Error(check.reason);
+  paySpice(state, 'guild', check.totalCost);
+  state.spiceBank.totalInCirculation -= check.totalCost; // the Guild's own fare goes to the bank
+  const forces = state.factions.guild.forces;
+  forces.onBoard[from] -= amount;
+  if (forces.onBoard[from] <= 0) delete forces.onBoard[from];
+  forces.onBoard[to] = (forces.onBoard[to] ?? 0) + amount;
+  return { from, to, amount, cost: check.totalCost };
+}
+
+function canRetreatToReserves(state, factionId, from, amount) {
+  if (factionId !== 'guild') return { ok: false, reason: 'Only the Spacing Guild can ship back to reserves.' };
+  const here = state.factions.guild.forces.onBoard[from] ?? 0;
+  if (amount < 1 || amount > here) return { ok: false, reason: 'Not that many Guild forces there.' };
+  const totalCost = Math.ceil(amount / 2);
+  if (totalCost > spendingPower(state, 'guild')) return { ok: false, reason: 'Not enough spice.' };
+  return { ok: true, totalCost };
+}
+
+function executeRetreatToReserves(state, factionId, from, amount) {
+  const check = canRetreatToReserves(state, factionId, from, amount);
+  if (!check.ok) throw new Error(check.reason);
+  paySpice(state, 'guild', check.totalCost);
+  state.spiceBank.totalInCirculation -= check.totalCost;
+  const forces = state.factions.guild.forces;
+  forces.onBoard[from] -= amount;
+  if (forces.onBoard[from] <= 0) delete forces.onBoard[from];
+  forces.reserve += amount;
+  return { from, amount, cost: check.totalCost };
+}
+
 export {
+  canCrossShip,
+  executeCrossShip,
+  canRetreatToReserves,
+  executeRetreatToReserves,
   canRideWorm,
   rideWorm,
   hasOrnithopterAccess,
