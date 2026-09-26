@@ -127,7 +127,7 @@ export const FACTION_GUIDE = {
       'Secret Prediction: name a faction and a turn at the start. If that faction wins on that turn (even with Bene Gesserit as its ally), Bene Gesserit win alone instead. Doesn’t count for the Fremen or Guild special victories.',
       'The Voice: before a battle, command the opponent to play, or not to play, one kind of card. Works in an ally’s battles too.',
       'Spiritual Advisors: whenever another faction ships in from off-planet, place 1 troop in the Polar Sink for free.',
-      'Any worthless card can be played as a Karama.',
+      'Any worthless card can be played as a Karama (worthless cards are currently out of the deck by house rule).',
       'Not yet in this version: advisors as peaceful, non-fighting troops.'
     ],
     push: [
