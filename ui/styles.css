@@ -202,6 +202,10 @@ code { font-family: var(--font-data); font-size: 0.9em; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .btn--primary { background: var(--rust); border-color: var(--rust); color: var(--parchment); }
 .btn--block { width: 100%; margin: 0.5rem 0; }
+.btn--block + .btn--block { margin-top: 0; }
+#btn-continue:not([hidden]) + #btn-new-game { background: var(--parchment-panel); color: var(--ink); border-color: var(--ink); }
+.save-actions { display: flex; gap: 0.4rem; }
+.save-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; }
 
 .row-field, .field {
   display: flex;
@@ -289,16 +293,20 @@ code { font-family: var(--font-data); font-size: 0.9em; }
 /* --- Board -------------------------------------------------------------- */
 
 .board-wrap { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
-.board { width: 100%; height: 100%; max-height: 100%; display: block; }
+.board { width: 100%; height: 100%; max-height: 100%; display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+.map-controls { position: absolute; top: 0.4rem; right: 0.4rem; display: flex; flex-direction: column; gap: 0.3rem; z-index: 4; }
+.map-controls .icon-btn { background: rgba(246, 241, 228, 0.92); border-color: var(--ink); font-size: 17px; font-weight: 700; }
+.map-controls .icon-btn[hidden] { display: none; }
 .board__rim { fill: var(--parchment-panel-alt); stroke: var(--ink); stroke-width: 3; }
 .territory { stroke: var(--ink); stroke-width: 1.5; cursor: pointer; }
 .territory--sand { fill: #e6d19d; }
 .territory--rock { fill: #b38f62; }
 .territory--stronghold { fill: #8f432a; }
 .territory--polarSink { fill: #f6f1e4; }
-.territory--highlight { stroke: var(--gold); stroke-width: 4; stroke-dasharray: 8 5; }
+.territory--highlight { stroke: #fff4c2; stroke-width: 5; stroke-dasharray: 10 6; filter: brightness(1.06); }
 .territory--selected { stroke: var(--spice); stroke-width: 6; }
-.territory:focus-visible { outline: none; stroke: var(--rust); stroke-width: 5; }
+.territory:focus { outline: none; } /* taps: the gold selection outline is enough */
+.territory:focus-visible { outline: none; stroke: var(--rust); stroke-width: 5; } /* keyboard: rust outline */
 .board__sectors line { stroke: rgba(42, 31, 20, 0.25); stroke-width: 1.5; stroke-dasharray: 6 8; pointer-events: none; }
 .board__storm { fill: rgba(74, 56, 38, 0.38); stroke: rgba(42, 31, 20, 0.7); stroke-width: 2; pointer-events: none; }
 .board__label {
@@ -342,7 +350,12 @@ code { font-family: var(--font-data); font-size: 0.9em; }
 /* --- Decision panel (a sheet that asks you something) --------------------- */
 
 .decision-panel { padding: 0.7rem 0.8rem calc(0.8rem + var(--safe-bottom)); overflow-y: auto; }
-.decision__title { font-family: var(--font-display); font-size: 15px; margin: 0 0 0.45rem; }
+.decision__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.45rem; }
+.decision__title { font-family: var(--font-display); font-size: 15px; margin: 0; }
+.decision-panel--collapsed { max-height: none; }
+.decision-panel--collapsed .decision__body { display: none; }
+.decision-panel--collapsed .decision__head { margin: 0; }
+.decision-panel--collapsed .decision__title { cursor: pointer; }
 .decision__body p { margin: 0 0 0.5rem; font-size: 12px; }
 .decision__note { color: var(--ink-soft); font-style: italic; }
 .decision__cost { font-family: var(--font-data); font-size: 11.5px; color: var(--gold); font-weight: 700; }
