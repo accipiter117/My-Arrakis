@@ -3,7 +3,10 @@
   "_notes": "Per explicit instruction: advanced rules are always incorporated, not a togglable option. This file exists to make which specific rules that means auditable, not to make it optional at runtime.",
   "official": {
     "description": "Core rules as printed in the base GF9 rulebook. Always active regardless of advanced/standard.",
-    "shippingCostPerForce": { "toStronghold": 1, "toOtherTerritory": 2 },
+    "shippingCostPerForce": {
+      "toStronghold": 1,
+      "toOtherTerritory": 2
+    },
     "guildShippingDiscount": 0.5,
     "prescienceOneFieldOnly": true,
     "reviveForceCostPerForce": 2,
@@ -37,8 +40,14 @@
     "tleilaxuGholaRevival": true,
     "choamInflationToken": true,
     "richeseBlackMarket": true,
-    "leaderSkillCards": { "enabled": false, "notes": "CHOAM & Richese variant, opt-in per rulebook rather than always-on, not a base advanced rule. Leaving disabled by default, revisit if wanted." },
-    "advancedStrongholdCards": { "enabled": false, "notes": "Same as Leader Skill Cards, an opt-in variant rather than a base advanced rule." }
+    "leaderSkillCards": {
+      "enabled": false,
+      "notes": "CHOAM & Richese variant, opt-in per rulebook rather than always-on, not a base advanced rule. Leaving disabled by default, revisit if wanted."
+    },
+    "advancedStrongholdCards": {
+      "enabled": false,
+      "notes": "Same as Leader Skill Cards, an opt-in variant rather than a base advanced rule."
+    }
   },
   "optional": {
     "description": "True optional/variant rules (not the base game's own Advanced Game section). Off by default, distinct from the always-on advanced rules above.",
@@ -47,8 +56,12 @@
     "notes": "The rulebook's Optional Rules for Alliances table (page 24) offers five named presets. Default is the original unrestricted alliance game. Worth a decision later, not urgent for Phase 1."
   },
   "expansions": {
-    "ixianTleilaxu": { "enabled": false },
-    "choamRichese": { "enabled": false }
+    "ixianTleilaxu": {
+      "enabled": false
+    },
+    "choamRichese": {
+      "enabled": false
+    }
   },
   "implementationDecisions": {
     "description": "Rules that exist only because a physical-table interaction needs a digital equivalent. Every entry here must have a one-line justification so it's auditable later.",
@@ -60,21 +73,48 @@
       {
         "id": "hiddenBidOrderDisplay",
         "justification": "Physical bidding relies on players holding cards face down; digital equivalent is a sequential reveal-and-decide UI rather than simultaneous entry, to preserve bidding psychology per section 16 of the brief."
+      },
+      {
+        "id": "voiceIncludesCheapHero",
+        "justification": "The original Avalon Hill rules say the Voice cannot name a Cheap Hero; the GF9 2019 rules list Cheap Heroes among valid Voice commands. GF9 is this project's authority, so Cheap Heroes can be voiced."
+      },
+      {
+        "id": "invalidPlanFallback",
+        "justification": "A submitted battle plan that breaks a rule (a card not in hand, a leader already used in another territory) is replaced by a minimal legal plan rather than halting the game. The human panel prevents this for players; it guards against AI bugs."
+      },
+      {
+        "id": "captureChoiceAfterDiscard",
+        "justification": "After a Harkonnen win, the winner's keep/discard choice is resolved before the capture. The two are independent in the rules; a fixed order keeps the digital flow simple."
       }
     ]
   },
   "gameSize": {
-    "supported": [2, 3, 4, 5, 6],
+    "supported": [
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
     "default": 6
   },
   "victoryVariants": {
     "soloStrongholdCount": 3,
     "allianceStrongholdCount": 4,
     "twoPlayerStrongholdCount": 4,
-    "threePlayerRecommendedFactions": ["atreides", "harkonnen", "fremen"],
+    "threePlayerRecommendedFactions": [
+      "atreides",
+      "harkonnen",
+      "fremen"
+    ],
     "threePlayerAllianceStrongholdCount": 4,
-    "fourPlayerRecommendedExclusions": ["guild", "gesserit"],
-    "fivePlayerRecommendedExclusions": ["gesserit"],
+    "fourPlayerRecommendedExclusions": [
+      "guild",
+      "gesserit"
+    ],
+    "fivePlayerRecommendedExclusions": [
+      "gesserit"
+    ],
     "maxTurns": 10,
     "notes": "Confirmed directly from the base rulebook text. Solo win is 3 strongholds (or all 3 Tech Tokens if Ixian/Tleilaxu expansion is active, per that expansion's rulebook), alliance win is 4 (first player) held jointly. Two-player games use 4 regardless of alliance status."
   }
