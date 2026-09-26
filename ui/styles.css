@@ -372,6 +372,65 @@ code { font-family: var(--font-data); font-size: 0.9em; }
 .decision__actions { display: flex; gap: 0.45rem; margin-top: 0.4rem; }
 .decision__actions .btn { flex: 1; }
 
+/* --- Event cards and board animation ------------------------------------ */
+
+.event-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 8;
+  cursor: pointer;
+}
+.event-layer[hidden] { display: none; }
+.event-card {
+  width: min(78%, 290px);
+  padding: 0.9rem 1rem 0.7rem;
+  border-radius: 12px;
+  border: 2px solid var(--ink);
+  box-shadow: 0 12px 34px rgba(42, 31, 20, 0.45);
+  text-align: center;
+  animation: card-in 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+@keyframes card-in { from { transform: scale(0.8) translateY(14px); opacity: 0; } to { transform: none; opacity: 1; } }
+.event-card__eyebrow { font-family: var(--font-data); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
+.event-card__title { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.15; margin: 0.25rem 0; }
+.event-card__detail { font-size: 12.5px; margin-top: 0.3rem; }
+.event-card__hint { font-size: 9.5px; opacity: 0.55; margin-top: 0.55rem; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Storm: dark, with swirling bands */
+.event-card--storm {
+  color: var(--parchment);
+  background:
+    repeating-radial-gradient(circle at 70% 30%, rgba(236, 223, 196, 0.08) 0 6px, transparent 6px 16px),
+    linear-gradient(160deg, #4a3826, #1e160e);
+}
+/* Spice: gold */
+.event-card--spice { color: var(--ink); background: radial-gradient(circle at 50% 20%, #f2c96b, var(--spice) 60%, #b98424); }
+.event-card--spice strong { font-size: 18px; }
+/* Shai-Hulud: rust and sand */
+.event-card--worm {
+  color: var(--parchment);
+  background: repeating-linear-gradient(115deg, rgba(0, 0, 0, 0.06) 0 10px, transparent 10px 22px), linear-gradient(170deg, #b0552f, #6e2616);
+}
+/* Battle: parchment with both revealed plans */
+.event-card--battle { color: var(--ink); background: var(--parchment); width: min(88%, 330px); text-align: left; }
+.event-card--battle .event-card__eyebrow { text-align: center; }
+.battle-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0.4rem; margin: 0.5rem 0 0.2rem; }
+.battle-side { border: 1px solid var(--line); border-radius: 8px; padding: 0.35rem 0.45rem; font-size: 11.5px; background: var(--parchment-panel); }
+.battle-side--won { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); background: #f1e6c8; }
+.battle-side__name { font-weight: 700; margin-bottom: 0.15rem; }
+.battle-side__cards { color: var(--ink-soft); font-size: 11px; }
+.event-card--battle .event-card__detail { text-align: center; font-weight: 600; }
+
+.token--ghost .token__disc { filter: drop-shadow(0 4px 4px rgba(42, 31, 20, 0.45)); }
+.fx-worm__ring { fill: none; stroke: #c96a3c; stroke-width: 5; }
+.fx-worm__maw { fill: #2a1f14; stroke: #e6d19d; stroke-width: 4; }
+.fx-pulse { fill: none; stroke-width: 6; }
+.fx-pulse--spice { stroke: #f2c96b; }
+.fx-pulse--battle { stroke: var(--rust); }
+
 /* --- Accessibility ------------------------------------------------------ */
 
 :focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
