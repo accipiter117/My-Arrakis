@@ -348,7 +348,11 @@ function describe(entry) {
         ? result.placed.map(m => `${m.amount} spice in ${territoryNameOf(m.territoryId)}`).join(', ')
         : 'no new spice placed';
       const rides = (result.rides ?? []).map(r => ` Fremen rode the worm from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)} with ${r.amount} forces.`).join('');
-      return log(`Spice blow: ${text}.${result.nexus ? ' Shai-Hulud appeared, a Nexus follows.' : ''}${rides}`);
+      const diplomacy = (result.diplomacy ?? []).map(d =>
+        d.type === 'allianceFormed' ? ` ${nameOf(d.proposer)} and ${nameOf(d.target)} form an alliance.`
+        : d.type === 'allianceRejected' ? ` ${nameOf(d.target)} rejects ${nameOf(d.proposer)}'s alliance.`
+        : ` ${nameOf(d.by)} breaks with ${nameOf(d.of)}.`).join('');
+      return log(`Spice blow: ${text}.${result.nexus ? ' Shai-Hulud appeared, a Nexus follows.' : ''}${rides}${diplomacy}`);
     }
     case 'charity':
       if (result.length) log(result.map(r => `${nameOf(r.factionId)} +${r.amountReceived}`).join(', ') + ' spice.');
@@ -494,6 +498,9 @@ function renderStatus() {
   const me = humanFactionId && gameState.factions[humanFactionId];
   spicePill.hidden = !me;
   if (me) spicePill.textContent = `${me.spice} spice`;
+  const ally = humanFactionId && gameState.alliances?.find(a => a.factions.includes(humanFactionId))?.factions.find(f => f !== humanFactionId);
+  $('status-ally').hidden = !ally;
+  if (ally) $('status-ally').textContent = `Ally: ${FACTION_NAMES[ally]}`;
 }
 
 function renderPhaseTrack() {
@@ -532,6 +539,11 @@ function renderHand() {
     ${me.specialFactionState?.prediction ? `<p class="hand-meta"><strong>Prediction:</strong> ${nameOf(me.specialFactionState.prediction.factionId)} on turn ${me.specialFactionState.prediction.turn}</p>` : ''}`;
 }
 
+const allyName = f => {
+  const ally = gameState?.alliances?.find(a => a.factions.includes(f))?.factions.find(x => x !== f);
+  return ally ? FACTION_NAMES[ally] : null;
+};
+
 function renderFactions() {
   const grid = $('factions-grid');
   if (!gameState) { grid.innerHTML = '<p class="empty-note">No game yet.</p>'; return; }
@@ -540,7 +552,7 @@ function renderFactions() {
     const hidden = humanFactionId && f !== humanFactionId;
     const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
     return `<tr${f === humanFactionId ? ' class="is-you"' : ''}>
-      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}</td>
+      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}</td>
       <td>${hidden ? '?' : faction.spice}</td><td>${faction.treacheryHand.length}</td><td>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</td>
       <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
   }).join('');
