@@ -11,7 +11,8 @@ A living plan: what's done, what's next, and why. Updated as work lands.
   invariants (forces, leaders and cards conserved) after every phase.
 - **AI:** Basic AI (legal, simple); Strategic AI with threat assessment
   (deny the leader, close out a win), diplomacy with betrayal, and the
-  battle brain (sampling over honest knowledge). Seeded head-to-head
+  battle brain (sampling over honest knowledge). Difficulty levels Easy,
+  Normal and Hard, verified in order by tournament. Seeded head-to-head
   tournaments decide what becomes the default.
 - **Human play:** decision panels for every choice, live rule checks,
   map taps fill forms, hidden information respected.
@@ -23,13 +24,12 @@ A living plan: what's done, what's next, and why. Updated as work lands.
 
 ## Next, in priority order
 
-1. **Bidding brain.** Value cards by what they add to battle odds, plus
+1. **Bidding brain tuning** (first version built, not yet better; see AI_NOTES). Value cards by what they add to battle odds, plus
    denial value against the leader (AI plan step 4).
 2. **Remaining ally advantages:** paying for an ally's bids and shipments,
    Emperor and Fremen revival help.
 3. **Shipment and movement lookahead** (AI plan step 5), and faction
    playbooks (step 6).
-4. **Difficulty levels** Easy to Expert (step 8), all by decision quality.
 5. **Karama and Truthtrance** cards; **Bene Gesserit advisors**.
 6. **Tutorial and "why can't I?" help** for first games.
 
