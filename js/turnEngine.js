@@ -58,6 +58,9 @@ const passiveDecisionProvider = {
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
   chooseTruthtrance() { return null; },
+  chooseAdvisor() { return false; },
+  chooseGuildTiming() { return null; }, // null: act last
+  chooseFremenPlacement() { return null; }, // null: all 10 in Sietch Tabr
   chooseKaramaCancel() { return false; },
   chooseAllyPledge() { return 0; },
   chooseEmperorAllyRevival() { return 0; },
@@ -340,7 +343,16 @@ async function runShipmentMovementPhase(state, decisionProvider) {
   foreseeSpice(state); // unchanged since the Spice Blow: nothing is drawn in between
   const turnOrder = state.meta.turnOrder ?? Object.keys(state.factions);
 
-  for (const factionId of turnOrder) {
+  // Spacing Guild (advanced): may take its turn at any point in the order.
+  let order = turnOrder;
+  if (turnOrder.includes('guild') && decisionProvider.chooseGuildTiming) {
+    const others = turnOrder.filter(f => f !== 'guild');
+    const pos = await decisionProvider.chooseGuildTiming(state, others);
+    const at = Number.isInteger(pos) ? Math.max(0, Math.min(others.length, pos)) : others.length;
+    order = [...others.slice(0, at), 'guild', ...others.slice(at)];
+  }
+
+  for (const factionId of order) {
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
     if (decision.shipment) {
       const { territoryId, amount } = decision.shipment;
@@ -348,6 +360,30 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         movementEngine.executeShipment(state, factionId, territoryId, amount);
         results.push({ factionId, type: 'shipment', territoryId, amount });
         await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount }, state);
+        // Bene Gesserit Spiritual Advisors: whenever another faction ships in
+        // from off-planet, Bene Gesserit may place 1 force in the Polar Sink free.
+        if (factionId !== 'gesserit' && state.factions.gesserit?.forces.reserve > 0 && decisionProvider.chooseAdvisor
+            && await decisionProvider.chooseAdvisor(state, 'gesserit', factionId)) {
+          state.factions.gesserit.forces.reserve -= 1;
+          state.factions.gesserit.forces.onBoard.polarSink = (state.factions.gesserit.forces.onBoard.polarSink ?? 0) + 1;
+          results.push({ factionId: 'gesserit', type: 'advisor', territoryId: 'polarSink', amount: 1 });
+          await observe(decisionProvider, { type: 'shipment', factionId: 'gesserit', territoryId: 'polarSink', amount: 1, advisor: true }, state);
+        }
+      }
+    } else if (factionId === 'guild' && decision.crossShip) {
+      // Guild (advanced): ship across the planet instead of from reserves.
+      const { from, to, amount } = decision.crossShip;
+      if (movementEngine.canCrossShip(state, 'guild', from, to, amount).ok) {
+        movementEngine.executeCrossShip(state, 'guild', from, to, amount);
+        results.push({ factionId, type: 'crossShip', from, to, amount });
+        await observe(decisionProvider, { type: 'move', factionId, from, to, amount, ornithopter: true }, state);
+      }
+    } else if (factionId === 'guild' && decision.retreat) {
+      // Guild (advanced): ship forces back to reserves, 1 spice per 2 forces.
+      const { from, amount } = decision.retreat;
+      if (movementEngine.canRetreatToReserves(state, 'guild', from, amount).ok) {
+        movementEngine.executeRetreatToReserves(state, 'guild', from, amount);
+        results.push({ factionId, type: 'retreat', from, amount });
       }
     }
     if (decision.movement) {
@@ -564,6 +600,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     let traitor = null;
     for (const f of fighting) {
       const theirLeader = plans[opponentOf(f)].leaderId;
+      // A leader carrying the Kwisatz Haderach cannot turn traitor (advanced).
+      if (opponentOf(f) === 'atreides' && plans.atreides.useKwisatzHaderach) continue;
       const holder = battleEngine.isTraitorAgainst(state, f, theirLeader) ? f
         : allyOf(f) === 'harkonnen' && battleEngine.isTraitorAgainst(state, 'harkonnen', theirLeader) ? 'harkonnen' : null;
       if (!holder) continue;
@@ -677,6 +715,16 @@ async function runTraitorSelection(state, decisionProvider) {
 // Every one-off decision made during setup: traitors, then (if Bene
 // Gesserit is playing) their secret Prediction.
 async function runSetupDecisions(state, decisionProvider) {
+  // The Fremen split their 10 starting forces between Sietch Tabr, False
+  // Wall South and False Wall West as they choose.
+  if (state.factions.fremen && decisionProvider.chooseFremenPlacement) {
+    const p = await decisionProvider.chooseFremenPlacement(state, 'fremen');
+    const allowed = ['sietchTabr', 'falseWallSouth', 'falseWallWest'];
+    if (p && Object.keys(p).every(k => allowed.includes(k)) && Object.values(p).every(n => Number.isInteger(n) && n >= 0)
+        && Object.values(p).reduce((a, b) => a + b, 0) === 10) {
+      state.factions.fremen.forces.onBoard = Object.fromEntries(Object.entries(p).filter(([, n]) => n > 0));
+    }
+  }
   const traitors = await runTraitorSelection(state, decisionProvider);
   let prediction = null;
   if (state.factions.gesserit) {
