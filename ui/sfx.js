@@ -19,6 +19,7 @@ const SOUNDS = {
   revivalTanks: '../assets/sfx/revival-tanks.wav',
   bidding: '../assets/sfx/bidding.wav',
   shipping: '../assets/sfx/shipping.wav',
+  wormDelivery: '../assets/sfx/worm-delivery.mp3',
   // Turn announcements, played as a faction's turn banner appears.
   'turn-atreides': '../assets/sfx/turn-atreides.mp3',
   'turn-harkonnen': '../assets/sfx/turn-harkonnen.mp3',
