@@ -81,11 +81,10 @@ export function playGhola(state, factionId, choice) {
 }
 
 // --- Cards whose effects aren't built yet ------------------------------------
-// Karama and Truthtrance (effects not yet implemented), Weather Control and
-// Family Atomics (need the storm's sector data). Until they work, their holder
+// Weather Control and Family Atomics (need the storm's sector data). Until they work, their holder
 // may discard them so they don't sit dead in a hand. A temporary
 // implementation decision (data/rulesConfig.json: unbuiltCardDiscard).
-export const UNBUILT_CARDS = ['karama1', 'karama2', 'truthtrance1', 'truthtrance2', 'weatherControl', 'familyAtomics'];
+export const UNBUILT_CARDS = ['weatherControl', 'familyAtomics'];
 
 export function canDiscardUnbuilt(state, factionId, cardId) {
   if (!UNBUILT_CARDS.includes(cardId)) return { ok: false, reason: 'Only cards whose effects are not in the game yet can be discarded freely.' };
@@ -98,4 +97,54 @@ export function discardUnbuilt(state, factionId, cardId) {
   if (!check.ok) throw new Error(check.reason);
   discard(state, factionId, cardId);
   return { factionId, cardId };
+}
+
+// --- Truthtrance --------------------------------------------------------------
+// Ask one other player a yes/no question; they must answer publicly and
+// truthfully. Digitally, only factual questions the game can answer:
+//   { kind: 'holdsCategory', category }  do you hold this kind of card?
+//   { kind: 'isTraitor', leaderId }      is this leader of mine your traitor?
+//   { kind: 'spiceAtLeast', amount }     do you have at least N spice?
+// The engine answers from the real state, so the answer is always true.
+const TRUTH_CARDS = ['truthtrance1', 'truthtrance2'];
+
+export function answerTruthtrance(state, targetId, question, cardLookup) {
+  const t = state.factions[targetId];
+  if (question.kind === 'holdsCategory') return t.treacheryHand.some(id => cardLookup[id]?.category === question.category);
+  if (question.kind === 'isTraitor') return (t.traitorHand ?? []).includes(question.leaderId);
+  if (question.kind === 'spiceAtLeast') return t.spice >= question.amount;
+  throw new Error('Unknown Truthtrance question.');
+}
+
+export function canPlayTruthtrance(state, askerId, targetId) {
+  if (!TRUTH_CARDS.some(id => holds(state, askerId, id))) return { ok: false, reason: 'You do not hold a Truthtrance.' };
+  if (!state.factions[targetId] || targetId === askerId) return { ok: false, reason: 'Ask another player.' };
+  return { ok: true };
+}
+
+export function playTruthtrance(state, askerId, targetId, question, cardLookup) {
+  const check = canPlayTruthtrance(state, askerId, targetId);
+  if (!check.ok) throw new Error(check.reason);
+  discard(state, askerId, TRUTH_CARDS.find(id => holds(state, askerId, id)));
+  const record = { turn: state.meta.turn, asker: askerId, target: targetId, question, answer: answerTruthtrance(state, targetId, question, cardLookup) };
+  state.meta.truths = [...(state.meta.truths ?? []), record]; // public: everyone heard it
+  return record;
+}
+
+// --- Karama --------------------------------------------------------------------
+// Built: its core use, cancelling a faction advantage at the moment it is
+// used against you (the Voice, Prescience, a Harkonnen capture). Not yet:
+// each faction's once-per-game advanced Karama power.
+const KARAMA_CARDS = ['karama1', 'karama2'];
+
+export function holdsKarama(state, factionId) {
+  return KARAMA_CARDS.some(id => holds(state, factionId, id));
+}
+
+export function playKarama(state, factionId, purpose) {
+  if (!holdsKarama(state, factionId)) throw new Error('You do not hold a Karama.');
+  discard(state, factionId, KARAMA_CARDS.find(id => holds(state, factionId, id)));
+  const record = { turn: state.meta.turn, factionId, purpose };
+  state.meta.karamas = [...(state.meta.karamas ?? []), record];
+  return record;
 }
