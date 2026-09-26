@@ -136,8 +136,16 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
     async move(e, state) {
       if (!speed()) return;
       renderDisplay(displayWithout(state, e.factionId, e.to, e.amount));
-      const route = board.pathBetween(e.from, e.to).map(board.labelPoint);
-      await board.animateToken({ color: factionColors[e.factionId], count: e.amount, points: route, msPerHop: scaled(420) });
+      if (e.ornithopter) {
+        // Ornithopters: one smooth, high flight straight to the destination.
+        sfx?.play('ornithopter');
+        await board.animateToken({ color: factionColors[e.factionId], count: e.amount,
+          points: [board.labelPoint(e.from), board.labelPoint(e.to)], msPerHop: scaled(1300), hop: 70 });
+      } else {
+        // On foot: marching territory by territory.
+        const route = board.pathBetween(e.from, e.to).map(board.labelPoint);
+        await board.animateToken({ color: factionColors[e.factionId], count: e.amount, points: route, msPerHop: scaled(420) });
+      }
       renderReal();
     },
 
