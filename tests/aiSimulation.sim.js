@@ -7,6 +7,7 @@ import { initializeGame } from '../js/setupEngine.js';
 import * as turnEngine from '../js/turnEngine.js';
 import * as phaseEngine from '../js/phaseEngine.js';
 import { createBasicAI } from '../js/ai/basicAI.js';
+import { createStrategicAI } from '../js/ai/strategicAI.js';
 
 const loadJSON = p => JSON.parse(fs.readFileSync(p, 'utf8'));
 const territoriesData = loadJSON('./data/territories.json');
@@ -92,7 +93,8 @@ for (let g = 0; g < GAMES; g++) {
       rngShuffle: shuffleWith(rng)
     });
     initialTotals = Object.fromEntries(Object.entries(state.factions).map(([id, f]) => [id, forceTotals(f)]));
-    const ai = createBasicAI({ leadersData, cardLookup, rng });
+    // Alternate AIs so both the unaligned Basic AI and the allying Strategic AI are checked.
+    const ai = (g % 2 ? createStrategicAI : createBasicAI)({ leadersData, cardLookup, rng });
     await turnEngine.runSetupDecisions(state, ai);
     phaseEngine.nextPhase(state);
     checkInvariants(state, 'setup');
