@@ -29,9 +29,47 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   const svg = el('svg', { viewBox: geometry.viewBox.join(' '), class: 'board', role: 'img', 'aria-label': 'Map of Arrakis' });
   container.replaceChildren(svg);
 
-  el('circle', { cx, cy, r: radius + 8, class: 'board__rim' }, svg);
+  // Textures and light: dune ripples on sand, stippled rock, carved stone
+  // strongholds, a pale Polar Sink, and a bronze bezel. userSpaceOnUse
+  // patterns so the ripples run continuously across territory borders.
+  const defs = el('defs', {}, svg);
+  defs.innerHTML = `
+    <pattern id="pat-sand" width="64" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(-18)">
+      <rect width="64" height="24" fill="#dfc389"/>
+      <path d="M0 12 Q16 4 32 12 T64 12" fill="none" stroke="rgba(126,82,38,0.22)" stroke-width="1.6"/>
+      <path d="M0 20 Q16 13 32 20 T64 20" fill="none" stroke="rgba(255,245,215,0.35)" stroke-width="1"/>
+    </pattern>
+    <pattern id="pat-rock" width="16" height="16" patternUnits="userSpaceOnUse">
+      <rect width="16" height="16" fill="#9e7b52"/>
+      <circle cx="4" cy="5" r="1.4" fill="rgba(52,34,18,0.35)"/><circle cx="12" cy="11" r="1.1" fill="rgba(52,34,18,0.3)"/>
+      <circle cx="11" cy="3" r="0.9" fill="rgba(255,236,200,0.25)"/><circle cx="5" cy="13" r="0.8" fill="rgba(255,236,200,0.2)"/>
+    </pattern>
+    <pattern id="pat-stronghold" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="9" height="9" fill="#7c3522"/>
+      <line x1="0" y1="0" x2="0" y2="9" stroke="rgba(20,8,4,0.28)" stroke-width="2"/>
+    </pattern>
+    <radialGradient id="grad-polar"><stop offset="0" stop-color="#fffaf0"/><stop offset="1" stop-color="#e3d4b2"/></radialGradient>
+    <radialGradient id="grad-sunlight" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="rgba(255,236,190,0.18)"/><stop offset="1" stop-color="rgba(40,20,8,0.28)"/>
+    </radialGradient>
+    <linearGradient id="grad-bezel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8f6d3f"/><stop offset="0.5" stop-color="#4a3520"/><stop offset="1" stop-color="#26190e"/>
+    </linearGradient>`;
+
+  // The bronze bezel, engraved with 18 sectors.
+  el('circle', { cx, cy, r: radius + 18, class: 'board__bezel' }, svg);
+  const ticks = el('g', { class: 'board__ticks' }, svg);
+  for (let i = 0; i < 72; i++) {
+    const a = (i * 5 - 90) * Math.PI / 180;
+    const major = i % 4 === 0;
+    const r1 = radius + 5, r2 = radius + (major ? 16 : 10);
+    el('line', { x1: cx + r1 * Math.cos(a), y1: cy + r1 * Math.sin(a), x2: cx + r2 * Math.cos(a), y2: cy + r2 * Math.sin(a),
+      class: major ? 'board__tick board__tick--major' : 'board__tick' }, ticks);
+  }
+  el('circle', { cx, cy, r: radius + 3, class: 'board__rim' }, svg);
   const territoryLayer = el('g', {}, svg);
   const sectorLayer = el('g', { class: 'board__sectors' }, svg);
+  el('circle', { cx, cy, r: radius, fill: 'url(#grad-sunlight)', 'pointer-events': 'none' }, svg); // late light across the desert
   const stormLayer = el('g', {}, svg);
   const labelLayer = el('g', { class: 'board__labels' }, svg);
   const tokenLayer = el('g', {}, svg);
@@ -151,7 +189,9 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       const start = (100 - state.board.stormPosition * 20) * Math.PI / 180;
       const end = start - 20 * Math.PI / 180;
       const p = a => `${cx + radius * Math.cos(a)},${cy + radius * Math.sin(a)}`;
-      el('path', { d: `M${cx},${cy} L${p(start)} A${radius},${radius} 0 0 0 ${p(end)} Z`, class: 'board__storm' }, stormLayer);
+      const d = `M${cx},${cy} L${p(start)} A${radius},${radius} 0 0 0 ${p(end)} Z`;
+      el('path', { d, class: 'board__storm' }, stormLayer);
+      el('path', { d, class: 'board__storm-swirl' }, stormLayer); // churning bands
     }
 
     tokenLayer.replaceChildren();
