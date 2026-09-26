@@ -14,6 +14,7 @@ import { createBasicAI } from './basicAI.js';
 import * as movementEngine from '../movementEngine.js';
 import { createDiplomacy } from './diplomacy.js';
 import { createBattleBrain } from './battleBrain.js';
+import { createBiddingBrain } from './biddingBrain.js';
 
 const BLOCKS_FREMEN_AT_TUEKS = ['harkonnen', 'atreides', 'emperor', 'richese'];
 
@@ -25,6 +26,11 @@ export function createStrategicAI(options) {
   for (const list of Object.values(options.leadersData)) if (Array.isArray(list)) for (const l of list) leaderValue[l.id] = l.fightingValue;
   const brain = options.battleBrain === false ? null
     : createBattleBrain({ cardLookup: options.cardLookup, leaderValue, rng: options.rng, samples: options.battleSamples ?? 150 });
+  // Diplomacy can be switched off for easier opponents.
+  const allies = options.diplomacy !== false;
+  // Opt-in: the bidding brain has not yet beaten the Basic bidding in seeded
+  // head-to-heads (43 vs 45 wins; Harkonnen much worse), see docs/AI_NOTES.md.
+  const bidder = options.biddingBrain === true ? createBiddingBrain({ cardLookup: options.cardLookup, rng: options.rng }) : null;
 
   const strongholds = state => Object.keys(state.board.territories)
     .filter(id => state.board.territories[id].type === 'stronghold');
@@ -162,6 +168,11 @@ export function createStrategicAI(options) {
     ...base,
     name: 'Strategic AI',
 
+    // Bidding by card value and denial (js/ai/biddingBrain.js).
+    chooseBid(state, me, cardId, currentBid) {
+      return bidder ? bidder.chooseBid(state, me, cardId, currentBid) : base.chooseBid(state, me, cardId, currentBid);
+    },
+
     // Battles by sampling (js/ai/battleBrain.js); falls back to the Basic plan.
     chooseBattlePlan(state, me, territoryId, opponentId, intel, voice) {
       if (brain) {
@@ -172,9 +183,9 @@ export function createStrategicAI(options) {
       return base.chooseBattlePlan(state, me, territoryId, opponentId, intel, voice);
     },
 
-    chooseAllianceProposal: (state, me) => diplomacy.propose(state, me),
-    chooseAllianceResponse: (state, me, proposer) => diplomacy.respond(state, me, proposer),
-    chooseBreakAlliance: (state, me, ally) => diplomacy.shouldBreak(state, me, ally),
+    chooseAllianceProposal: (state, me) => (allies ? diplomacy.propose(state, me) : null),
+    chooseAllianceResponse: (state, me, proposer) => (allies ? diplomacy.respond(state, me, proposer) : false),
+    chooseBreakAlliance: (state, me, ally) => (allies ? diplomacy.shouldBreak(state, me, ally) : false),
 
     assessThreats,
 
