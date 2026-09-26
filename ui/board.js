@@ -304,24 +304,34 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   const SHIP = 170;          // ship sprite size (board units)
   const CRUISE = 80;         // flying height above the ground shadow
   const shipUrl = f => new URL(`../assets/ships/${f}.png`, import.meta.url).href;
-  for (const f of Object.keys(factionColors)) { const img = new Image(); img.src = shipUrl(f); } // preload
+  const thopterUrl = f => new URL(`../assets/thopters/${f}.png`, import.meta.url).href;
+  for (const f of Object.keys(factionColors)) { for (const u of [shipUrl(f), thopterUrl(f)]) { const img = new Image(); img.src = u; } } // preload
 
-  async function flyShip({ faction, count, from, to, ms = 1200, landMs = 450 }) {
+  // Flies a craft carrying a counter. With takeoffMs, it first lifts off from
+  // the origin (a move across the planet); without, it arrives already at
+  // cruising height (from off-world).
+  async function flyShip({ faction, count, from, to, ms = 1200, landMs = 450, takeoffMs = 0, sprite = null, size = SHIP }) {
     const [x1, y1] = from, [x2, y2] = to;
+    const SIZE = size;
     const facing = x2 < x1 ? -1 : 1; // sprites face right; mirror when flying left
     const g = el('g', { class: 'fx-ship' }, fxLayer);
     const shadow = el('ellipse', { rx: 56, ry: 15, class: 'fx-ship__shadow' }, g);
     const badge = el('g', {}, g);
     drawCounter(badge, faction, count);
     const craft = el('g', {}, g);
-    el('image', { href: shipUrl(faction), x: -SHIP / 2, y: -SHIP / 2, width: SHIP, height: SHIP, transform: `scale(${facing},1)` }, craft);
+    el('image', { href: sprite ?? shipUrl(faction), x: -SIZE / 2, y: -SIZE / 2, width: SIZE, height: SIZE, transform: `scale(${facing},1)` }, craft);
     const place = (x, y, alt, t = 0) => {
       shadow.setAttribute('transform', `translate(${x},${y + 6}) scale(${0.7 + 0.3 * (1 - alt / CRUISE)})`);
       shadow.setAttribute('opacity', 0.25 + 0.35 * (1 - alt / CRUISE));
       craft.setAttribute('transform', `translate(${x},${y - alt})`);
       badge.setAttribute('transform', `translate(${x},${y - alt + 30 * (1 - t)}) scale(${0.8 + 0.2 * t})`);
     };
-    // Cruise in from beyond the rim.
+    // Lift off from the origin, if starting on the ground.
+    if (takeoffMs > 0) {
+      craft.setAttribute('opacity', 0);
+      await tween(takeoffMs, t => { place(x1, y1, CRUISE * ease(t), 1 - t); craft.setAttribute('opacity', Math.min(1, t * 2)); });
+    }
+    // Cruise to the destination.
     await tween(ms, t => { const e = ease(t); place(x1 + (x2 - x1) * e, y1 + (y2 - y1) * e, CRUISE); });
     // Descend, set the troops down, and lift away.
     await tween(landMs, t => {
@@ -331,14 +341,21 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     g.remove();
   }
 
-  // Shai-Hulud rises out of the sand at the destination, delivers the Fremen, and sinks.
-  async function wormDelivers({ count, at, ms = 1800 }) {
+  // An ornithopter lifts a counter out of one territory and sets it down in another.
+  function flyThopter({ faction, count, from, to, ms = 1100, landMs = 400, takeoffMs = 350 }) {
+    return flyShip({ faction, count, from, to, ms, landMs, takeoffMs, sprite: thopterUrl(faction), size: 140 });
+  }
+
+  // Shai-Hulud rises out of the sand at the destination, delivers the Fremen
+  // (when count is given), and sinks. Also used when a worm appears in the
+  // Spice Blow (no count).
+  async function wormDelivers({ count = null, at, ms = 1800 }) {
     const [x, y] = at;
     const g = el('g', { class: 'fx-worm-rise', transform: `translate(${x},${y + 16})` }, fxLayer);
     const body = el('g', {}, g);
     el('image', { href: shipUrl('fremen'), x: -SHIP / 2, y: -SHIP + 8, width: SHIP, height: SHIP }, body);
     const badge = el('g', { opacity: 0 }, g);
-    drawCounter(badge, 'fremen', count);
+    if (count !== null) drawCounter(badge, 'fremen', count);
     const rings = worm(null, ms, [x, y], false); // sand rings only: the sprite is the worm
     await tween(ms, t => {
       // Rise (first 35%), hold, then sink (last 35%).
@@ -401,6 +418,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     offBoardPoint,
     animateToken,
     flyShip,
+    flyThopter,
     wormDelivers,
     worm,
     pulse,
