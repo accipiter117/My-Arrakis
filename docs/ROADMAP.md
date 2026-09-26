@@ -16,24 +16,22 @@ A living plan: what's done, what's next, and why. Updated as work lands.
 - **Human play:** decision panels for every choice, live rule checks,
   map taps fill forms, hidden information respected.
 - **Presentation:** original generated map, zoom/pan, event cards (storm,
-  spice, worm, battle, traitor, alliances), marching and gliding troops.
+  spice, worm, battle, traitor, alliances), marching and gliding troops,
+  live auctions with bids going round the table.
 - **App:** single-screen mobile layout, sheets, auto-save and resume,
   export/import, seeded replay (?seed=N), debug hook (?debug=1).
 
 ## Next, in priority order
 
-1. **Bidding presentation.** The auction is where Dune's tension lives and
-   it is currently invisible: show each card going round the table, bids
-   appearing in turn, the winner taking it.
-2. **Bidding brain.** Value cards by what they add to battle odds, plus
+1. **Bidding brain.** Value cards by what they add to battle odds, plus
    denial value against the leader (AI plan step 4).
-3. **Remaining ally advantages:** paying for an ally's bids and shipments,
+2. **Remaining ally advantages:** paying for an ally's bids and shipments,
    Emperor and Fremen revival help.
-4. **Shipment and movement lookahead** (AI plan step 5), and faction
+3. **Shipment and movement lookahead** (AI plan step 5), and faction
    playbooks (step 6).
-5. **Difficulty levels** Easy to Expert (step 8), all by decision quality.
-6. **Karama and Truthtrance** cards; **Bene Gesserit advisors**.
-7. **Tutorial and "why can't I?" help** for first games.
+4. **Difficulty levels** Easy to Expert (step 8), all by decision quality.
+5. **Karama and Truthtrance** cards; **Bene Gesserit advisors**.
+6. **Tutorial and "why can't I?" help** for first games.
 
 ## Blocked on the physical board
 
