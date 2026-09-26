@@ -18,8 +18,29 @@ export function seededRandom(seed) {
   };
 }
 
+// The engine's own seeded stream keeps its position in a plain number, so
+// it can be saved with a game and restored exactly (save/resume must draw
+// the same cards the original game would have).
+let seededState = null;
+function nextSeeded() {
+  seededState = (seededState + 0x6D2B79F5) >>> 0;
+  let t = Math.imul(seededState ^ (seededState >>> 15), 1 | seededState);
+  t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
 export function setSeed(seed) {
-  source = seededRandom(seed);
+  seededState = seed >>> 0;
+  source = nextSeeded;
+}
+
+export function getRandomState() {
+  return seededState;
+}
+
+export function setRandomState(value) {
+  seededState = value >>> 0;
+  source = nextSeeded;
 }
 
 export function random() {
