@@ -216,6 +216,35 @@ export function createPresenter({ board, layer, factionColors, names, getSpeed, 
       };
       const fmt = n => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 
+      // Battles you are not fighting in get one compact card; your own keep
+      // the full step-by-step reveal below.
+      const viewer = getViewer();
+      if (!viewer || !sides.includes(viewer)) {
+        const w = e.winnerFactionId, l = e.loserFactionId;
+        const decided = e.traitor || e.mutualTraitors || e.explosion;
+        const outcome = e.explosion ? 'Lasgun meets shield: everything here is destroyed.'
+          : e.mutualTraitors ? 'Both leaders were traitors: both sides lose everything.'
+          : e.traitor ? `${esc(names.faction(w))} win by treachery: ${esc(names.leader(e.traitorCard?.leaderId))} was a traitor.`
+          : `${esc(names.faction(w))} win ${fmt(strength(w).total)} to ${fmt(strength(l).total)}.`;
+        const side = f => {
+          const p = P[f];
+          const cards = [p.weapon, p.defense].filter(Boolean).map(id => esc(names.card(id))).join(' + ') || 'no cards';
+          return `<div class="battle-side${w === f ? ' battle-side--won' : ''}">
+            <div class="battle-side__name"><span class="faction-chip" style="background:${factionColors[f]}"></span>${esc(names.faction(f))}${w === f ? ' ✓' : ''}</div>
+            <div>${esc(leaderName(f))}${P[f].leaderId || P[f].cheapHero ? ` (${p.leaderValue})` : ''}${killed[f] && !decided ? ' <span class="br-bad">fell</span>' : ''}</div>
+            <div>${p.forces} troops, ${p.spice} spice</div>
+            <div class="battle-side__cards">${cards}</div>
+            ${decided ? '' : `<div class="battle-side__total">${fmt(strength(f).total)}</div>`}
+          </div>`;
+        };
+        const shown = showCard('battle', `<div class="event-card__eyebrow">Battle · ${esc(names.territory(e.territoryId))}</div>
+          <div class="battle-sides">${side(agg)}${side(def)}</div>
+          <div class="event-card__detail">${outcome}</div>`, 4000);
+        board.pulse(e.territoryId, 'battle', scaled(1000));
+        await shown;
+        return;
+      }
+
       // Build the stage.
       layer.innerHTML = `<div class="battle-reveal" role="status">
         <div class="br-eyebrow">Battle</div>
