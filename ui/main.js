@@ -15,6 +15,7 @@ import { createBasicAI } from '../js/ai/basicAI.js';
 import { createStrategicAI } from '../js/ai/strategicAI.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
+import { createBoard } from './board.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
 
@@ -46,6 +47,8 @@ let logEntries = [];
 let decisionProvider = turnEngine.passiveDecisionProvider;
 let humanFactionId = null;
 let busy = false;
+let board = null;
+let selectedTerritory = null;
 
 // --- Data --------------------------------------------------------------
 
@@ -59,17 +62,18 @@ async function loadJSON(path) {
 }
 
 async function loadAllData() {
-  const [territories, spiceDeck, treacheryDeck, leaders, rulesConfig] = await Promise.all([
+  const [territories, spiceDeck, treacheryDeck, leaders, rulesConfig, geometry] = await Promise.all([
     loadJSON('../data/territories.json'),
     loadJSON('../data/spiceDeck.json'),
     loadJSON('../data/treacheryDeck.json'),
     loadJSON('../data/leaders.json'),
-    loadJSON('../data/rulesConfig.json')
+    loadJSON('../data/rulesConfig.json'),
+    loadJSON('../data/mapGeometry.json')
   ]);
   cardLookup = Object.fromEntries(treacheryDeck.cards.map(c => [c.id, c]));
   leadersById = {};
   for (const list of Object.values(leaders)) if (Array.isArray(list)) for (const l of list) leadersById[l.id] = l;
-  return { territories, spiceDeck, treacheryDeck, leaders, rulesConfig };
+  return { territories, spiceDeck, treacheryDeck, leaders, rulesConfig, geometry };
 }
 
 // --- Game control ------------------------------------------------------
@@ -80,6 +84,7 @@ async function startNewGame() {
   try {
     const data = await loadAllData();
     territoriesData = data.territories;
+    ensureBoard(data);
     humanFactionId = $('select-faction').value || null;
 
     gameState = initializeGame({
@@ -268,7 +273,52 @@ function describe(entry) {
 
 // --- Rendering ---------------------------------------------------------
 
+// --- Board ---------------------------------------------------------------
+
+const FACTION_COLORS = {
+  atreides: '#2f5233', harkonnen: '#7a1f1f', emperor: '#221c14',
+  fremen: '#2b6f86', guild: '#b5561f', gesserit: '#4b2e5a'
+};
+
+function ensureBoard(data) {
+  if (board) return;
+  territoriesData = territoriesData ?? data.territories;
+  board = createBoard({
+    container: $('board'), geometry: data.geometry, territoriesData: data.territories,
+    factionColors: FACTION_COLORS, onTap: tapTerritory
+  });
+}
+
+function tapTerritory(id) {
+  selectedTerritory = id;
+  renderBoard();
+  renderTerritoryInfo();
+  // An open decision panel (e.g. shipment) can use the tap to fill a field.
+  document.dispatchEvent(new CustomEvent('territory-tap', { detail: { id } }));
+}
+
+function renderBoard() {
+  board?.render(gameState, { selected: selectedTerritory });
+}
+
+function renderTerritoryInfo() {
+  const info = $('territory-info');
+  if (!selectedTerritory || !territoriesData) return;
+  const t = territoriesData.territories[selectedTerritory];
+  const type = { sand: 'Sand', rock: 'Rock', stronghold: 'Stronghold', polarSink: 'Polar Sink (safe haven, no battles)' }[t.type] ?? t.type;
+  const spice = gameState ? gameState.board.spiceBlowMarkers.filter(m => m.territoryId === selectedTerritory).reduce((a, m) => a + m.amount, 0) : 0;
+  const occupants = gameState ? Object.entries(gameState.factions)
+    .filter(([, f]) => (f.forces.onBoard[selectedTerritory] ?? 0) > 0)
+    .map(([id, f]) => `<li>${nameOf(id)}: ${f.forces.onBoard[selectedTerritory]} forces${f.forces.starredOnBoard?.[selectedTerritory] ? ` (${f.forces.starredOnBoard[selectedTerritory]} starred)` : ''}</li>`) : [];
+  const neighbours = (t.adjacentDraft ?? []).map(territoryNameOf).sort().join(', ');
+  info.innerHTML = `<strong>${t.name}</strong>, ${type}${spice ? `, <strong>${spice} spice</strong>` : ''}
+    ${occupants.length ? `<ul>${occupants.join('')}</ul>` : '<br>Unoccupied.'}
+    <br><em>Borders:</em> ${neighbours}`;
+}
+
 function render() {
+  renderBoard();
+  renderTerritoryInfo();
   renderStatus();
   renderPhaseTrack();
   renderHand();
@@ -414,6 +464,8 @@ function escapeHTML(str) {
 }
 
 $('btn-new-game').addEventListener('click', startNewGame);
+// Show the map straight away, before any game starts.
+loadAllData().then(data => { ensureBoard(data); render(); }).catch(err => addLog('error', '—', `Failed to load the map: ${err.message}`));
 $('btn-step-phase').addEventListener('click', stepPhase);
 $('btn-run-turn').addEventListener('click', runTurn);
 
