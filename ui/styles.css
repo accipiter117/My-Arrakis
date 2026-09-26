@@ -31,7 +31,7 @@
   --faction-atreides: #2f5233;
   --faction-harkonnen: #7a1f1f;
   --faction-emperor: #221c14;
-  --faction-fremen: #8c6a3f;
+  --faction-fremen: #2b6f86; /* blue, the eyes of Ibad: stands out on sand and rock */
   --faction-guild: #b5561f;
   --faction-gesserit: #4b2e5a;
 
@@ -139,10 +139,12 @@ body {
   .layout {
     grid-template-columns: 2fr 1.4fr;
     grid-template-areas:
+      "map log"
       "hand log"
       "factions log"
       "territories log";
   }
+  .panel--map { grid-area: map; }
   .panel--hand { grid-area: hand; }
   .panel--factions { grid-area: factions; }
   .panel--territories { grid-area: territories; }
@@ -452,6 +454,45 @@ table.territories-table {
   padding: 0 1.5rem 1rem;
   margin: 0;
 }
+
+/* --- Board: an original map of Arrakis (tools/buildMap.py) --- */
+
+.board-wrap { max-width: 720px; margin: 0 auto; }
+.board { width: 100%; height: auto; display: block; }
+.board__rim { fill: var(--parchment-panel-alt); stroke: var(--ink); stroke-width: 3; }
+.territory { stroke: var(--ink); stroke-width: 1.5; cursor: pointer; transition: filter 0.15s; }
+.territory--sand { fill: #e6d19d; }
+.territory--rock { fill: #b38f62; }
+.territory--stronghold { fill: #8f432a; }
+.territory--polarSink { fill: #f6f1e4; }
+.territory:hover { filter: brightness(1.08); }
+.territory--highlight { stroke: var(--gold); stroke-width: 4; stroke-dasharray: 8 5; }
+.territory--selected { stroke: var(--rust); stroke-width: 5; }
+.territory:focus-visible { outline: none; stroke: var(--rust); stroke-width: 5; }
+.board__sectors line { stroke: rgba(42, 31, 20, 0.28); stroke-width: 1.5; stroke-dasharray: 6 8; pointer-events: none; }
+.board__storm { fill: rgba(74, 56, 38, 0.38); stroke: rgba(42, 31, 20, 0.7); stroke-width: 2; pointer-events: none; }
+.board__label {
+  font-family: var(--font-body);
+  font-weight: 600;
+  fill: var(--ink);
+  text-anchor: middle;
+  pointer-events: none;
+  paint-order: stroke;
+  stroke: rgba(246, 241, 228, 0.75);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.token { pointer-events: none; }
+.token__disc { stroke: var(--ink); stroke-width: 3; paint-order: stroke; }
+.token__disc { filter: drop-shadow(0 0 1.5px var(--parchment)); }
+.token__count { font-family: var(--font-data); font-weight: 700; font-size: 17px; fill: #fff; text-anchor: middle; }
+.token__count--spice { fill: var(--ink); }
+.token__spice-bg { fill: #d9a33a; stroke: var(--ink); stroke-width: 2; }
+.token__star { fill: var(--gold); stroke: var(--ink); stroke-width: 1.5; }
+
+.territory-info { margin-top: 0.6rem; font-size: 0.88rem; min-height: 2.6rem; color: var(--ink-soft); }
+.territory-info strong { color: var(--ink); }
+.territory-info ul { margin: 0.3rem 0 0; padding-left: 1.1rem; font-family: var(--font-data); font-size: 0.8rem; color: var(--ink); }
 
 /* --- Accessibility baseline --- */
 
