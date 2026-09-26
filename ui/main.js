@@ -18,6 +18,8 @@ import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
 import * as cardEffects from '../js/cardEffects.js';
+import { assessVictoryWatch } from '../js/victoryWatch.js';
+import { FACTION_GUIDE, GUIDE_ORDER } from './factionGuide.js';
 import { createPresenter } from './presenter.js';
 import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
@@ -508,7 +510,44 @@ function renderTerritoryInfo() {
   card.hidden = false;
 }
 
+// --- Victory watch: who is one step from winning (public information) ----
+function renderWatch() {
+  const strip = $('victory-watch'), list = $('watch-list');
+  const items = gameState && !gameState.victory.achieved && territoriesData ? assessVictoryWatch(gameState, territoriesData) : [];
+  const who = f => f.map(x => (x === humanFactionId ? 'You' : FACTION_NAMES[x])).join(' + ');
+  const mine = it => humanFactionId && it.factions.includes(humanFactionId);
+  const top = items.find(it => it.level !== 'info') ?? items[0];
+  strip.hidden = !top;
+  if (top) {
+    strip.className = `watch watch--${top.level}${mine(top) ? ' watch--mine' : ''}`;
+    strip.innerHTML = `<span class="watch__icon">${top.level === 'info' ? '◆' : '⚠'}</span><span><strong>${escapeHTML(who(top.factions))}</strong> ${escapeHTML(top.headline)}</span>${items.length > 1 ? `<span class="watch__more">+${items.length - 1}</span>` : ''}`;
+  }
+  list.innerHTML = !items.length ? '' : `<h3 class="sheet__sub">Victory watch</h3>` + items.map(it => `
+    <div class="watch-item watch-item--${it.level}${mine(it) ? ' watch-item--mine' : ''}">
+      <strong>${escapeHTML(who(it.factions))}</strong> ${escapeHTML(it.headline)}.<br><span>${escapeHTML(it.detail)}</span>
+    </div>`).join('');
+}
+
+// --- Faction guide ------------------------------------------------------------
+function renderGuide() {
+  const body = $('guide-body');
+  if (body.dataset.built) return;
+  body.dataset.built = '1';
+  const list = items => `<ul>${items.map(i => `<li>${escapeHTML(i)}</li>`).join('')}</ul>`;
+  body.innerHTML = GUIDE_ORDER.map(f => {
+    const g = FACTION_GUIDE[f];
+    return `<details class="guide" data-faction="${f}"${f === humanFactionId ? ' open' : ''}>
+      <summary><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${escapeHTML(g.title)}<em>${escapeHTML(g.tagline)}</em></summary>
+      <p class="guide__start">${escapeHTML(g.start)}</p>
+      <h4>Unique powers</h4>${list(g.powers)}
+      <h4>Playing them: push it</h4>${list(g.push)}
+      <h4>Facing them: counter it</h4>${list(g.counter)}
+    </details>`;
+  }).join('') + '<p class="sheet__note">Tuned to the rules as built in this version. Advanced rules are always on.</p>';
+}
+
 function render() {
+  renderWatch();
   renderBoard();
   renderTerritoryInfo();
   renderStatus();
@@ -569,6 +608,8 @@ function renderPhaseTrack() {
 function renderHand() {
   const me = humanFactionId && gameState?.factions[humanFactionId];
   $('dock-hand').hidden = !me;
+  $('topbar-hand').hidden = !me;
+  $('status-storm').hidden = Boolean(me); // the storm shows on the map; the Hand needs the space
   if (!me) return;
   const cards = me.treacheryHand.length
     ? me.treacheryHand.map(id => {
@@ -687,6 +728,10 @@ $('btn-continue').addEventListener('click', () => { closeSheets(); resumeGame(re
 $('btn-export').addEventListener('click', exportSave);
 $('input-import').addEventListener('change', e => { if (e.target.files[0]) importSave(e.target.files[0]); e.target.value = ''; });
 $('btn-step-phase').addEventListener('click', stepPhase);
+// The Hand is always one tap away, even mid-decision (it opens above the panel).
+$('topbar-hand').addEventListener('click', () => { const open = !$('sheet-hand').hidden; if (open) closeSheets(); else openSheet('hand'); });
+$('victory-watch').addEventListener('click', () => openSheet('factions'));
+document.querySelectorAll('[data-open-guide]').forEach(b => b.addEventListener('click', () => { renderGuide(); openSheet('guide'); }));
 // Hand: tap a card for what it does; discard cards whose effects aren't built yet.
 $('hand-body').addEventListener('click', e => {
   const face = e.target.closest('[data-card]');
