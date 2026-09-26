@@ -26,12 +26,15 @@ player shields in the physical game.
   its own hand
 - Human play: full decision panels for one faction, including Atreides
   battle Prescience
-- Treachery cards: weapons, defences, Cheap Heroes, Hajr and Ghola work
+- Treachery cards: weapons, defences, Cheap Heroes, worthless bluffs, Hajr and Ghola
+- Faction abilities: Atreides Prescience and Kwisatz Haderach, Harkonnen extra
+  cards, four traitors and captured leaders, Emperor bid income and Sardaukar,
+  Fremen movement, Fedaykin and worm riding, Guild shipping, Bene Gesserit
+  Prediction and Voice
 - Not yet: storm damage and First Player (awaiting sector data, see
   `docs/STORM_TODO.md`), strategic AI, alliances for the human player,
-  Voice, advisors, Karama, Truthtrance, Weather Control and Family Atomics
-  (the last two need the storm), worm riding, expansion factions, an
-  illustrated board
+  Bene Gesserit advisors, Karama, Truthtrance, Weather Control and Family
+  Atomics (the last two need the storm), expansion factions
 
 ## Running locally
 
