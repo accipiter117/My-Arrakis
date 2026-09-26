@@ -93,6 +93,13 @@ export function createMusic({ onChange } = {}) {
       if (started && settings.enabled) rampTo(volume, 0.15);
       notify();
     },
+    // Dip the score briefly so a loud effect cuts through.
+    duck(seconds = 3) {
+      if (!started || !settings.enabled || !gain) return;
+      rampTo(settings.volume * 0.3, 0.25);
+      clearTimeout(this._duck);
+      this._duck = setTimeout(() => rampTo(settings.volume, 1.0), seconds * 1000);
+    },
     skip() {
       rampTo(0, 0.4);
       setTimeout(() => { load(index + 1); if (started) play(); else notify(); }, 420);
