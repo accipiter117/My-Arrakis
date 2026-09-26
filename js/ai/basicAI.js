@@ -233,15 +233,23 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       // Shipment: best-value territory we can afford a meaningful force for.
       const reserve = me.forces.reserve ?? 0;
       if (reserve > 0) {
+        // A faction with (almost) nothing on the board must get back onto it:
+        // it may spend all its spice and land even one troop somewhere
+        // modest. Otherwise it keeps a little spice and ships with purpose.
+        // (An earlier version always kept 3 spice, stranding poor factions:
+        // a quarter of AI turns ended with nothing on the board.)
+        const onBoardNow = Object.values(me.forces.onBoard).reduce((a, b) => a + b, 0);
+        const stranded = onBoardNow < 3;
+        const keep = stranded ? 0 : 3, minValue = stranded ? 0 : 3, minAmount = stranded ? 1 : 2;
         let best = null;
         for (const territoryId of Object.keys(state.board.territories)) {
           const value = territoryValue(state, factionId, territoryId);
-          if (value <= 3) continue;
+          if (value <= minValue) continue;
           const perForce = movementEngine.shipmentCostPerForce(state, factionId, territoryId);
-          const affordable = perForce === 0 ? reserve : Math.floor((me.spice - 3) / perForce);
+          const affordable = perForce === 0 ? reserve : Math.floor((me.spice - keep) / perForce);
           const needed = Math.max(3, enemyForcesIn(state, factionId, territoryId) + 2);
           const amount = Math.min(reserve, affordable, Math.max(needed, 4), 8);
-          if (amount < 2) continue;
+          if (amount < minAmount) continue;
           if (!movementEngine.canShip(state, factionId, territoryId, amount).ok) continue;
           const score = value + rng();
           if (!best || score > best.score) best = { territoryId, amount, score };
