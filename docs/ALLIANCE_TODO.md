@@ -16,10 +16,10 @@
   battles, Harkonnen traitors usable against the ally's opponent, Fremen
   protecting the ally from worms
 
-## Still to build
+- Allies pledging spice toward each other's cards and shipments (each turn)
+- The Emperor paying for up to 3 extra force revivals for the ally
+- The Fremen's ally reviving 3 forces free each turn
 
-- Allies paying for each other's treachery card bids and shipments
-- Emperor paying for up to 3 extra force revivals for the ally
-- Fremen granting the ally 3 free force revivals
+## Still to build
 - AI breaking alliances: allowed, but its threshold is cautious and it has
   not yet done so in simulation; revisit when tuning the Strategic AI
