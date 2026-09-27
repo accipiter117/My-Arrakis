@@ -60,6 +60,15 @@ const STARTING_CONDITIONS = {
     starredReserve: 0,
     onBoard: { tueksSietch: 5 }
   },
+  // Ixians: 10 spice; 3 Cyborgs and 3 Suboids in the Hidden Mobile Stronghold,
+  // 4 Cyborgs and 10 Suboids in reserve (Cyborgs are the starred forces).
+  ixians: {
+    spice: 10,
+    reserve: 14,
+    starredReserve: 4,
+    onBoard: { hms: 6 },
+    starredOnBoard: { hms: 3 }
+  },
   // Ixians & Tleilaxu expansion: 20 forces in reserve, no presence on Arrakis.
   tleilaxu: {
     spice: 5,
@@ -234,10 +243,19 @@ function initializeGame(config) {
   state.meta.phase = 'setup';
   state.meta.turn = 1;
 
+  applyStartingStarredOnBoard(state);
   return state;
 }
 
+// Starting elite forces already on the board (the Ixians' Cyborgs in the HMS).
+function applyStartingStarredOnBoard(state) {
+  for (const [f, c] of Object.entries(STARTING_CONDITIONS)) {
+    if (state.factions[f] && c.starredOnBoard) state.factions[f].forces.starredOnBoard = { ...(state.factions[f].forces.starredOnBoard ?? {}), ...c.starredOnBoard };
+  }
+}
+
 export {
+  applyStartingStarredOnBoard,
   treacheryCardsInPlay,
   STARTING_CONDITIONS,
   STARTING_TREACHERY_COUNT,
