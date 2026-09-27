@@ -60,7 +60,7 @@ export function createStrategicAI(options) {
     }
 
     // Fremen special condition: only matters near the final turn.
-    if (state.factions.fremen && me !== 'fremen' && myAlly !== 'fremen' && state.meta.turn >= maxTurns - 2) {
+    if (state.factions.fremen && me !== 'fremen' && myAlly !== 'fremen' && state.meta.turn >= maxTurns - 2 && state.meta.turn <= maxTurns) {
       const cleanOf = t => occupants(state, t).every(f => f === 'fremen' || f === allyOf(state, 'fremen'));
       const tueksBlocked = occupants(state, 'tueksSietch').some(f => BLOCKS_FREMEN_AT_TUEKS.includes(f));
       if (cleanOf('sietchTabr') && cleanOf('habbanyaSietch') && !tueksBlocked) {
