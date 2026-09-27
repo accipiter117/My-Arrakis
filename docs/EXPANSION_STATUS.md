@@ -18,10 +18,10 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
   Sandtrout; Cheap Hero traitor. AI and player decisions, event cards, card help, tests
   (tests/leaderResolution.sim.js, tests/spiceCards.sim.js). Switch: expansions.ixTlCards.
 - M2 Tleilaxu: CORE DONE. Faction, Face Dancers (reveal, cycling, Mentat Pause swap), revival economy, limit increase,
-  ally half price, Zoal, AI and player decisions, guide entry, tests (tests/tleilaxu.sim.js). REMAINING: Gholas,
-  leader-price negotiation, Face Dancer replacement from the board, Tleilaxu Karama powers, art and audio.
+  ally half price, Zoal, AI and player decisions, guide entry, tests (tests/tleilaxu.sim.js). Gholas and early leader
+  revival DONE. REMAINING: Ghola buy-back, Face Dancer replacements from the board, Karama powers, art and audio.
 - M3 Ixians: CORE DONE. Faction, Cyborgs/Suboids, HMS (placement, movement, spice, victory, entry rules), starting draft,
-  auction bury, ally card swap, AI and player decisions, guide, tests (tests/ixians.sim.js). REMAINING: Technology,
-  Suboid-for-Cyborg exchange, Karama powers, art and audio.
+  auction bury, ally card swap, AI and player decisions, guide, tests (tests/ixians.sim.js). Technology and the Suboid exchange
+  DONE. REMAINING: Karama powers, art and audio.
 - Alliance perks: all eight factions verified (tests/alliancePerks.sim.js).
 - M3+ (was: M3 Ixians, M4 Tech Tokens, M5 CHOAM, M6 Richese, M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
