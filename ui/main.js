@@ -208,6 +208,10 @@ function logEvent(e) {
     addLog('battle', turn, `Truthtrance${where}: ${nameOf(e.asker)} asked ${nameOf(e.target)} "${q}" Answer: ${e.answer ? 'yes' : 'no'}.`);
   }
   if (e.type === 'karama') addLog('battle', turn, `${nameOf(e.factionId)} played Karama to cancel ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[e.purpose]}${e.territoryId ? ` in ${territoryNameOf(e.territoryId)}` : ''}.`);
+  if (e.type === 'technology') addLog('bidding', turn, 'The Ixians used Technology to swap the card about to be auctioned.');
+  if (e.type === 'suboidExchange') addLog('battle', turn, `Ixians exchanged ${e.count} surviving Suboids for lost Cyborgs in ${territoryNameOf(e.territoryId)}.`);
+  if (e.type === 'earlyLeaderRevival') addLog('revival', turn, `${nameOf(e.factionId)} paid the Tleilaxu ${e.price} spice to revive ${leaderNameOf(e.leaderId)} early.`);
+  if (e.type === 'ghola') addLog('revival', turn, `The Tleilaxu revived ${leaderNameOf(e.leaderId)} (${nameOf(e.owner)}) as a Ghola for ${e.cost} spice.`);
   if (e.type === 'thumper') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Thumper: Shai-Hulud is called.`);
   if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
