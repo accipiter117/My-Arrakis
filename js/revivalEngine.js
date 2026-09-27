@@ -101,9 +101,22 @@ function reviveForces(state, factionId, amount, starredAmount = 0) {
 // which includes leaders that are dead OR currently held captured by
 // another faction (e.g. Harkonnen's Captured Leaders ability), not
 // strictly "all 5 physically in the Tanks."
+// Rulebook: "If all 5 of a player's leaders are in the Tleilaxu Tanks they may
+// revive 1 leader per turn until all of their leaders have been revived."
+// So the window opens when no leader is available, and STAYS open (one a
+// turn) until the tanks hold none of their leaders.
 function isEligibleForLeaderRevival(state, factionId) {
   const faction = state.factions[factionId];
-  return (faction.leaders.available ?? []).length === 0;
+  if ((faction.leaders.killed ?? []).length === 0) return false;
+  return (faction.leaders.available ?? []).length === 0 || Boolean(faction.leaderRevivalOpen);
+}
+
+// "Dead Again": a revived leader killed again stays face down until all of the
+// player's other leaders in the tanks have been revived and killed again.
+function isFaceDown(faction, leaderId) {
+  const revived = faction.leaders.revivedOnce ?? [];
+  if (!revived.includes(leaderId)) return false;
+  return (faction.leaders.killed ?? []).some(id => !revived.includes(id));
 }
 
 function canReviveLeader(state, factionId, leaderId, leaderFightingValue) {
@@ -117,6 +130,9 @@ function canReviveLeader(state, factionId, leaderId, leaderFightingValue) {
   }
   if (faction.leaderRevivedThisTurn) {
     return { ok: false, reason: 'Only 1 leader may be revived per turn.' };
+  }
+  if (isFaceDown(faction, leaderId)) {
+    return { ok: false, reason: 'Dead again: this leader cannot be revived until your other leaders in the tanks have been revived first.' };
   }
   if (leaderFightingValue > faction.spice) {
     return { ok: false, reason: `Reviving this leader costs ${leaderFightingValue} spice (their fighting strength), which exceeds current spice.` };
@@ -135,6 +151,7 @@ function reviveLeader(state, factionId, leaderId, leaderFightingValue) {
   faction.spice -= check.cost;
   faction.leaderRevivedThisTurn = true;
   state.spiceBank.totalInCirculation += check.cost;
+  noteLeaderRevived(faction, leaderId);
 
   return { factionId, leaderId, cost: check.cost };
 }
@@ -171,7 +188,21 @@ function emperorRevivesForAlly(state, allyId, amount) {
   return { payer: 'emperor', factionId: allyId, amount, cost: check.cost };
 }
 
+// Bookkeeping shared by paid revival and the Ghola card.
+function noteLeaderRevived(faction, leaderId) {
+  // Once every leader is back, the Dead Again cycle starts over.
+  if (!faction.leaders.killed.length) {
+    faction.leaderRevivalOpen = false;
+    faction.leaders.revivedOnce = [];
+  } else {
+    faction.leaderRevivalOpen = true;
+    faction.leaders.revivedOnce = [...new Set([...(faction.leaders.revivedOnce ?? []), leaderId])];
+  }
+}
+
 export {
+  noteLeaderRevived,
+  isFaceDown,
   canEmperorReviveForAlly,
   emperorRevivesForAlly,
   freeRevivalAllowance,
