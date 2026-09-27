@@ -256,5 +256,48 @@
       "isSpecial": false,
       "traitorPoolEligible": true
     }
+  ],
+  "tleilaxu": [
+    {
+      "id": "zoal",
+      "name": "Zoal",
+      "faction": "tleilaxu",
+      "fightingValue": 0,
+      "variableValue": true,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "hidarFenAjidica",
+      "name": "Hidar Fen Ajidica",
+      "faction": "tleilaxu",
+      "fightingValue": 4,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "masterZaaf",
+      "name": "Master Zaaf",
+      "faction": "tleilaxu",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "wykk",
+      "name": "Wykk",
+      "faction": "tleilaxu",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "blin",
+      "name": "Blin",
+      "faction": "tleilaxu",
+      "fightingValue": 1,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
   ]
 }
