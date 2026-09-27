@@ -722,6 +722,38 @@ strong { color: var(--gold); }
 .stage { padding: 0.15rem; }
 .ticker { padding: 0.3rem 0.7rem; }
 
+/* --- Phone layout: map on top, console beneath -------------------------------------- */
+
+.console-feed { display: none; }
+body.has-console .stage { flex-direction: column; align-items: stretch; justify-content: flex-start; padding: 0; }
+body.has-console .board-wrap { flex: none; height: var(--board-size); }
+body.has-console .console-feed {
+  display: flex; flex-direction: column; justify-content: flex-start; flex: 1; min-height: 0; overflow: hidden; width: 100%; text-align: left; cursor: pointer;
+  padding: 0.5rem 0.75rem; border: none; border-top: 1px solid var(--bronze);
+  background: linear-gradient(180deg, rgba(29, 20, 13, 0.92), rgba(14, 9, 6, 0.96));
+  color: var(--sand-soft); font-size: 11.5px; z-index: 2;
+}
+.console-feed__line { margin: 0 0 0.35rem; line-height: 1.35; opacity: 0.6; }
+.console-feed__line.is-latest { opacity: 1; color: var(--sand); }
+.console-feed__empty { margin: 0; color: var(--sand-dim); }
+body.has-console .ticker { display: none; }
+
+/* Cards, reveals, banners and the territory card appear in the console, not over the map. */
+body.has-console .event-layer { top: var(--board-size); align-items: flex-start; padding-top: 0.5rem; overflow-y: auto; }
+body.has-console .event-layer.event-layer--top { top: 0; bottom: auto; padding-top: 0; }
+body.has-console .event-card--auction { margin-top: 0.4rem; }
+body.has-console .battle-reveal { max-height: none; }
+body.has-console .turn-banner { top: calc(var(--board-size) + 0.45rem); }
+body.has-console .territory-card { top: calc(var(--board-size) + 0.4rem); bottom: auto; }
+
+/* Decisions, Hand and Factions fit the console, so the map stays in view. */
+body.has-console .decision-panel,
+body.has-console #sheet-hand,
+body.has-console #sheet-factions,
+body.has-console #sheet-log,
+body.has-console #sheet-truth { max-height: max(var(--below-board), 40dvh); }
+body.has-console .scrim { background: rgba(6, 3, 1, 0.14); backdrop-filter: none; }
+
 /* --- Accessibility -------------------------------------------------------------------- */
 
 :focus-visible { outline: 2px solid var(--spice); outline-offset: 2px; }
