@@ -145,6 +145,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       await showCard('storm', card(e.first ? 'The first storm' : e.stormCard ? 'Storm card' : 'Storm',
         `${e.sectors} sector${e.sectors === 1 ? '' : 's'}`, how), 2600);
       if (!speed()) return;
+      await board.overview(scaled(600));
       // Sweep sector by sector.
       for (let step = 1; step <= e.sectors; step++) {
         const display = structuredClone(state);
@@ -165,6 +166,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
     async spiceCard(e) {
       if (e.kind === 'territory') {
+        if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 480 });
         const shown = showCard('spice', card('Spice blow', names.territory(e.territoryId), `<strong>+${e.amount}</strong> spice`), 2300);
         if (speed()) await board.pulse(e.territoryId, 'spice', scaled(900));
         await shown;
@@ -174,6 +176,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
           `${e.devoured ? `It devours <strong>${esc(names.territory(e.devoured))}</strong>: spice and troops there are lost (Fremen are spared). ` : ''}A Nexus follows.`), 3200);
         if (speed() && e.devoured) {
           const [x, y] = board.labelPoint(e.devoured);
+          await board.focusOn([[x, y]], { ms: scaled(500), minW: 480 });
           await board.wormDelivers({ at: [x, y + 14], ms: scaled(1800) });
         }
         await shown;
@@ -187,6 +190,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       renderDisplay(displayWithout(state, e.factionId, e.territoryId, e.amount));
       const [lx, ly] = board.labelPoint(e.territoryId);
       const at = [lx, ly + 14]; // where the counter sits in the territory
+      await board.focusOn([at], { ms: scaled(600), minW: 480 });
       if (e.factionId === 'fremen') {
         // The Fremen come from the deep desert: Shai-Hulud brings them.
         sfx?.play('wormDelivery');
@@ -203,6 +207,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       if (!speed()) return;
       renderDisplay(displayWithout(state, e.factionId, e.to, e.amount));
       const ground = id => { const [x, y] = board.labelPoint(id); return [x, y + 14]; };
+      await board.focusOn(e.crossShip || e.ornithopter ? [ground(e.from), ground(e.to)] : board.pathBetween(e.from, e.to).map(board.labelPoint), { ms: scaled(600) });
       if (e.crossShip) {
         // The Guild ships across the planet: its Heighliner lifts off and sets down.
         sfx?.play('shipArrival');
@@ -220,6 +225,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     },
 
     async wormRide(e, state) {
+      if (speed()) await board.focusOn([board.labelPoint(e.from), board.labelPoint(e.to)], { ms: scaled(600) });
       await showCard('worm', card('Fremen', 'Ride Shai-Hulud',
         `${e.amount} forces ride from ${esc(names.territory(e.from))} to <strong>${esc(names.territory(e.to))}</strong>.`), 2300);
       if (!speed()) return;
@@ -271,6 +277,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     async battle(e) {
       if (!speed()) return;
       const agg = e.aggressorId, def = e.defenderId, sides = [agg, def];
+      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380 });
       const P = e.plans;
       const opp = f => (f === agg ? def : agg);
       const cat = id => cardLookup?.[id]?.category;
