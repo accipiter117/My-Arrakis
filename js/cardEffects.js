@@ -78,6 +78,7 @@ export function playGhola(state, factionId, choice) {
     }
   }
   discard(state, factionId, 'ghola');
+  if (state.factions.tleilaxu && factionId !== 'tleilaxu') { state.factions.tleilaxu.spice += 1; state.spiceBank.totalInCirculation -= 1; }
   return { factionId, card: 'ghola', ...choice };
 }
 
