@@ -284,7 +284,9 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       const opp = f => (f === agg ? def : agg);
       const cat = id => cardLookup?.[id]?.category;
       const CATS = { poisonWeapon: 'poison weapon', projectileWeapon: 'projectile weapon', specialWeapon: 'lasgun',
-        poisonDefense: 'poison defence', projectileDefense: 'projectile defence', worthless: 'worthless: a bluff' };
+        poisonDefense: 'poison defence', projectileDefense: 'projectile defence', worthless: 'worthless: a bluff',
+        poisonBlade: 'projectile and poison weapon', weirdingWay: 'projectile weapon', poisonTooth: 'kills both leaders',
+        artilleryStrike: 'artillery: kills both leaders', shieldSnooper: 'shield and snooper', chemistry: 'poison defence' };
       const asPlan = p => ({ forcesCommitted: p.forces, starredForcesCommitted: p.starred, spiceCommitted: p.spice,
         supportedStarredCount: p.supportedStarred, supportedOrdinaryCount: p.supportedOrdinary,
         leaderId: p.leaderId, leaderFightingValue: p.leaderValue, weaponCardId: p.weapon, defenseCardId: p.defense });
