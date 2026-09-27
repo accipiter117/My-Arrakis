@@ -251,6 +251,11 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       await showCard('karama', card('Karama', names.faction(e.factionId), `${esc(what)}.`), 2600);
     },
 
+    async faceDancer(e) {
+      if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 420 });
+      await showCard('traitor', `<div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(e.leaderId))}</div>
+        <div class="event-card__detail">was a Tleilaxu Face Dancer. ${esc(names.faction(e.winnerId))} keep the win, but lose the leader, and ${e.returned} troops go home; ${e.placed} Tleilaxu take ${esc(names.territory(e.territoryId))}.</div>`, 3200);
+    },
     async thumper(e) {
       await showCard('worm', card('Thumper', names.faction(e.factionId), 'calls Shai-Hulud to the last spice territory.'), 2200);
     },
