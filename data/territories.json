@@ -920,6 +920,18 @@
         "cielagoEast",
         "meridian"
       ]
+    },
+    "hms": {
+      "id": "hms",
+      "name": "Hidden Mobile Stronghold",
+      "type": "stronghold",
+      "dynamic": true,
+      "adjacentDraft": [],
+      "adjacentBoard": [],
+      "spiceBlow": {
+        "present": false
+      },
+      "_notes": "Ixians only. Moves around the map; its links are set at runtime (js/hms.js). Immune to storm and worms."
     }
   },
   "stormStart": {
