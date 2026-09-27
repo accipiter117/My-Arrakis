@@ -111,7 +111,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     async auctionStart(e) {
       if (!speed()) return;
       // Only Atreides may see the card before bidding (Prescience).
-      const seen = getViewer() === 'atreides' ? esc(names.card(e.cardId)) : 'Face down';
+      const seen = ['atreides', 'ixians'].includes(getViewer()) ? esc(names.card(e.cardId)) : 'Face down';
       layer.classList.add('event-layer--top'); // stays visible above your bid panel
       layer.innerHTML = `<div class="event-card event-card--auction" role="status">
         <div class="event-card__eyebrow">Auction · card ${e.index + 1} of ${e.total}</div>
@@ -251,6 +251,14 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       await showCard('karama', card('Karama', names.faction(e.factionId), `${esc(what)}.`), 2600);
     },
 
+    async hmsPlaced(e) {
+      if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 460 });
+      await showCard('nexus', card('Hidden Mobile Stronghold', names.territory(e.territoryId), 'The Ixians point their HMS here.'), 2200);
+    },
+    async hmsMove(e) {
+      if (speed()) await board.focusOn(e.path.map(board.labelPoint), { ms: scaled(500) });
+      await showCard('nexus', card('Hidden Mobile Stronghold', `to ${names.territory(e.to)}`, e.collected ? `collecting <strong>${e.collected}</strong> spice on the way` : 'The Ixians move their HMS.'), 2200);
+    },
     async faceDancer(e) {
       if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 420 });
       await showCard('traitor', `<div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(e.leaderId))}</div>
