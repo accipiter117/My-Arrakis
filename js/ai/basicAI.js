@@ -23,8 +23,10 @@ import * as movementEngine from '../movementEngine.js';
 import * as revivalEngine from '../revivalEngine.js';
 import * as battleEngine from '../battleEngine.js';
 
-const WEAPON_CATEGORIES = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
-const DEFENSE_CATEGORIES = ['poisonDefense', 'projectileDefense'];
+// Card types that fill each slot come from the battle engine (base game plus
+// the Ixians & Tleilaxu cards), so new cards are handled everywhere at once.
+const WEAPON_CATEGORIES = battleEngine.WEAPONS;
+const DEFENSE_CATEGORIES = battleEngine.DEFENSES;
 
 export function createBasicAI({ leadersData, cardLookup, rng = random }) {
   // Leader fighting values are printed on the discs, so they are public.
@@ -94,8 +96,10 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     if (intel.element === 'weapon') {
       const incoming = categoryOf(intel.value);
       let defenseCardId = null;
-      if (incoming === 'poisonWeapon') defenseCardId = find(['poisonDefense']);
-      if (incoming === 'projectileWeapon') defenseCardId = find(['projectileDefense']);
+      if (['poisonWeapon'].includes(incoming)) defenseCardId = find(['poisonDefense', 'chemistry', 'shieldSnooper']);
+      if (['projectileWeapon', 'weirdingWay'].includes(incoming)) defenseCardId = find(['projectileDefense', 'shieldSnooper']);
+      if (incoming === 'poisonBlade') defenseCardId = find(['shieldSnooper']);                 // only a Shield Snooper stops it
+      if (incoming === 'artilleryStrike') defenseCardId = find(['projectileDefense', 'shieldSnooper']);
       // Lasgun: nothing defends against it, and our own shield would
       // explode the territory, so defenseCardId stays null.
       return { ...plan, defenseCardId };
@@ -107,7 +111,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       else if (theirs === 'projectileDefense') weaponCardId = find(['poisonWeapon']); // a lasgun into their shield explodes
       else weaponCardId = find(['poisonWeapon', 'projectileWeapon']) ?? find(['specialWeapon']);
       const usingLasgun = categoryOf(weaponCardId) === 'specialWeapon';
-      const defenseCardId = usingLasgun && categoryOf(plan.defenseCardId) === 'projectileDefense' ? null : plan.defenseCardId;
+      const defenseCardId = usingLasgun && battleEngine.isShieldCard(cardLookup[plan.defenseCardId]) ? null : plan.defenseCardId;
       return { ...plan, weaponCardId, defenseCardId };
     }
     if (intel.element === 'number') {
@@ -165,6 +169,12 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
     chooseAllianceResponse() {
       return false;
+    },
+
+    // Poison Tooth, after the reveal: withhold it if it would cost us a better
+    // leader than it takes from them (it kills both).
+    choosePoisonToothUse(state, factionId, territoryId, opponentId, mine, theirs) {
+      return (theirs.leaderFightingValue ?? 0) >= (mine.leaderFightingValue ?? 0);
     },
 
     // Truthtrance before a battle: is my strongest available leader your traitor?
@@ -409,7 +419,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const weaponCardId = (nonLasgun ?? lasgun)?.id ?? null;
       const usingLasgun = weaponCardId && cardLookup[weaponCardId]?.category === 'specialWeapon';
       const defense = hand.find(c => DEFENSE_CATEGORIES.includes(c.category) &&
-        !(usingLasgun && c.category === 'projectileDefense'));
+        !(usingLasgun && battleEngine.isShieldCard(c)));
       let defenseCardId = defense?.id ?? null;
       // Worthless cards can only be shed by playing them: fill empty slots.
       const worthless = hand.filter(c => c.category === 'worthless').map(c => c.id);
