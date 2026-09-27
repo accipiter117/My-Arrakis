@@ -21,11 +21,13 @@ function hasOrnithopterAccess(state, factionId) {
   );
 }
 
-function moveRangeFor(state, factionId) {
+function moveRangeFor(state, factionId, cyborgsMoving = 0) {
   const hasOrnithopters = hasOrnithopterAccess(state, factionId);
   const isFremen = factionId === 'fremen';
 
-  if (hasOrnithopters) return 3; // capped at 3 even for Fremen; desert knowledge doesn't make the 'thopter fly faster, confirmed ruling
+  if (hasOrnithopters) return 3;
+  // Ixians: Cyborgs move 2, and Suboids move 2 when accompanied by a Cyborg.
+  if (factionId === 'ixians') return cyborgsMoving > 0 ? 2 : 1; // capped at 3 even for Fremen; desert knowledge doesn't make the 'thopter fly faster, confirmed ruling
   if (isFremen) return 2;
   return 1;
 }
@@ -115,6 +117,9 @@ function canShip(state, factionId, destinationTerritoryId, amount) {
   if (isStrongholdBlocked(state, destinationTerritoryId, factionId)) {
     return { ok: false, reason: 'Stronghold already occupied by two other factions.' };
   }
+  if (destinationTerritoryId === 'hms' && (factionId !== 'ixians' || !state.board.hms?.placed)) {
+    return { ok: false, reason: 'Only the Ixians may ship straight into the Hidden Mobile Stronghold; others enter from the territory it is over.' };
+  }
   if (allyOccupies(state, factionId, destinationTerritoryId)) {
     return { ok: false, reason: 'Your ally already has forces there; allies may only share the Polar Sink.' };
   }
@@ -170,7 +175,7 @@ function executeShipment(state, factionId, destinationTerritoryId, amount, starr
 
 // --- Movement -----------------------------------------------------------
 
-function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount) {
+function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount, starredRequested) {
   if (amount <= 0) return { ok: false, reason: 'Move amount must be positive.' };
   if ((state.factions[factionId].forces.onBoard[fromTerritoryId] ?? 0) < amount) {
     return { ok: false, reason: 'Not enough forces in the origin territory.' };
@@ -179,7 +184,9 @@ function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount) {
     return { ok: false, reason: 'Only one force move is allowed per faction per turn.' };
   }
 
-  const range = moveRangeFor(state, factionId);
+  // Elite forces in the group (default: as many as possible, as executeMove does).
+  const eliteHere = state.factions[factionId].forces.starredOnBoard?.[fromTerritoryId] ?? 0;
+  const range = moveRangeFor(state, factionId, starredRequested ?? Math.min(amount, eliteHere));
   const reachable = reachableTerritories(state, factionId, fromTerritoryId, range);
   if (!reachable.includes(toTerritoryId)) {
     return { ok: false, reason: `${toTerritoryId} is not reachable within this faction's movement range.` };
