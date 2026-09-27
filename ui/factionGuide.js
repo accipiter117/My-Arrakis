@@ -154,7 +154,9 @@ FACTION_GUIDE.ixians = {
     'Suboids: worth ½ in battle and never boosted with spice; move 2 alongside a Cyborg, otherwise 1.',
     'Starting draft: you choose your first treachery card from one per faction.',
     'Each auction you see every card plus one extra, and put one back on the deck.',
-    'Not yet in this version: Technology (swapping the card about to be auctioned), Suboids replacing lost Cyborgs, and your Karama powers.'
+    'Technology: once each round, swap the card about to be auctioned for one from your hand.',
+    'After a battle you win, surviving Suboids can take the place of Cyborgs you lost.',
+    'Not yet in this version: your Karama powers.'
   ],
   push: [
     'Park the HMS by the richest spice and sweep it up each turn.',
@@ -179,7 +181,9 @@ FACTION_GUIDE.tleilaxu = {
     'You may raise another faction\'s revival limit from 3 to 5 for the turn (they pay you for it).',
     'Zoal: your leader with no printed value takes the value of the leader he faces.',
     'Face Dancer cycling: once all three are revealed, draw three new ones; at each Mentat Pause you may swap one.',
-    'Not yet in this version: Gholas, leader-price negotiation, and your Karama powers.'
+    'Gholas: with fewer than five active leaders, revive another faction\'s dead leader at half its value to fight for you.',
+    'Other factions can ask you to revive one of their leaders early, at a price you name.',
+    'Not yet in this version: your Karama powers.'
   ],
   push: [
     'Let others fight: every battle is a chance for a Face Dancer to steal a stronghold.',
