@@ -249,8 +249,23 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       t.textContent = `${foreseen.amount ?? ''}?`;
     }
 
+    lastState = state;
     const spice = {};
     for (const m of state.board.spiceBlowMarkers) spice[m.territoryId] = (spice[m.territoryId] ?? 0) + m.amount;
+
+    // The Ixians' Hidden Mobile Stronghold: a bronze hexagon beside its host, with anyone inside it.
+    if (state.board.territories.hms && (state.board.hms?.placed || Object.values(state.factions).some(f => f.forces.onBoard.hms))) {
+      const [hx, hy] = hmsPoint();
+      const g = el('g', { class: 'hms', transform: `translate(${hx},${hy})` }, tokenLayer);
+      const pts = Array.from({ length: 6 }, (_, i) => { const a = Math.PI / 6 + i * Math.PI / 3; return `${Math.cos(a) * 34},${Math.sin(a) * 34}`; }).join(' ');
+      el('polygon', { points: pts, class: 'hms__hull' }, g);
+      const tag = el('text', { class: 'hms__label', y: -40 }, g); tag.textContent = 'HMS';
+      const inside = Object.entries(state.factions).filter(([, f]) => (f.forces.onBoard.hms ?? 0) > 0);
+      inside.forEach(([f, x], i) => {
+        const c = el('g', { class: 'token', transform: `translate(${(i - (inside.length - 1) / 2) * 44},0) scale(0.8)` }, g);
+        drawCounter(c, f, x.forces.onBoard.hms);
+      });
+    }
 
     for (const [id, geo] of Object.entries(geometry.territories)) {
       const [lx, ly] = geo.label;
@@ -306,7 +321,14 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   });
   const ease = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
-  const labelPoint = id => geometry.territories[id]?.label ?? [cx, cy];
+  // The HMS has no shape of its own: it sits beside the territory it points at.
+  let lastState = null;
+  const hmsPoint = () => {
+    const host = lastState?.board?.hms?.placed ? lastState.board.hms.territoryId : null;
+    const [x, y] = host ? (geometry.territories[host]?.label ?? [cx, cy]) : [cx, cy + 140];
+    return [x + 48, y - 36];
+  };
+  const labelPoint = id => id === 'hms' ? hmsPoint() : (geometry.territories[id]?.label ?? [cx, cy]);
 
   // Shortest route through adjacent territories, so a march visibly
   // passes through each territory on the way.
