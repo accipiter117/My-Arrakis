@@ -38,7 +38,8 @@ export function assessVictoryWatch(state, territoriesData) {
   }
 
   // The Fremen special victory, from two turns before the end.
-  if (state.factions.fremen && state.meta.turn >= v.maxTurns - 2) {
+  const house = state.rulesConfig.houseRules ?? {};
+  if (state.factions.fremen && state.meta.turn >= v.maxTurns - 2 && state.meta.turn <= v.maxTurns) {
     const winners = checkFremenSpecialVictory(state);
     if (winners) {
       items.push({ level: state.meta.turn >= v.maxTurns ? 'critical' : 'warning', factions: winners, held: [], deciding: ['sietchTabr', 'habbanyaSietch', 'tueksSietch'],
@@ -48,7 +49,12 @@ export function assessVictoryWatch(state, territoriesData) {
   }
 
   // The Guild special victory: the default ending.
-  if (state.factions.guild && state.meta.turn >= v.maxTurns - 1) {
+  const cap = house.stalemateTurnCap ?? 30;
+  if (house.noTurnLimit && state.meta.turn >= cap - 2) {
+    items.push({ level: 'info', factions: [], held: [], deciding: [],
+      headline: `The game ends in a draw if nobody has won by the end of turn ${cap}`, detail: 'The safety cap for games without a turn limit.' });
+  }
+  if (state.factions.guild && !house.noGuildSpecialVictory && state.meta.turn >= v.maxTurns - 1) {
     const ally = (state.alliances ?? []).find(a => a.factions.includes('guild'))?.factions ?? ['guild'];
     items.push({ level: 'info', factions: ally, held: [], deciding: [],
       headline: `win if nobody else has won by the end of turn ${v.maxTurns}`,
