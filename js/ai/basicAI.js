@@ -180,8 +180,9 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     // Swap out a Face Dancer who can never come up: one of our own leaders
     // first, then one who is dead or captured.
     chooseFaceDancerToReplace(state, factionId, leaderIds) {
-      const own = leaderIds.find(id => own(state, factionId).leaders.available.includes(id) || own(state, factionId).leaders.killed.includes(id));
-      return own ?? leaderIds.find(id => !Object.values(state.factions).some(f => f.leaders.available.includes(id))) ?? null;
+      const me = own(state, factionId);
+      const ownLeader = leaderIds.find(id => me.leaders.available.includes(id) || me.leaders.killed.includes(id));
+      return ownLeader ?? leaderIds.find(id => !Object.values(state.factions).some(f => f.leaders.available.includes(id))) ?? null;
     },
     // Raise another faction's revival limit to 5 (they pay us), unless they're
     // close to winning; always for our ally.
