@@ -100,13 +100,18 @@ function setupSpiceDeck(state, spiceDeckData, territoriesData, rngShuffle) {
   return state;
 }
 
+// Which treachery cards are in play under these rules (house rules and expansions).
+function treacheryCardsInPlay(rulesConfig, treacheryDeckData) {
+  const leaveOutWorthless = rulesConfig.houseRules?.removeWorthlessCards;
+  return treacheryDeckData.cards.filter(c =>
+    !(leaveOutWorthless && c.category === 'worthless')
+    && !(c.expansion === 'ixTl' && !rulesConfig.expansions?.ixTlCards));
+}
+
 function setupTreacheryDeck(state, treacheryDeckData, rngShuffle) {
   // House rule (data/rulesConfig.json houseRules.removeWorthlessCards): the
   // five worthless cards can be left out of the deck.
-  const leaveOut = state.rulesConfig.houseRules?.removeWorthlessCards;
-  state.decks.treacheryDeck = rngShuffle(treacheryDeckData.cards
-    .filter(c => !(leaveOut && c.category === 'worthless'))
-    .map(c => c.id));
+  state.decks.treacheryDeck = rngShuffle(treacheryCardsInPlay(state.rulesConfig, treacheryDeckData).map(c => c.id));
   state.decks.treacheryDiscard = [];
   return state;
 }
@@ -225,6 +230,7 @@ function initializeGame(config) {
 }
 
 export {
+  treacheryCardsInPlay,
   STARTING_CONDITIONS,
   STARTING_TREACHERY_COUNT,
   initializeFactionResources,
