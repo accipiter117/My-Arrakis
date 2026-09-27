@@ -133,6 +133,22 @@
       {
         "id": "noTurnLimit",
         "justification": "House rules at the project owner's request, to see how games play when they can drag on: no 10-turn limit (play continues until a stronghold victory), no Spacing Guild special victory, the Fremen special victory kept as a one-time check at the end of turn 10 (it is defined at the last turn), and a draw if nobody has won by the end of turn 30 (houseRules.stalemateTurnCap) so a true stalemate cannot run forever. Set houseRules.noTurnLimit and noGuildSpecialVictory to false to restore the official game."
+      },
+      {
+        "id": "expansionD1WorthlessCards",
+        "justification": "Expansion plan decision D1 (project owner): the worthless cards return to the deck only when something in the game needs them (CHOAM seated, Leader Skills or Stronghold Cards on); otherwise the house rule removing them stands."
+      },
+      {
+        "id": "expansionD5ChoamCharity",
+        "justification": "Expansion plan decision D5 (project owner): CHOAM collects spice for every player in the game during Charity, so it can always pay other factions' charity; no shortfall rule is needed."
+      },
+      {
+        "id": "expansionD7CyborgRevival",
+        "justification": "Expansion plan decision D7 (project owner): Ixian Cyborgs have no separate revival cap; they count toward the normal limit of 3 forces a turn."
+      },
+      {
+        "id": "factionSelection",
+        "justification": "Any 2 to 6 factions may play (GF9 supports 2 to 6 players). Seating follows the board order; the traitor deck only contains leaders of factions in play. Verified by 60 simulated games across every line-up size with no crashes or invariant breaks."
       }
     ]
   },
