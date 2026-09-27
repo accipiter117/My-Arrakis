@@ -166,6 +166,10 @@
       {
         "id": "ixiansCore",
         "justification": "Ixians (expansion M3, core). Start: 10 spice; 3 Cyborgs + 3 Suboids in the Hidden Mobile Stronghold, 4 Cyborgs + 10 Suboids in reserve (Cyborgs are the starred forces); 1 free revival. Cyborgs: worth 2 in battle, cost 3 to revive, no separate revival cap (D7). Suboids: worth half and never boosted with spice. Groups with a Cyborg move 2, Suboids alone 1 (ornithopters still give 3). HMS: a stronghold territory ('hms') linked only to the territory it points at; placed after the first storm on any non-stronghold territory not in storm; counts for victory; immune to storm and worms; before each storm (turn 2+), while Ixians occupy it, it may move up to 3 territories between non-stronghold territories, never into, out of or through storm, collecting up to 2 spice per Ixian force inside from each spice territory entered; only the Ixians ship straight in, others enter from its host. Starting draft: Ixians choose from one card per faction. Bidding: the Ixians see the auction cards plus one, and put one back on the top or bottom of the deck. Alliance: the ally may swap a card just bought for the top card. Not yet: Technology, Suboids replacing lost Cyborgs, Ixian Karama powers."
+      },
+      {
+        "id": "ixTlFactionsComplete",
+        "justification": "Ixians: Technology (once per bidding round, before an auction, swap the card about to be auctioned for one from the Ixian hand); after a battle the Ixians win, surviving Suboids may be exchanged one for one for Cyborgs lost in that battle (rulebook example tested). Tleilaxu: Gholas (with fewer than five active leaders, revive another faction's dead leader at half its value, rounded up, paid to the Bank; a dead Ghola returns to its original owner's tanks); early leader revival (a faction with some but not all leaders dead may ask; the Tleilaxu name a price or refuse; paid to the Tleilaxu; counts as that faction's leader revival this turn). Ghola buy-back and all faction-specific Karama powers are not yet built."
       }
     ]
   },
