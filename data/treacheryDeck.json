@@ -231,6 +231,30 @@
       "name": "Chemistry",
       "category": "chemistry",
       "expansion": "ixTl"
+    },
+    {
+      "id": "harvester",
+      "name": "Harvester",
+      "category": "special",
+      "expansion": "ixTl"
+    },
+    {
+      "id": "thumper",
+      "name": "Thumper",
+      "category": "special",
+      "expansion": "ixTl"
+    },
+    {
+      "id": "amal",
+      "name": "Amal",
+      "category": "special",
+      "expansion": "ixTl"
+    },
+    {
+      "id": "kullWahad",
+      "name": "Kull Wahad",
+      "category": "worthless",
+      "expansion": "ixTl"
     }
   ]
 }
