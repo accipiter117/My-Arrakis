@@ -424,8 +424,12 @@ function killLeader(state, holderFactionId, leaderId, fightingValue = 0) {
   holder.leaders.available = holder.leaders.available.filter(id => id !== leaderId);
   const captured = capturedLeaders(state);
   const originalOwner = holderFactionId === 'harkonnen' ? captured[leaderId] : null;
-  (originalOwner ? state.factions[originalOwner] : holder).leaders.killed.push(leaderId);
+  // A Tleilaxu Ghola goes back to its ORIGINAL owner's tanks.
+  const gholas = holderFactionId === 'tleilaxu' ? holder.specialFactionState?.gholas : null;
+  const gholaOwner = gholas?.[leaderId] ?? null;
+  (originalOwner ? state.factions[originalOwner] : gholaOwner ? state.factions[gholaOwner] : holder).leaders.killed.push(leaderId);
   if (originalOwner) delete captured[leaderId];
+  if (gholaOwner) delete gholas[leaderId];
   return fightingValue ?? 0;
 }
 
