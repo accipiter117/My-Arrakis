@@ -144,6 +144,31 @@ export const FACTION_GUIDE = {
   }
 };
 
+FACTION_GUIDE.tleilaxu = {
+  title: 'The Bene Tleilax',
+  tagline: 'Masters of flesh. Death feeds them.',
+  start: '20 troops in reserve, nothing on Arrakis, 5 spice. 2 free revivals a turn.',
+  powers: [
+    'Face Dancers: instead of a traitor, you secretly hold three leaders. When another faction WINS with one of them, reveal it: the win stands, but that leader dies, their remaining troops there go home, and your troops from reserve take their place.',
+    'Revival economy: other factions pay you, not the Bank, for revival. You revive with no limit at half price, and take 1 spice whenever someone uses free revival or a Ghola card.',
+    'You may raise another faction\'s revival limit from 3 to 5 for the turn (they pay you for it).',
+    'Zoal: your leader with no printed value takes the value of the leader he faces.',
+    'Face Dancer cycling: once all three are revealed, draw three new ones; at each Mentat Pause you may swap one.',
+    'Not yet in this version: Gholas, leader-price negotiation, and your Karama powers.'
+  ],
+  push: [
+    'Let others fight: every battle is a chance for a Face Dancer to steal a stronghold.',
+    'Keep troops in reserve: a revealed Face Dancer places them straight into the stronghold.',
+    'Grow rich on others\' revival, and use it to ship in when the moment comes.'
+  ],
+  ally: ['The ally revives forces at half price.'],
+  counter: [
+    'Win battles with leaders the Tleilaxu are unlikely to hold, or with a Cheap Hero (never a Face Dancer).',
+    'Every revival you pay funds them: revive with free allowances where you can.',
+    'They start with nothing on the board: take the strongholds early.'
+  ]
+};
+
 // True of every alliance.
 export const ALLIANCE_BASICS = [
   'You win together with 4 strongholds between you.',
@@ -151,4 +176,4 @@ export const ALLIANCE_BASICS = [
   'You cannot move into each other’s territories (except the Polar Sink), and you never fight each other.'
 ];
 
-export const GUIDE_ORDER = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
+export const GUIDE_ORDER = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'tleilaxu'];
