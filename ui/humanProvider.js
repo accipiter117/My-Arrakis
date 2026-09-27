@@ -481,6 +481,56 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'pos')));
     },
 
+    chooseIxianTechnology(state, factionId, upcoming) {
+      const hand = state.factions.ixians.treacheryHand;
+      return ask('Ixian Technology?',
+        `<p>The next card up for auction is <strong>${esc(cardName(upcoming))}</strong>. Once this round you may take it, putting a card from your hand up for auction in its place.</p>
+         <label class="field"><span>Give up</span><select name="c">${options([['', 'No, let it be auctioned'], ...hand.map(id => [id, cardName(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value || null));
+    },
+
+    chooseSuboidExchange(state, factionId, { territoryId, max }) {
+      return ask('Suboids for Cyborgs?',
+        `<p>You lost Cyborgs in ${esc(territoryName(territoryId))}. Surviving Suboids there may take their place in the tanks, one for one, bringing Cyborgs back.</p>
+         <label class="field"><span>Exchange</span><select name="n">${options(range(0, max).map(n => [n, n]), max)}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'n')));
+    },
+
+    chooseEarlyLeaderRevival(state, factionId) {
+      const dead = state.factions[factionId].leaders.killed;
+      return ask('Buy a leader back from the Tleilaxu?',
+        `<p>The Tleilaxu can revive one of your dead leaders early, for a price they set. Ask for one?</p>
+         <label class="field"><span>Leader</span><select name="l">${options([['', 'No'], ...dead.map(id => [id, leaderLabel(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'l').value || null));
+    },
+
+    chooseLeaderRevivalPrice(state, factionId, { factionId: other, leaderId }) {
+      const v = leader[leaderId]?.fightingValue ?? 0;
+      return ask('Name your price',
+        `<p>${esc(factionName(other))} ask you to revive <strong>${esc(leaderLabel(leaderId))}</strong> early. Set a price, or refuse.</p>
+         <label class="field"><span>Price</span><select name="p">${options([['', 'Refuse'], ...range(0, v + 8).map(n => [n, `${n} spice`])], v + 2)}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => { const val = field(p, 'p').value; done(val === '' ? null : Number(val)); });
+    },
+
+    chooseAcceptLeaderRevivalPrice(state, factionId, { leaderId, price }) {
+      return ask('The Tleilaxu name a price',
+        `<p>They will revive <strong>${esc(leaderLabel(leaderId))}</strong> for <strong>${price} spice</strong>. You have ${state.factions[factionId].spice}.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Pay ${price}</button><button class="btn" data-default-action>Refuse</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+
+    chooseGholaRevival(state, factionId, opts) {
+      return ask('Revive a Ghola?',
+        `<p>You may revive another faction's dead leader to fight for you, at half its value.</p>
+         <label class="field"><span>Ghola</span><select name="g">${options([['', 'None'], ...opts.map(o => [o.leaderId, `${leaderLabel(o.leaderId)}, ${factionName(o.owner)}: ${o.cost} spice`])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'g').value || null));
+    },
+
     chooseIxianStartingCard(state, factionId, ids) {
       return ask('Choose your starting card',
         `<p>One card for each faction in the game. Keep one; the rest are shuffled and dealt to the others.</p>
