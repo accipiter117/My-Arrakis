@@ -174,10 +174,12 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             [['', 'None'], ...me.leaders.killed.map(id => [id, `${leaderLabel(id)}, costs ${leader[id]?.fightingValue ?? 0} spice`])], '')}</select></label>` : '';
       const starredSelect = starredTanks > 0
         ? `<label class="field"><span>Of which starred</span><select name="starred">${options(range(0, 1).map(n => [n, n]), 0)}</select></label>` : '';
+      const revivalTerms = revivalEngine.revivalTerms(state, factionId);
+      const revivalCap = revivalTerms.cap;
       return ask('Revival',
         `<dl class="facts"><dt>In the tanks</dt><dd>${tanks}</dd><dt>Free this turn</dt><dd>${free}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
-         <p>Up to 3 forces a turn. Beyond your free allowance, each costs 2 spice.</p>
-         <label class="field"><span>Forces</span><select name="forces">${options(range(0, Math.min(3, tanks)).map(n => [n, n]), Math.min(free, tanks))}</select></label>
+         <p>${revivalCap === Infinity ? 'No limit on revival.' : `Up to ${revivalCap} forces a turn.`} Beyond your free allowance, each costs 2 spice${revivalTerms.halfPrice ? ', at half price' : ''}${revivalTerms.payee === 'tleilaxu' ? ', paid to the Tleilaxu' : ''}.</p>
+         <label class="field"><span>Forces</span><select name="forces">${options(range(0, Math.min(revivalCap, tanks)).map(n => [n, n]), Math.min(free, tanks))}</select></label>
          ${starredSelect}${leaderSelect}${gholaSelect}
          <p class="decision__cost"></p><p class="decision__error" hidden></p>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm revival</button></div>`,
@@ -477,6 +479,30 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <label class="field"><span>Act</span><select name="pos">${options(choices, others.length)}</select></label>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'pos')));
+    },
+
+    chooseRevealFaceDancer(state, factionId, { territoryId, leaderId, winnerId }) {
+      const n = state.factions[winnerId].forces.onBoard[territoryId] ?? 0;
+      return ask('Reveal a Face Dancer?',
+        `<p>${esc(factionName(winnerId))} won in ${esc(territoryName(territoryId))} with <strong>${esc(leaderLabel(leaderId))}</strong>, one of your Face Dancers.</p>
+         <p>Reveal it: the win still stands, but that leader goes to the tanks (no spice for it), their ${n} remaining troops there return to their reserves, and up to ${n} of your troops from reserve take their place.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Reveal</button><button class="btn" data-default-action>Stay hidden</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+
+    chooseFaceDancerToReplace(state, factionId, leaderIds) {
+      return ask('Mentat Pause: replace a Face Dancer?',
+        `<p>You may shuffle one unrevealed Face Dancer back into the traitor deck and draw a replacement.</p>
+         <label class="field"><span>Replace</span><select name="fd">${options([['', 'Keep them all'], ...leaderIds.map(id => [id, leaderLabel(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'fd').value || null));
+    },
+
+    chooseIncreaseRevivalLimit(state, factionId, { factionId: other, tanks }) {
+      return ask('Raise their revival limit?',
+        `<p>${esc(factionName(other))} have ${tanks} troops in the tanks. You may raise their revival limit from 3 to 5 this turn. They pay you for every paid revival.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Raise it to 5</button><button class="btn" data-default-action>Keep it at 3</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
     },
 
     chooseThumper(state, factionId) {
