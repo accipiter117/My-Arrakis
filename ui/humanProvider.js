@@ -17,11 +17,12 @@ import * as revivalEngine from '../js/revivalEngine.js';
 import * as movementEngine from '../js/movementEngine.js';
 import * as battleEngine from '../js/battleEngine.js';
 
-const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
-const DEFENSES = ['poisonDefense', 'projectileDefense'];
+const { WEAPONS, DEFENSES } = battleEngine;
 const CATEGORY_NAMES = {
   poisonWeapon: 'a poison weapon', projectileWeapon: 'a projectile weapon', specialWeapon: 'a Lasgun',
   poisonDefense: 'a poison defence (Snooper)', projectileDefense: 'a projectile defence (Shield)',
+  poisonBlade: 'a Poison Blade (projectile and poison)', weirdingWay: 'Weirding Way (projectile)', poisonTooth: 'a Poison Tooth',
+  artilleryStrike: 'an Artillery Strike', shieldSnooper: 'a Shield Snooper (both defences)', chemistry: 'Chemistry (poison defence)',
   worthless: 'a worthless card', specialLeaderSubstitute: 'a Cheap Hero'
 };
 
@@ -478,6 +479,22 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'pos')));
     },
 
+    choosePoisonToothUse(state, factionId, territoryId, opponentId, mine, theirs) {
+      return ask('Use the Poison Tooth?',
+        `<p>Plans are revealed in ${esc(territoryName(territoryId))}. Your Poison Tooth kills <strong>both</strong> leaders (yours and theirs), and a Snooper can't stop it.</p>
+         <dl class="facts"><dt>Your leader</dt><dd>${esc(mine.leaderId ? leaderLabel(mine.leaderId) : 'none')}</dd>
+         <dt>Their leader</dt><dd>${esc(theirs.leaderId ? leaderLabel(theirs.leaderId) : 'none')}</dd></dl>
+         <p>Withhold it and it has no effect, and if you win you keep the card.</p>
+         <div class="decision__actions">
+           <button class="btn" data-action="use">Use it</button>
+           <button class="btn" data-default-action>Withhold it</button>
+         </div>`,
+        (p, done) => {
+          p.querySelector('[data-action="use"]').onclick = () => done(true);
+          p.querySelector('[data-default-action]').onclick = () => done(false);
+        });
+    },
+
     chooseKaramaCancel(state, factionId, purpose, ctx) {
       const place = territoryName(ctx.territoryId);
       const what = {
@@ -662,7 +679,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           const check = () => {
             const plan = build();
             const result = battleEngine.canDeclareBattlePlan(state, territoryId, factionId, plan, cardLookup);
-            const warn = cardLookup[plan.weaponCardId]?.category === 'specialWeapon' && cardLookup[plan.defenseCardId]?.category === 'projectileDefense'
+            const warn = cardLookup[plan.weaponCardId]?.category === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[plan.defenseCardId])
               ? ' Warning: a lasgun with your own shield explodes, destroying everything here.' : '';
             const strength = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(factionId, plan), starredUnitValue: battleEngine.starredUnitValueFor(factionId, opponentId), leaderWasKilled: false, kwisatzHaderachBonus: plan.useKwisatzHaderach ? 2 : 0 });
             p.querySelector('[data-for="strength"]').textContent = `Your total if your leader survives: ${strength}.${warn}`;
