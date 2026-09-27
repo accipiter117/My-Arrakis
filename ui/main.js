@@ -329,7 +329,11 @@ function checkVictory() {
   if (!gameState?.victory?.achieved) return;
   const winners = gameState.victory.winningFactions.map(f => FACTION_NAMES[f] ?? f).join(' & ');
   const youWon = humanFactionId && gameState.victory.winningFactions.includes(humanFactionId);
-  addLog('victory', gameState.meta.turn, `Game over: ${winners} win (${gameState.victory.method}).${humanFactionId ? (youWon ? ' You won.' : ' You lost.') : ''}`);
+  if (gameState.victory.method === 'stalemate') {
+    addLog('victory', gameState.meta.turn, `Game over: a draw. Nobody won by the end of turn ${gameState.meta.turn}.`);
+  } else {
+    addLog('victory', gameState.meta.turn, `Game over: ${winners} win (${gameState.victory.method}).${humanFactionId ? (youWon ? ' You won.' : ' You lost.') : ''}`);
+  }
   saveGame();
   openSheet('log');
 }
