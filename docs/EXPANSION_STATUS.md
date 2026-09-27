@@ -17,4 +17,7 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
 - M1 Ixians & Tleilaxu cards: DONE. 10 battle cards; Harvester, Thumper, Amal; Kull Wahad (worthless, only with D1);
   Sandtrout; Cheap Hero traitor. AI and player decisions, event cards, card help, tests
   (tests/leaderResolution.sim.js, tests/spiceCards.sim.js). Switch: expansions.ixTlCards.
-- M2 Tleilaxu, M3 Ixians, M4 Tech Tokens, M5 CHOAM, M6 Richese, M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
+- M2 Tleilaxu: CORE DONE. Faction, Face Dancers (reveal, cycling, Mentat Pause swap), revival economy, limit increase,
+  ally half price, Zoal, AI and player decisions, guide entry, tests (tests/tleilaxu.sim.js). REMAINING: Gholas,
+  leader-price negotiation, Face Dancer replacement from the board, Tleilaxu Karama powers, art and audio.
+- M3 Ixians, M4 Tech Tokens, M5 CHOAM, M6 Richese, M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
