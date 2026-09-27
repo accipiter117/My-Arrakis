@@ -46,7 +46,7 @@ assert(r.aggressorLeaderKilled && !r.defenderLeaderKilled && !r.leadersCount && 
 console.log('\nTest 6: in a real battle, Artillery ignores surviving leaders and is always discarded');
 const g = game();
 g.factions.harkonnen.forces.onBoard.arrakeen = 10;
-for (const f of ALL) g.factions[f].treacheryHand = [];
+for (const f of ALL) { g.factions[f].treacheryHand = []; delete g.factions[f].pendingTraitorHand; g.factions[f].traitorHand = []; } // test Artillery alone, no traitors
 g.factions.atreides.treacheryHand = ['artilleryStrike'];
 g.factions.harkonnen.treacheryHand = ['shield1'];
 const battlePlan = (leaderId, v, forces, w, d) => ({ forcesCommitted: forces, starredForcesCommitted: 0, spiceCommitted: 0, supportedStarredCount: 0, supportedOrdinaryCount: 0,
