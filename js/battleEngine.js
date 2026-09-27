@@ -268,7 +268,16 @@ function checkTraitor(revealingFactionState, opponentLeaderId) {
 // reveal a traitor. Eligibility and the choice are made by the turn runner
 // (it also handles Harkonnen traitors used for an ally). Without it, any
 // eligible traitor is revealed automatically.
-function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId, aggressorPlanInput, defenderPlanInput, cardLookup, traitorCalls) {
+// Zoal (Tleilaxu) has no printed value: he takes the value of the opposing
+// leader disc (0 against a Cheap Hero or no leader).
+function withZoal(plan, other) {
+  if (plan.leaderId !== 'zoal') return plan;
+  return { ...plan, leaderFightingValue: other.leaderId && other.leaderId !== 'zoal' ? (other.leaderFightingValue ?? 0) : 0 };
+}
+
+function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId, aggressorPlanRaw, defenderPlanRaw, cardLookup, traitorCalls) {
+  const aggressorPlanInput = withZoal(aggressorPlanRaw, defenderPlanRaw);
+  const defenderPlanInput = withZoal(defenderPlanRaw, aggressorPlanRaw);
   // Traitor check first: either side may hold a traitor card matching the
   // OTHER side's leader. Cheap heroes can't be traitors (no leaderId).
   const aggressorHoldsTraitor = traitorCalls ? Boolean(traitorCalls[aggressorFactionId]) : isTraitorAgainst(state, aggressorFactionId, defenderPlanInput.leaderId);
@@ -599,6 +608,8 @@ function resolveExplosion(state, territoryId, factionAId, factionBId) {
 }
 
 export {
+  withZoal,
+  killLeader,
   slotKinds,
   isShieldCard,
   cardIsType,
