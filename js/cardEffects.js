@@ -65,6 +65,7 @@ export function playGhola(state, factionId, choice) {
   if (choice.leaderId) {
     faction.leaders.killed = faction.leaders.killed.filter(id => id !== choice.leaderId);
     faction.leaders.available.push(choice.leaderId);
+    if (!faction.leaders.killed.length) { faction.leaderRevivalOpen = false; faction.leaders.revivedOnce = []; }
   } else {
     // Ordinary forces first; any beyond the ordinary count come from starred.
     const ordinaryInTanks = (faction.revivalTanks ?? 0) - (faction.starredRevivalTanks ?? 0);
