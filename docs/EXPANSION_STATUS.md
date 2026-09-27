@@ -14,5 +14,9 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
 
 ## Milestones
 - M0 Foundations: faction selection DONE; engine verified with any 2 to 6 base factions. Remaining M0 items (registry for new factions, force profiles, event hooks, spice helpers, card data model) are built with the first milestone that needs them.
-- M1 Ixians & Tleilaxu cards: next.
+- M1 Ixians & Tleilaxu cards: PART 1 DONE. The 10 battle cards (Poison Blade, Hunter-Seeker, Basilia Weapon,
+  Weirding Way, Poison Tooth, Artillery Strike, Shield Snooper, Shield, Snooper, Chemistry), with the Poison Tooth
+  withhold decision, Artillery scoring and forced discards, type-aware Voice, AI and UI support, a menu switch
+  (expansions.ixTlCards), and tests (tests/leaderResolution.sim.js). PART 2 NEXT: Harvester, Thumper, Amal,
+  Kull Wahad (worthless, only with D1), Sandtrout, Cheap Hero traitor.
 - M2 Tleilaxu, M3 Ixians, M4 Tech Tokens, M5 CHOAM, M6 Richese, M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
