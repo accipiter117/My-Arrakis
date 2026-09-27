@@ -23,6 +23,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
   function showCard(kind, html, ms = 1600) {
     if (!speed()) return Promise.resolve();
     return new Promise(resolve => {
+      layer.classList.remove('event-layer--top');
       layer.innerHTML = `<div class="event-card event-card--${kind}" role="status">${html}<div class="event-card__hint">tap to continue</div></div>`;
       layer.hidden = false;
       let finished = false;
@@ -111,6 +112,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       if (!speed()) return;
       // Only Atreides may see the card before bidding (Prescience).
       const seen = getViewer() === 'atreides' ? esc(names.card(e.cardId)) : 'Face down';
+      layer.classList.add('event-layer--top'); // stays visible above your bid panel
       layer.innerHTML = `<div class="event-card event-card--auction" role="status">
         <div class="event-card__eyebrow">Auction · card ${e.index + 1} of ${e.total}</div>
         <div class="event-card__title">${seen}</div>
@@ -331,6 +333,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       }
 
       // Build the stage.
+      layer.classList.remove('event-layer--top');
       layer.innerHTML = `<div class="battle-reveal" role="status">
         <div class="br-eyebrow">Battle</div>
         <div class="br-title">${esc(names.territory(e.territoryId))}</div>
