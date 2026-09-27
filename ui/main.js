@@ -27,6 +27,34 @@ import { getRandomState, setRandomState } from '../js/random.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
 
+// --- Faction line-up: which factions play (any 2 to 6) --------------------------
+// Expansion factions appear as "coming soon" until their milestone ships
+// (docs/EXPANSION_STATUS.md).
+const EXPANSION_FACTIONS = [
+  ['ixians', 'Ixians'], ['tleilaxu', 'Tleilaxu'], ['choam', 'CHOAM'], ['richese', 'Richese']
+];
+const LINEUP_KEY = 'my-arrakis-lineup';
+let lineup = (() => {
+  try { const saved = JSON.parse(localStorage.getItem(LINEUP_KEY)); if (Array.isArray(saved) && saved.length >= 2) return saved.filter(f => ALL_FACTIONS.includes(f)); } catch {}
+  return [...ALL_FACTIONS];
+})();
+function renderLineup() {
+  const human = $('select-faction').value;
+  $('lineup-grid').innerHTML = ALL_FACTIONS.map(f => `<button type="button" class="lineup__faction${lineup.includes(f) ? ' is-on' : ''}" data-lineup="${f}" aria-pressed="${lineup.includes(f)}">
+      <img src="assets/counters/${f}.png" alt=""><span>${FACTION_NAMES[f]}${f === human ? ' (you)' : ''}</span></button>`).join('')
+    + EXPANSION_FACTIONS.map(([id, name]) => `<button type="button" class="lineup__faction is-soon" disabled><span class="lineup__soon-dot"></span><span>${name}<small>coming soon</small></span></button>`).join('');
+  const n = lineup.length;
+  $('lineup-note').textContent = n < 2 ? 'Choose at least 2 factions.' : `${n} faction${n === 1 ? '' : 's'} will play.`;
+  // Play as: only factions in the line-up (plus spectating).
+  [...$('select-faction').options].forEach(o => { if (o.value) o.hidden = !lineup.includes(o.value); });
+}
+function lineupForNewGame() {
+  const human = $('select-faction').value;
+  if (human && !lineup.includes(human)) lineup = [...lineup, human];
+  const seated = ALL_FACTIONS.filter(f => lineup.includes(f)); // board seating order
+  return seated.length >= 2 ? seated : [...ALL_FACTIONS];
+}
+
 const FACTION_DISPLAY = {
   atreides: { name: 'Atreides', colorVar: '--faction-atreides' },
   harkonnen: { name: 'Harkonnen', colorVar: '--faction-harkonnen' },
@@ -106,10 +134,11 @@ async function startNewGame() {
     territoriesData = data.territories;
     ensureBoard(data);
     humanFactionId = $('select-faction').value || null;
+    const seated = lineupForNewGame();
 
     gameState = initializeGame({
-      activeFactionIds: ALL_FACTIONS,
-      playerCircleOrder: ALL_FACTIONS,
+      activeFactionIds: seated,
+      playerCircleOrder: seated,
       rulesConfig: data.rulesConfig,
       spiceDeckData: data.spiceDeck,
       territoriesData: data.territories,
@@ -877,6 +906,32 @@ $('hand-body').addEventListener('click', e => {
 });
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
+$('lineup-grid').addEventListener('click', e => {
+  const b = e.target.closest('[data-lineup]');
+  if (!b) return;
+  const f = b.dataset.lineup;
+  if (lineup.includes(f)) {
+    if (f === $('select-faction').value) return; // your own faction always plays
+    lineup = lineup.filter(x => x !== f);
+  } else if (lineup.length < 6) lineup = [...lineup, f];
+  localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup));
+  renderLineup();
+});
+$('lineup-all').addEventListener('click', () => { lineup = [...ALL_FACTIONS]; localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup)); renderLineup(); });
+$('lineup-random').addEventListener('click', () => {
+  const human = $('select-faction').value;
+  const size = 3 + Math.floor(Math.random() * 4); // 3 to 6 factions
+  const pool = ALL_FACTIONS.filter(f => f !== human).sort(() => Math.random() - 0.5);
+  lineup = [...(human ? [human] : []), ...pool].slice(0, size);
+  localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup));
+  renderLineup();
+});
+$('select-faction').addEventListener('change', () => {
+  const human = $('select-faction').value;
+  if (human && !lineup.includes(human)) { lineup = [...lineup, human].slice(-6); localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup)); }
+  renderLineup();
+});
+renderLineup();
 // Camera: follow the action (default) or stay where you put it.
 const CAMERA_KEY = 'my-arrakis-camera';
 const cameraOn = () => localStorage.getItem(CAMERA_KEY) !== 'off';
