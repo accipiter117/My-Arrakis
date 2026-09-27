@@ -52,7 +52,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     const worthless = hand.filter(id => cat(id) === 'worthless');
     let weaponCardId = weapons.length && rng() < 0.75 ? pick(weapons) : (worthless.length && rng() < 0.4 ? worthless[0] : null);
     let defenseCardId = defenses.length && rng() < 0.7 ? pick(defenses) : null;
-    if (cat(weaponCardId) === 'specialWeapon' && cat(defenseCardId) === 'projectileDefense') defenseCardId = null;
+    if (cat(weaponCardId) === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[defenseCardId])) defenseCardId = null;
     const dial = Math.round(forces * (0.3 + rng() * 0.7));
     const spice = Math.round(dial * rng());
     const plan = {
@@ -123,7 +123,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     const plans = [];
     for (const cmd of commanders) for (const weaponCardId of uniq(weaponOpts)) for (const defenseCardId of uniq(defenseOpts)) {
       if (weaponCardId && weaponCardId === defenseCardId) continue;
-      if (cat(weaponCardId) === 'specialWeapon' && cat(defenseCardId) === 'projectileDefense') continue; // own explosion
+      if (cat(weaponCardId) === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[defenseCardId])) continue; // own explosion
       // Fremen fight at full strength without spice (advanced): never back with spice.
       for (const dial of dials) for (const backed of uniq([0, me === 'fremen' ? 0 : Math.min(dial, Math.max(0, faction.spice - 2))])) {
         const starred = Math.min(starredPresent, dial);
@@ -154,13 +154,13 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     if (wd.explosion) return -myForces - myLeaderValue - mine.spiceCommitted * 0.5;
     const myKilled = isAggressor ? wd.aggressorLeaderKilled : wd.defenderLeaderKilled;
     const theirKilled = isAggressor ? wd.defenderLeaderKilled : wd.aggressorLeaderKilled;
-    const myS = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(me, mine), leaderWasKilled: myKilled, kwisatzHaderachBonus: mine.useKwisatzHaderach ? 2 : 0 });
-    const theirS = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(opp, theirs), leaderWasKilled: theirKilled, starredUnitValue: battleEngine.starredUnitValueFor(opp, me) });
+    const myS = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(me, mine), leaderWasKilled: myKilled || !wd.leadersCount, kwisatzHaderachBonus: mine.useKwisatzHaderach ? 2 : 0 });
+    const theirS = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(opp, theirs), leaderWasKilled: theirKilled || !wd.leadersCount, starredUnitValue: battleEngine.starredUnitValueFor(opp, me) });
     const iWin = isAggressor ? myS >= theirS : myS > theirS;
     // Played cards the loser discards; a small nudge to shed worthless cards.
     const shed = cat(mine.weaponCardId) === 'worthless' ? 0.3 : 0;
     const spiceCost = mine.spiceCommitted * 0.5;
-    const leaderPay = (theirKilled ? theirs.leaderFightingValue ?? 0 : 0) + (myKilled ? mine.leaderFightingValue ?? 0 : 0);
+    const leaderPay = wd.noSpiceForKills ? 0 : (theirKilled ? theirs.leaderFightingValue ?? 0 : 0) + (myKilled ? mine.leaderFightingValue ?? 0 : 0);
     if (iWin) return worth - mine.forcesCommitted - spiceCost + leaderPay * 0.6 - (myKilled ? myLeaderValue : 0) + shed;
     return -myForces - spiceCost - (myKilled ? myLeaderValue : 0) - 1 + shed;
   }
