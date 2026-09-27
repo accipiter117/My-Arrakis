@@ -104,7 +104,8 @@ for (let i = 0; i < 10 && !state.victory.achieved; i++) {
 }
 assert(state.meta.turn >= 10 || state.victory.achieved, `game should reach turn 10 or end in victory, got turn ${state.meta.turn}`);
 const spiceCardsTotal = state.decks.spiceDeck.length + state.decks.spiceDiscardA.length + state.decks.spiceDiscardB.length;
-assert(spiceCardsTotal === 21, `all 21 spice cards accounted for after reshuffling, got ${spiceCardsTotal}`);
+const spiceInPlay = 21 + (rulesConfig.expansions?.ixTlCards ? 1 : 0); // + Sandtrout
+assert(spiceCardsTotal === spiceInPlay, `all ${spiceInPlay} spice cards accounted for after reshuffling, got ${spiceCardsTotal}`);
 
 console.log('\nTest 10: traitor selection resolves every pending hand and conserves the traitor deck');
 state = freshGame();
@@ -115,7 +116,8 @@ for (const f of allSix) {
 }
 assert(state.factions.atreides.traitorHand.length === 1, 'atreides holds exactly one traitor');
 const heldTraitors = allSix.reduce((n, f) => n + state.factions[f].traitorHand.length, 0);
-assert(heldTraitors + state.decks.traitorDeck.length === 30, `30 traitor cards accounted for, got ${heldTraitors + state.decks.traitorDeck.length}`);
+const traitorsInPlay = 30 + (rulesConfig.expansions?.ixTlCards ? 1 : 0); // + the Cheap Hero traitor
+assert(heldTraitors + state.decks.traitorDeck.length === traitorsInPlay, `${traitorsInPlay} traitor cards accounted for, got ${heldTraitors + state.decks.traitorDeck.length}`);
 
 console.log('\nTest 11: Atreides Prescience, opponent plans first and Atreides sees exactly the element it asked for');
 state = freshGame();
