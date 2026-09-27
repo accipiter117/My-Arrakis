@@ -22,14 +22,38 @@ function starredUnitValueFor(factionId, opponentFactionId) {
 
 // --- Battle Plan validation ------------------------------------------
 
-const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
-const DEFENSES = ['poisonDefense', 'projectileDefense'];
+// Card categories that can fill each slot (base game plus the Ixians &
+// Tleilaxu cards). Chemistry (a defence) may fill the weapon slot alongside
+// another defence; Weirding Way (a weapon) may fill the defence slot
+// alongside another weapon.
+const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon', 'poisonBlade', 'weirdingWay', 'poisonTooth', 'artilleryStrike'];
+const DEFENSES = ['poisonDefense', 'projectileDefense', 'shieldSnooper', 'chemistry'];
+
+// What a plan's cards effectively ARE in their slots, as sets of tags:
+//   weapon:  proj, poison, lasgun, tooth, artillery
+//   defence: proj, poison, shield (a real Shield, for Lasgun explosions and Artillery)
+function slotKinds(plan, cardLookup) {
+  const w = plan.weaponCardId ? cardLookup[plan.weaponCardId] : null;
+  const d = plan.defenseCardId ? cardLookup[plan.defenseCardId] : null;
+  const weapon = new Set({
+    projectileWeapon: ['proj'], poisonWeapon: ['poison'], specialWeapon: ['lasgun'], poisonBlade: ['proj', 'poison'],
+    weirdingWay: ['proj'], poisonTooth: ['tooth'], artilleryStrike: ['artillery'],
+    chemistry: d ? ['poison'] : []                       // Chemistry as a weapon, alongside a defence
+  }[w?.category] ?? []);
+  const defense = new Set({
+    projectileDefense: ['proj', 'shield'], poisonDefense: ['poison'], shieldSnooper: ['proj', 'poison', 'shield'],
+    chemistry: ['poison'],
+    weirdingWay: w ? ['proj'] : []                       // Weirding Way as a defence, alongside a weapon
+  }[d?.category] ?? []);
+  return { weapon, defense };
+}
+const isShieldCard = card => ['projectileDefense', 'shieldSnooper'].includes(card?.category);
 
 function checkPlanCards(state, factionId, plan, cardLookup) {
   const hand = state.factions[factionId].treacheryHand ?? [];
   const slots = [
-    ['weaponCardId', [...WEAPONS, 'worthless'], 'weapon'],
-    ['defenseCardId', [...DEFENSES, 'worthless'], 'defence'],
+    ['weaponCardId', [...WEAPONS, 'worthless', 'chemistry'], 'weapon'],
+    ['defenseCardId', [...DEFENSES, 'worthless', 'weirdingWay'], 'defence'],
     ['cheapHeroCardId', ['specialLeaderSubstitute'], 'Cheap Hero']
   ];
   const used = [];
@@ -42,6 +66,8 @@ function checkPlanCards(state, factionId, plan, cardLookup) {
     used.push(id);
   }
   if (plan.cheapHeroCardId && plan.leaderId) return { ok: false, reason: 'A Cheap Hero is played instead of a leader, not as well as one.' };
+  if (cardLookup[plan.weaponCardId]?.category === 'chemistry' && !plan.defenseCardId) return { ok: false, reason: 'Chemistry can only be played as a weapon alongside another defence.' };
+  if (cardLookup[plan.defenseCardId]?.category === 'weirdingWay' && !plan.weaponCardId) return { ok: false, reason: 'Weirding Way can only be played as a defence alongside another weapon.' };
   return { ok: true };
 }
 
@@ -196,30 +222,38 @@ function recordForceLossForKwisatzHaderach(state, factionId, forcesLost) {
 // --- Weapon/defense resolution -------------------------------------------
 
 function resolveWeaponDefense(aggressorPlan, defenderPlan, cardLookup) {
-  const aggressorWeapon = aggressorPlan.weaponCardId ? cardLookup[aggressorPlan.weaponCardId] : null;
-  const defenderWeapon = defenderPlan.weaponCardId ? cardLookup[defenderPlan.weaponCardId] : null;
-  const aggressorDefense = aggressorPlan.defenseCardId ? cardLookup[aggressorPlan.defenseCardId] : null;
-  const defenderDefense = defenderPlan.defenseCardId ? cardLookup[defenderPlan.defenseCardId] : null;
+  const A = slotKinds(aggressorPlan, cardLookup), D = slotKinds(defenderPlan, cardLookup);
 
-  // Lasgun/shield explosion: triggered if EITHER side plays a lasgun and
-  // EITHER side plays a shield (projectileDefense), regardless of pairing.
-  const anyLasgun = [aggressorWeapon, defenderWeapon].some(c => c?.id === 'lasgun');
-  const anyShield = [aggressorDefense, defenderDefense].some(c => c?.category === 'projectileDefense');
-  if (anyLasgun && anyShield) {
-    return { explosion: true, aggressorLeaderKilled: false, defenderLeaderKilled: false };
+  // Lasgun/shield explosion: EITHER side plays a Lasgun and EITHER side a Shield.
+  if ((A.weapon.has('lasgun') || D.weapon.has('lasgun')) && (A.defense.has('shield') || D.defense.has('shield'))) {
+    return { explosion: true, aggressorLeaderKilled: false, defenderLeaderKilled: false, leadersCount: true, noSpiceForKills: false };
   }
+  let aggressorLeaderKilled = killsLeader(D.weapon, A.defense);
+  let defenderLeaderKilled = killsLeader(A.weapon, D.defense);
+  let leadersCount = true, noSpiceForKills = false;
 
-  const aggressorLeaderKilled = killsLeader(defenderWeapon, aggressorDefense);
-  const defenderLeaderKilled = killsLeader(aggressorWeapon, defenderDefense);
-
-  return { explosion: false, aggressorLeaderKilled, defenderLeaderKilled };
+  // Poison Tooth (unless its owner withheld it after the reveal): kills BOTH
+  // leaders; a Snooper does not stop it.
+  if ((A.weapon.has('tooth') && !aggressorPlan.poisonToothWithheld) || (D.weapon.has('tooth') && !defenderPlan.poisonToothWithheld)) {
+    aggressorLeaderKilled = true; defenderLeaderKilled = true;
+  }
+  // Artillery Strike: kills both leaders unless shielded; surviving leaders
+  // do not count, and no spice is paid for the kills.
+  if (A.weapon.has('artillery') || D.weapon.has('artillery')) {
+    if (!A.defense.has('shield')) aggressorLeaderKilled = true;
+    if (!D.defense.has('shield')) defenderLeaderKilled = true;
+    leadersCount = false; noSpiceForKills = true;
+  }
+  return { explosion: false, aggressorLeaderKilled, defenderLeaderKilled, leadersCount, noSpiceForKills };
 }
 
-function killsLeader(incomingWeapon, ownDefense) {
-  if (!incomingWeapon || !WEAPONS.includes(incomingWeapon.category)) return false; // worthless: a bluff
-  if (incomingWeapon.category === 'specialWeapon') return true; // lasgun without a shield-triggered explosion still kills outright
-  const matchingDefenseCategory = incomingWeapon.category === 'poisonWeapon' ? 'poisonDefense' : 'projectileDefense';
-  return ownDefense?.category !== matchingDefenseCategory;
+// Does an incoming weapon (its tags) kill a leader protected by these defence tags?
+function killsLeader(weapon, defense) {
+  if (weapon.has('lasgun')) return true;                                             // no Shield, so no explosion: it kills
+  if (weapon.has('proj') && weapon.has('poison')) return !(defense.has('proj') && defense.has('poison')); // Poison Blade
+  if (weapon.has('proj')) return !defense.has('proj');
+  if (weapon.has('poison')) return !defense.has('poison');
+  return false;                                                                       // no weapon, or a worthless bluff
 }
 
 // --- Traitor check --------------------------------------------------------
@@ -269,13 +303,14 @@ function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId
     kwisatzHaderachBonus: kwisatzHaderachBonusFor(state, defenderFactionId, territoryId, defenderPlanInput)
   };
 
+  // (Artillery Strike: surviving leaders do not count either.)
   const aggressorStrength = calculateStrength({
     ...aggressorPlan,
-    leaderWasKilled: weaponResult.aggressorLeaderKilled
+    leaderWasKilled: weaponResult.aggressorLeaderKilled || !weaponResult.leadersCount
   });
   const defenderStrength = calculateStrength({
     ...defenderPlan,
-    leaderWasKilled: weaponResult.defenderLeaderKilled
+    leaderWasKilled: weaponResult.defenderLeaderKilled || !weaponResult.leadersCount
   });
 
   // Rulebook, verbatim: "In the case of a tie, the aggressor has won."
@@ -290,10 +325,13 @@ function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId
   if (aggressorPlan.useKwisatzHaderach) markKwisatzHaderachUsed(state, territoryId);
   if (defenderPlan.useKwisatzHaderach) markKwisatzHaderachUsed(state, territoryId);
 
-  return applyBattleOutcome(state, territoryId, {
-    winnerFactionId, loserFactionId, winnerPlan, loserPlan,
-    winnerLeaderKilled, loserLeaderKilled
-  });
+  return {
+    ...applyBattleOutcome(state, territoryId, {
+      winnerFactionId, loserFactionId, winnerPlan, loserPlan,
+      winnerLeaderKilled, loserLeaderKilled, noSpiceForKills: weaponResult.noSpiceForKills
+    }),
+    leadersCount: weaponResult.leadersCount
+  };
 }
 
 function removeForcesFromTerritory(state, factionId, territoryId, totalToRemove, starredToRemove) {
@@ -353,6 +391,7 @@ function applyBattleOutcome(state, territoryId, outcome) {
   if (loserLeaderKilled && loserPlan.leaderId) {
     spiceOwedToWinner += killLeader(state, loserFactionId, loserPlan.leaderId, loserPlan.leaderFightingValue);
   }
+  if (outcome.noSpiceForKills) spiceOwedToWinner = 0; // Artillery Strike: no spice for the dead
   winner.spice += spiceOwedToWinner;
   state.spiceBank.totalInCirculation -= spiceOwedToWinner;
 
@@ -444,20 +483,33 @@ function returnAllCapturedIfNeeded(state) {
 
 // --- Bene Gesserit Voice -----------------------------------------------------
 
-const VOICE_CATEGORIES = [...WEAPONS, ...DEFENSES, 'worthless', 'specialLeaderSubstitute'];
+const VOICE_CATEGORIES = ['poisonWeapon', 'projectileWeapon', 'specialWeapon', 'poisonDefense', 'projectileDefense', 'worthless', 'specialLeaderSubstitute'];
+// Does this card count as the named type (for the Voice)? New cards count as
+// every type they are: a Poison Blade is a poison AND a projectile weapon.
+function cardIsType(card, type) {
+  if (!card) return false;
+  if (card.category === type) return true;
+  const c = card.category;
+  return (type === 'projectileWeapon' && ['poisonBlade', 'weirdingWay'].includes(c))
+    || (type === 'poisonWeapon' && c === 'poisonBlade')
+    || (type === 'specialWeapon' && ['poisonTooth', 'artilleryStrike'].includes(c))
+    || (type === 'projectileDefense' && c === 'shieldSnooper')
+    || (type === 'poisonDefense' && ['shieldSnooper', 'chemistry'].includes(c));
+}
 
 // Makes a plan obey a Voice command where the player is able to; if they
 // can't comply (no such card), they may play as they wish.
 function enforceVoice(state, factionId, plan, voice, cardLookup) {
   if (!voice) return plan;
   const cat = id => cardLookup[id]?.category;
+  const is = (id, type) => cardIsType(cardLookup[id], type);
   const p = { ...plan };
   const slotsFor = category => category === 'specialLeaderSubstitute' ? ['cheapHeroCardId']
     : WEAPONS.includes(category) ? ['weaponCardId'] : DEFENSES.includes(category) ? ['defenseCardId']
     : ['weaponCardId', 'defenseCardId'];
   if (voice.command === 'notPlay') {
     for (const key of ['weaponCardId', 'defenseCardId', 'cheapHeroCardId']) {
-      if (p[key] && cat(p[key]) === voice.category) p[key] = null;
+      if (p[key] && is(p[key], voice.category)) p[key] = null;
     }
     if (voice.category === 'specialLeaderSubstitute' && !p.leaderId) {
       const leader = state.factions[factionId].leaders.available.find(id => isLeaderAvailable(state, factionId, id, plan.territoryId));
@@ -465,10 +517,11 @@ function enforceVoice(state, factionId, plan, voice, cardLookup) {
     }
     return p;
   }
-  const already = ['weaponCardId', 'defenseCardId', 'cheapHeroCardId'].some(k => p[k] && cat(p[k]) === voice.category);
+  const already = ['weaponCardId', 'defenseCardId', 'cheapHeroCardId'].some(k => p[k] && is(p[k], voice.category));
   if (already) return p;
   const inPlan = new Set([p.weaponCardId, p.defenseCardId, p.cheapHeroCardId]);
-  const card = state.factions[factionId].treacheryHand.find(id => cat(id) === voice.category && !inPlan.has(id));
+  const card = state.factions[factionId].treacheryHand.find(id => is(id, voice.category) && !inPlan.has(id)
+    && !['chemistry', 'weirdingWay'].includes(cat(id)));
   if (!card) return p; // cannot comply
   const slots = slotsFor(voice.category);
   const slot = slots.find(k => !p[k]) ?? slots[0];
@@ -546,6 +599,9 @@ function resolveExplosion(state, territoryId, factionAId, factionBId) {
 }
 
 export {
+  slotKinds,
+  isShieldCard,
+  cardIsType,
   fremenFullStrength,
   WEAPONS,
   DEFENSES,
