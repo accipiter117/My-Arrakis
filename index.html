@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-27s">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-27t">
 </head>
 <body>
   <div class="app">
@@ -78,6 +78,12 @@
           <option value="">Spectate (all AI)</option>
         </select>
       </label>
+      <div class="lineup">
+        <div class="lineup__head"><span>Factions in this game</span>
+          <span class="lineup__buttons"><button type="button" class="btn lineup__btn" id="lineup-all">All six</button><button type="button" class="btn lineup__btn" id="lineup-random">Random</button></span></div>
+        <div class="lineup__grid" id="lineup-grid"></div>
+        <p class="sheet__note" id="lineup-note"></p>
+      </div>
       <label class="row-field"><span>Difficulty</span>
         <select id="select-ai">
           <option value="easy">Easy</option>
