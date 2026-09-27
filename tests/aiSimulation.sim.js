@@ -3,7 +3,7 @@
 // Run with: node tests/aiSimulation.sim.js [games]
 
 import fs from 'fs';
-import { initializeGame } from '../js/setupEngine.js';
+import { treacheryCardsInPlay, initializeGame } from '../js/setupEngine.js';
 import * as turnEngine from '../js/turnEngine.js';
 import * as phaseEngine from '../js/phaseEngine.js';
 import { createBasicAI } from '../js/ai/basicAI.js';
@@ -35,7 +35,7 @@ const shuffleWith = rng => arr => {
   return a;
 };
 
-const TOTAL_TREACHERY = treacheryDeckData.cards.filter(c => !(rulesConfig.houseRules?.removeWorthlessCards && c.category === 'worthless')).length; // cards actually in play (house rules may leave some out)
+const TOTAL_TREACHERY = treacheryCardsInPlay(rulesConfig, treacheryDeckData).length; // cards actually in play (house rules and expansions)
 
 // Forces are never created or destroyed, only moved between reserve,
 // board and tanks. Totals are recorded at setup and checked every phase.
