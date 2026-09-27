@@ -172,6 +172,36 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return false;
     },
 
+    // Ixians: keep the best starting card (Karama, Lasgun, Shield Snooper, a defence, a weapon).
+    chooseIxianStartingCard(state, factionId, ids) {
+      const rank = id => { const c = cardLookup[id]?.category;
+        return id.startsWith('karama') ? 0 : c === 'specialWeapon' ? 1 : c === 'shieldSnooper' ? 2 : DEFENSE_CATEGORIES.includes(c) ? 3 : WEAPON_CATEGORIES.includes(c) ? 4 : 9; };
+      return ids.slice().sort((a, b) => rank(a) - rank(b))[0];
+    },
+    // Place the HMS next to the most spice, else in the Polar Sink (it reaches everywhere).
+    chooseHmsPlacement(state, factionId, sites) {
+      const spiceNear = t => [t, ...(state.board.territories[t]?.adjacentDraft ?? [])]
+        .reduce((n, x) => n + state.board.spiceBlowMarkers.filter(m => m.territoryId === x).reduce((a, m) => a + m.amount, 0), 0);
+      const best = sites.slice().sort((a, b) => spiceNear(b) - spiceNear(a))[0];
+      return best && spiceNear(best) > 0 ? best : (sites.includes('polarSink') ? 'polarSink' : best);
+    },
+    // Move the HMS along the richest reachable path, if any spice is on the way.
+    chooseHmsMove(state, factionId, reachable) {
+      const gain = path => path.slice(1).reduce((n, t) => n + state.board.spiceBlowMarkers.filter(m => m.territoryId === t).reduce((a, m) => a + m.amount, 0), 0);
+      const best = Object.entries(reachable).sort((a, b) => gain(b[1]) - gain(a[1]))[0];
+      return best && gain(best[1]) > 0 ? best[0] : null;
+    },
+    // Auction: bury the least useful card at the bottom of the deck.
+    chooseIxianBury(state, factionId, ids) {
+      const worth = id => { const c = cardLookup[id]?.category;
+        return c === 'worthless' ? 0 : ['weatherControl', 'familyAtomics'].includes(id) ? 1 : c === 'special' ? 2 : 5; };
+      return { cardId: ids.slice().sort((a, b) => worth(a) - worth(b))[0], where: 'bottom' };
+    },
+    // Ixian ally: swap a dud card just bought for the top of the deck.
+    chooseIxianAllySwap(state, factionId, cardId) {
+      return cardLookup[cardId]?.category === 'worthless' || ['weatherControl', 'familyAtomics'].includes(cardId);
+    },
+
     // Tleilaxu: always spring a Face Dancer (the win still counts for them,
     // but their leader dies and their forces there become ours).
     chooseRevealFaceDancer() {
@@ -285,7 +315,8 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       let valuation = 2 + randInt(0, 2);
       if (me.treacheryHand.length === 0) valuation += 2;
       if (factionId === 'harkonnen') valuation += 2; // every purchase comes with a free card
-      if (factionId === 'atreides' && cardId) {
+      // Atreides (Prescience) and the Ixians (who saw this auction's cards) know the card.
+      if ((factionId === 'atreides' || factionId === 'ixians') && cardId) {
         const category = cardLookup[cardId]?.category;
         if (category === 'worthless') return null;
         if (WEAPON_CATEGORIES.includes(category) || DEFENSE_CATEGORIES.includes(category)) valuation += 2;
