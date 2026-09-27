@@ -107,6 +107,45 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     const ox = r.left + (r.width - size) / 2, oy = r.top + (r.height - size) / 2;
     return { x: view.x + ((clientX - ox) / size) * view.w, y: view.y + ((clientY - oy) / size) * view.w, size };
   }
+  // --- Motion camera ------------------------------------------------------------
+  // Glides the view to frame the action. Pauses once the player pinches, drags
+  // or scrolls the map themselves, until released (at the end of each phase,
+  // or when they tap the full-map button).
+  let cameraOn = true, manual = false, camToken = 0;
+  function takeManualControl() { manual = true; camToken++; }
+  function glideTo(target, ms) {
+    const token = ++camToken;
+    const from = { ...view };
+    if (ms <= 0) { Object.assign(view, target); applyView(); return Promise.resolve(); }
+    return new Promise(resolve => {
+      const t0 = performance.now();
+      const frame = now => {
+        if (token !== camToken) return resolve(); // superseded or taken over
+        const t = Math.min(1, (now - t0) / ms), e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        view.x = from.x + (target.x - from.x) * e;
+        view.y = from.y + (target.y - from.y) * e;
+        view.w = from.w + (target.w - from.w) * e;
+        applyView();
+        if (t < 1) requestAnimationFrame(frame); else resolve();
+      };
+      requestAnimationFrame(frame);
+    });
+  }
+  // Frame a set of map points (a journey's ends, a battle, a territory).
+  function focusOn(points, { ms = 650, pad = 150, minW = 400, force = false } = {}) {
+    if (!cameraOn || (manual && !force) || !points.length) return Promise.resolve();
+    const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
+    const w = clamp(Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + pad * 2, minW, FULL);
+    const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
+    return glideTo({ x: clamp(cx - w / 2, 0, FULL - w), y: clamp(cy - w / 2, 0, FULL - w), w }, ms);
+  }
+  // Pull back to the whole map, and hand control back to the camera.
+  function overview(ms = 700) {
+    manual = false;
+    if (!cameraOn || view.w >= FULL - 1) return Promise.resolve();
+    return glideTo({ x: 0, y: 0, w: FULL }, ms);
+  }
+
   function zoomAt(mx, my, factor) {
     const newW = clamp(view.w / factor, MIN_W, FULL);
     const k = newW / view.w;
@@ -132,9 +171,11 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       if (lastPinch) zoomAt(mid.x, mid.y, dist / lastPinch);
       lastPinch = dist;
       dragged = true;
+      takeManualControl();
       return;
     }
     if (dragged && view.w < FULL) {
+      takeManualControl();
       const { size } = toMap(e.clientX, e.clientY);
       view.x -= ((e.clientX - p.x) / size) * view.w;
       view.y -= ((e.clientY - p.y) / size) * view.w;
@@ -152,6 +193,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   svg.addEventListener('pointercancel', release);
   svg.addEventListener('wheel', e => {
     e.preventDefault();
+    takeManualControl();
     const m = toMap(e.clientX, e.clientY);
     zoomAt(m.x, m.y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
   }, { passive: false });
@@ -422,7 +464,10 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     wormDelivers,
     worm,
     pulse,
-    zoomBy: factor => zoomAt(view.x + view.w / 2, view.y + view.w / 2, factor),
-    resetZoom: () => { view.x = 0; view.y = 0; view.w = FULL; applyView(); }
+    zoomBy: factor => { takeManualControl(); zoomAt(view.x + view.w / 2, view.y + view.w / 2, factor); },
+    resetZoom: () => { camToken++; manual = false; view.x = 0; view.y = 0; view.w = FULL; applyView(); },
+    focusOn,
+    overview,
+    setCamera: on => { cameraOn = on; if (!on) camToken++; },
   };
 }
