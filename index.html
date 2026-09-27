@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-27o">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-09-27p">
 </head>
 <body>
   <div class="app">
@@ -24,7 +24,7 @@
         <button id="status-ally" class="pill pill--ally" hidden aria-label="What your ally gives you">—</button>
         <span id="status-spice" class="pill pill--spice" hidden>—</span>
         <span id="status-storm" class="pill">Storm —</span>
-        <button id="topbar-hand" class="pill pill--hand" hidden aria-label="Your hand">Hand</button>
+        <button id="topbar-hand" class="pill pill--hand" hidden aria-label="Your hand"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="11" height="15" rx="1.5" transform="rotate(-8 9 12)"/><rect x="9" y="4" width="11" height="15" rx="1.5" transform="rotate(8 14 11)"/></svg></button>
       </div>
     </header>
 
@@ -92,6 +92,9 @@
           <option value="0.45">Fast</option>
           <option value="0">Off</option>
         </select>
+      </label>
+      <label class="row-field"><span>Camera</span>
+        <select id="select-camera"><option value="on">Follow the action</option><option value="off">Stay where I put it</option></select>
       </label>
       <label class="row-field"><span>Music</span>
         <select id="select-music"><option value="on">On</option><option value="off">Off</option></select>
