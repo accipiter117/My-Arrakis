@@ -367,9 +367,10 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     const resultsBefore = results.length;
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
     if (decision.shipment) {
-      const { territoryId, amount } = decision.shipment;
+      // starred: how many of the shipped forces are Sardaukar / Fedaykin (default: as many as possible).
+      const { territoryId, amount, starred } = decision.shipment;
       if (movementEngine.canShip(state, factionId, territoryId, amount).ok) {
-        movementEngine.executeShipment(state, factionId, territoryId, amount);
+        movementEngine.executeShipment(state, factionId, territoryId, amount, starred);
         results.push({ factionId, type: 'shipment', territoryId, amount });
         await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount }, state);
         // Bene Gesserit Spiritual Advisors: whenever another faction ships in
@@ -400,12 +401,12 @@ async function runShipmentMovementPhase(state, decisionProvider) {
       }
     }
     if (decision.movement) {
-      const { from, to, amount } = decision.movement;
+      const { from, to, amount, starred } = decision.movement;
       if (movementEngine.canMove(state, factionId, from, to, amount).ok) {
         // Ornithopter access is decided at the start of the move: leaving
         // Arrakeen or Carthag in this very move still flies.
         const ornithopter = movementEngine.hasOrnithopterAccess(state, factionId);
-        movementEngine.executeMove(state, factionId, from, to, amount);
+        movementEngine.executeMove(state, factionId, from, to, amount, starred);
         results.push({ factionId, type: 'movement', from, to, amount, ornithopter });
         await observe(decisionProvider, { type: 'move', factionId, from, to, amount, ornithopter }, state);
       }
