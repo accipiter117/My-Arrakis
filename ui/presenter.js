@@ -172,6 +172,8 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
         const shown = showCard('spice', card('Spice blow', names.territory(e.territoryId), `<strong>+${e.amount}</strong> spice`), 2300);
         if (speed()) await board.pulse(e.territoryId, 'spice', scaled(900));
         await shown;
+      } else if (e.kind === 'sandtrout') {
+        await showCard('worm', card('Sandtrout', 'All alliances end', 'The next worm brings no Nexus, and the spice after it is doubled.'), 2600);
       } else if (e.kind === 'worm') {
         if (speed()) sfx?.play('wormRoar');
         const shown = showCard('worm', card('Shai-Hulud', 'A worm rises',
@@ -249,6 +251,19 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       await showCard('karama', card('Karama', names.faction(e.factionId), `${esc(what)}.`), 2600);
     },
 
+    async thumper(e) {
+      await showCard('worm', card('Thumper', names.faction(e.factionId), 'calls Shai-Hulud to the last spice territory.'), 2200);
+    },
+    async harvester(e) {
+      if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 480 });
+      await showCard('spice', card('Harvester', names.territory(e.territoryId), `${esc(names.faction(e.factionId))} doubles it to <strong>${e.amount}</strong> spice`), 2200);
+    },
+    async amal(e) {
+      await showCard('storm', card('Amal', names.faction(e.factionId), 'Every faction discards half its spice.'), 2400);
+    },
+    async alliancesCancelled() {
+      await showCard('nexus', card('Sandtrout', 'Alliances cancelled', 'Every alliance ends at once.'), 2400);
+    },
     async traitor(e) {
       const html = `<div class="event-card__eyebrow">Traitor!</div>
         <div class="event-card__title">${esc(names.leader(e.leaderId))}</div>
