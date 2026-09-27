@@ -59,6 +59,9 @@ const passiveDecisionProvider = {
   },
   chooseTruthtrance() { return null; },
   choosePoisonToothUse() { return true; },
+  chooseThumper() { return false; },
+  chooseHarvester() { return null; },
+  chooseAmal() { return false; },
   chooseAdvisor() { return false; },
   chooseGuildTiming() { return null; }, // null: act last
   chooseFremenPlacement() { return null; }, // null: all 10 in Sietch Tabr
@@ -191,9 +194,42 @@ async function runStormPhase(state, decisionProvider) {
 }
 
 async function runSpiceBlowPhase(state, decisionProvider) {
+  // Thumper: at the start of the Spice Blow, instead of revealing pile A's card,
+  // resolve as though Shai-Hulud had appeared (not on turn 1).
+  if (state.meta.turn > 1 && decisionProvider.chooseThumper) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      if (!cardEffects.holdsCard(state, f, 'thumper')) continue;
+      if (await decisionProvider.chooseThumper(state, f)) {
+        cardEffects.discardCard(state, f, 'thumper');
+        state.meta.thumperPending = true;
+        await observe(decisionProvider, { type: 'thumper', factionId: f }, state);
+        break;
+      }
+    }
+  }
   spiceEngine.resolveSpiceBlowPhase(state);
   foreseeSpice(state); // Atreides see the next card as soon as this Spice Blow is over (house rule)
   for (const draw of state.nexus.draws ?? []) await observe(decisionProvider, { type: 'spiceCard', ...draw }, state);
+  if (state.meta.alliancesCancelled) {
+    await observe(decisionProvider, { type: 'alliancesCancelled', alliances: state.meta.alliancesCancelled }, state);
+    delete state.meta.alliancesCancelled;
+  }
+  // Harvester: double the spice of a blow just revealed (if still on the board).
+  if (decisionProvider.chooseHarvester) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      if (!cardEffects.holdsCard(state, f, 'harvester')) continue;
+      const blows = (state.nexus.draws ?? []).filter(d => d.kind === 'territory'
+        && state.board.spiceBlowMarkers.some(m => m.territoryId === d.territoryId && m.turn === state.meta.turn));
+      if (!blows.length) continue;
+      const territoryId = await decisionProvider.chooseHarvester(state, f, blows);
+      const marker = territoryId && state.board.spiceBlowMarkers.find(m => m.territoryId === territoryId && m.turn === state.meta.turn);
+      if (marker) {
+        cardEffects.discardCard(state, f, 'harvester');
+        marker.amount *= 2;
+        await observe(decisionProvider, { type: 'harvester', factionId: f, territoryId, amount: marker.amount }, state);
+      }
+    }
+  }
   // Snapshot what was placed now, later phases (collection, worms) can
   // remove these markers before anything reads the log.
   const result = {
@@ -244,6 +280,15 @@ async function runBiddingPhase(state, decisionProvider) {
       if (!dead.length) continue;
       for (const id of (await decisionProvider.chooseDiscards(state, f, dead)) ?? []) {
         if (cardEffects.canDiscardUnbuilt(state, f, id).ok) cardEffects.discardUnbuilt(state, f, id);
+      }
+    }
+  }
+  // Amal: at the start of a phase, a holder may make everyone discard half their spice.
+  if (decisionProvider.chooseAmal) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      if (cardEffects.holdsCard(state, f, 'amal') && await decisionProvider.chooseAmal(state, f)) {
+        const r = cardEffects.playAmal(state, f);
+        await observe(decisionProvider, { type: 'amal', ...r }, state);
       }
     }
   }
@@ -616,7 +661,9 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const traitorCalls = {};
     let traitor = null;
     for (const f of fighting) {
-      const theirLeader = plans[opponentOf(f)].leaderId;
+      // The Cheap Hero traitor matches any Cheap Hero the opponent plays.
+      const theirLeader = plans[opponentOf(f)].leaderId
+        ?? (plans[opponentOf(f)].cheapHeroCardId ? 'cheapHeroTraitor' : null);
       // A leader carrying the Kwisatz Haderach cannot turn traitor (advanced).
       if (opponentOf(f) === 'atreides' && plans.atreides.useKwisatzHaderach) continue;
       const holder = battleEngine.isTraitorAgainst(state, f, theirLeader) ? f
