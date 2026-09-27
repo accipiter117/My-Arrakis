@@ -12,7 +12,7 @@ const game = () => initializeGame({ activeFactionIds: ALL, playerCircleOrder: AL
 const T = territories.territories;
 
 console.log('Test 1: every territory has a storm sector');
-assert(Object.values(T).every(t => Number.isInteger(t.stormSector) && t.stormSector >= 0 && t.stormSector < 18), 'all 42 territories are assigned a sector 0-17');
+assert(Object.values(T).filter(t => !t.dynamic).every(t => Number.isInteger(t.stormSector) && t.stormSector >= 0 && t.stormSector < 18), 'all 42 map territories are assigned a sector 0-17 (the moving HMS has none: it is immune)');
 
 console.log('\nTest 2: sand in the storm\'s path is wiped; stone and strongholds are not');
 let s = game();
