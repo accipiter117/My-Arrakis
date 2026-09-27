@@ -139,7 +139,8 @@ async function startNewGame() {
     gameState = initializeGame({
       activeFactionIds: seated,
       playerCircleOrder: seated,
-      rulesConfig: data.rulesConfig,
+      // Expansion card sets are chosen per game in the menu.
+      rulesConfig: { ...data.rulesConfig, expansions: { ...(data.rulesConfig.expansions ?? {}), ixTlCards: $('select-ixtl').value === 'on' } },
       spiceDeckData: data.spiceDeck,
       territoriesData: data.territories,
       treacheryDeckData: data.treacheryDeck,
@@ -546,6 +547,12 @@ function cardHelp(id) {
     poisonDefense: 'Defence against poison weapons. Play it in a battle plan to protect your leader.',
     projectileDefense: 'Defence against projectile weapons. Never pair it with your own Lasgun.',
     specialLeaderSubstitute: 'Cheap Hero. Leads a battle in place of a leader, with strength 0, and can never be a traitor. Useful to throw a battle cheaply.',
+    poisonBlade: 'Poison Blade. A weapon that is both projectile AND poison: only a Shield Snooper stops it. A Shield or a Snooper alone does not.',
+    weirdingWay: 'Weirding Way. A projectile weapon. Or play it in the defence slot, alongside another weapon, as a projectile defence.',
+    poisonTooth: 'Poison Tooth. Kills BOTH leaders, and a Snooper cannot stop it. After plans are revealed you may withhold it: then it has no effect, and if you win you keep it.',
+    artilleryStrike: 'Artillery Strike. Kills both leaders unless shielded. Surviving leaders do not count towards strength, and no spice is paid for the dead. Always discarded after use.',
+    shieldSnooper: 'Shield Snooper. Defends against both projectile and poison weapons (including a Poison Blade). Counts as a Shield, so never pair it with your own Lasgun.',
+    chemistry: 'Chemistry. A poison defence. Or play it in the weapon slot, alongside another defence, as a poison weapon.',
     worthless: 'Worthless. Its only use is as a bluff: play it in a battle plan as your weapon or defence, and it is discarded afterwards. That is how you get rid of it.'
   }[c];
   if (help) return { text: help };
@@ -906,6 +913,8 @@ $('hand-body').addEventListener('click', e => {
 });
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
+$('select-ixtl').value = localStorage.getItem('my-arrakis-ixtl') ?? 'on';
+$('select-ixtl').addEventListener('change', e => localStorage.setItem('my-arrakis-ixtl', e.target.value));
 $('lineup-grid').addEventListener('click', e => {
   const b = e.target.closest('[data-lineup]');
   if (!b) return;
