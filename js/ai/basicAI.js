@@ -172,6 +172,25 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return false;
     },
 
+    // Tleilaxu: always spring a Face Dancer (the win still counts for them,
+    // but their leader dies and their forces there become ours).
+    chooseRevealFaceDancer() {
+      return true;
+    },
+    // Swap out a Face Dancer who can never come up: one of our own leaders
+    // first, then one who is dead or captured.
+    chooseFaceDancerToReplace(state, factionId, leaderIds) {
+      const own = leaderIds.find(id => own(state, factionId).leaders.available.includes(id) || own(state, factionId).leaders.killed.includes(id));
+      return own ?? leaderIds.find(id => !Object.values(state.factions).some(f => f.leaders.available.includes(id))) ?? null;
+    },
+    // Raise another faction's revival limit to 5 (they pay us), unless they're
+    // close to winning; always for our ally.
+    chooseIncreaseRevivalLimit(state, factionId, { factionId: other }) {
+      if (allianceEngine.allyOf(state, factionId) === other) return true;
+      const held = Object.keys(state.board.territories).filter(t => state.board.territories[t].type === 'stronghold' && (state.factions[other].forces.onBoard[t] ?? 0) > 0).length;
+      return held < 2 && state.factions[other].spice >= 8;
+    },
+
     // Thumper: call a worm onto the last spice territory if it would swallow a
     // big enemy stack (and none of ours or our ally's).
     chooseThumper(state, factionId) {
@@ -281,8 +300,19 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const me = own(state, factionId);
       const tanked = me.revivalTanks ?? 0;
       const free = revivalEngine.freeRevivalAllowance(factionId, state);
+      // How many may be revived this turn (3 normally; no limit for the
+      // Tleilaxu; 5 if the Tleilaxu raised it) and what each costs.
+      const cap = Math.min(revivalEngine.revivalTerms(state, factionId).cap, 20);
       let forces = Math.min(free, tanked);
-      if (me.spice >= 12) forces = Math.min(3, tanked);
+      if (me.spice >= 12 || factionId === 'tleilaxu') {
+        forces = Math.min(cap, tanked);
+        const keep = factionId === 'tleilaxu' ? 3 : 4;
+        while (forces > Math.min(free, tanked)) {
+          const r = revivalEngine.canReviveForces(state, factionId, forces, 0);
+          if (r.ok && r.cost <= me.spice - keep) break;
+          forces--;
+        }
+      }
       // At most one starred force per turn; the rest must be ordinary ones
       // actually present in the tanks.
       const starredTanked = me.starredRevivalTanks ?? 0;
