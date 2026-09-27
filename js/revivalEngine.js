@@ -20,7 +20,8 @@ const FREE_FORCE_REVIVAL = {
   fremen: 3,
   guild: 1,
   gesserit: 1,
-  tleilaxu: 2
+  tleilaxu: 2,
+  ixians: 1
 };
 
 // Revival terms (Tleilaxu advanced rules). With the Tleilaxu in the game:
@@ -68,10 +69,10 @@ function canReviveForces(state, factionId, amount, starredAmount = 0) {
   if ((faction.forcesRevivedThisTurn ?? 0) + amount > terms.cap) {
     return { ok: false, reason: 'Would exceed the per-turn revival cap when combined with forces already revived this turn.' };
   }
-  if (starredAmount > STARRED_REVIVAL_CAP_PER_TURN) {
+  if (starredAmount > STARRED_REVIVAL_CAP_PER_TURN && factionId !== 'ixians') {
     return { ok: false, reason: `Cannot revive more than ${STARRED_REVIVAL_CAP_PER_TURN} starred force per turn, regardless of the overall cap.` };
   }
-  if ((faction.starredForcesRevivedThisTurn ?? 0) + starredAmount > STARRED_REVIVAL_CAP_PER_TURN) {
+  if (factionId !== 'ixians' && (faction.starredForcesRevivedThisTurn ?? 0) + starredAmount > STARRED_REVIVAL_CAP_PER_TURN) {
     return { ok: false, reason: 'Would exceed the per-turn starred-force revival cap.' };
   }
 
@@ -80,6 +81,7 @@ function canReviveForces(state, factionId, amount, starredAmount = 0) {
   const remainingFree = Math.max(0, freeAllowance - alreadyUsedFree);
   const paidPortion = Math.max(0, amount - remainingFree);
   let cost = paidPortion * FORCE_REVIVAL_SPICE_COST;
+  if (factionId === 'ixians') cost += Math.min(starredAmount, paidPortion); // Cyborgs cost 3 each
   if (terms.halfPrice) cost = Math.ceil(cost / 2);
 
   if (cost > faction.spice) {
