@@ -153,12 +153,27 @@ function resolveMentatPauseBeforePrediction(state, territoriesData) {
     return { gameOver: true, winners: allianceWins[0], method: 'stronghold-alliance' };
   }
 
+  // House rules (data/rulesConfig.json houseRules): play on past turn 10 until
+  // someone wins by strongholds. The Fremen special victory stays a one-time
+  // check at the end of turn 10; a safety cap ends a true stalemate in a draw.
+  const house = state.rulesConfig.houseRules ?? {};
+  if (house.noTurnLimit) {
+    if (state.meta.turn === maxTurns) {
+      const fremenWin = checkFremenSpecialVictory(state);
+      if (fremenWin) return { gameOver: true, winners: fremenWin, method: 'fremen-special' };
+    }
+    if (state.meta.turn >= (house.stalemateTurnCap ?? 30)) {
+      return { gameOver: true, winners: [], method: 'stalemate' };
+    }
+    return { gameOver: false, winners: [], method: null };
+  }
+
   if (state.meta.turn === maxTurns) {
     const fremenWin = checkFremenSpecialVictory(state);
     if (fremenWin) {
       return { gameOver: true, winners: fremenWin, method: 'fremen-special' };
     }
-    const guildWin = checkGuildSpecialVictory(state);
+    const guildWin = house.noGuildSpecialVictory ? null : checkGuildSpecialVictory(state);
     if (guildWin) {
       return { gameOver: true, winners: guildWin, method: 'guild-special' };
     }
