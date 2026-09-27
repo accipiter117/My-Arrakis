@@ -128,8 +128,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
     chooseBid(state, factionId, cardId, currentBid) {
       const me = state.factions[factionId];
       const b = state.bidding;
-      const seen = factionId === 'atreides' && cardId
-        ? `<p class="decision__note">Prescience: this card is <strong>${esc(cardName(cardId))}</strong>.</p>` : '';
+      const seen = (factionId === 'atreides' || factionId === 'ixians') && cardId
+        ? `<p class="decision__note">${factionId === 'ixians' ? 'You saw this auction\'s cards' : 'Prescience'}: this card is <strong>${esc(cardName(cardId))}</strong>.</p>` : '';
       const leading = b.currentBidder ? `${factionName(b.currentBidder)} leads at ${currentBid}` : 'No bids yet';
       return ask(`Treachery card ${b.currentCardIndex + 1} of ${b.cardsUpForBid.length}`,
         `${seen}
@@ -479,6 +479,51 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <label class="field"><span>Act</span><select name="pos">${options(choices, others.length)}</select></label>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'pos')));
+    },
+
+    chooseIxianStartingCard(state, factionId, ids) {
+      return ask('Choose your starting card',
+        `<p>One card for each faction in the game. Keep one; the rest are shuffled and dealt to the others.</p>
+         <label class="field"><span>Keep</span><select name="c">${options(ids.map(id => [id, cardName(id)]), ids[0])}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Keep this card</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value));
+    },
+
+    chooseHmsPlacement(state, factionId, sites) {
+      const choices = sites.map(t => [t, territoryName(t)]).sort((a, b) => a[1].localeCompare(b[1]));
+      return ask('Place the Hidden Mobile Stronghold',
+        `<p>Point your HMS at any non-stronghold territory. Others can only enter it from there. Tapping the map selects a territory.</p>
+         <label class="field"><span>Over</span><select name="t">${options(choices, sites.includes('polarSink') ? 'polarSink' : sites[0])}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Place it</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 't').value));
+    },
+
+    chooseHmsMove(state, factionId, reachable) {
+      const spiceOn = path => path.slice(1).reduce((n, t) => n + state.board.spiceBlowMarkers.filter(m => m.territoryId === t).reduce((a, m) => a + m.amount, 0), 0);
+      const inside = state.factions.ixians.forces.onBoard.hms ?? 0;
+      const choices = Object.entries(reachable).map(([t, path]) => [t, `${territoryName(t)} (${path.length - 1} step${path.length > 2 ? 's' : ''}${spiceOn(path) ? `, up to ${Math.min(spiceOn(path), inside * 2 * (path.length - 1))} spice` : ''})`]);
+      return ask('Move the HMS?',
+        `<p>Before the storm, the HMS may move up to 3 territories, collecting up to ${inside * 2} spice (2 per force inside) from each spice territory it enters.</p>
+         <label class="field"><span>Move to</span><select name="t">${options([['', 'Stay where it is'], ...choices], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 't').value || null));
+    },
+
+    chooseIxianBury(state, factionId, ids) {
+      return ask('Ixian technology: this auction',
+        `<p>You see every card for this auction, plus one extra. Put one back on the deck; the rest are shuffled and auctioned.</p>
+         <ul>${ids.map(id => `<li>${esc(cardName(id))}</li>`).join('')}</ul>
+         <label class="field"><span>Put back</span><select name="c">${options(ids.map(id => [id, cardName(id)]), ids[ids.length - 1])}</select></label>
+         <label class="field"><span>Where</span><select name="w">${options([['bottom', 'Bottom of the deck'], ['top', 'Top (you will know the next card)']], 'bottom')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done({ cardId: field(p, 'c').value, where: field(p, 'w').value }));
+    },
+
+    chooseIxianAllySwap(state, factionId, cardId) {
+      return ask('Ixian alliance: swap this card?',
+        `<p>You just bought <strong>${esc(cardName(cardId))}</strong>. As the Ixians' ally you may discard it and draw the top card of the deck instead.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Swap it</button><button class="btn" data-default-action>Keep it</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
     },
 
     chooseRevealFaceDancer(state, factionId, { territoryId, leaderId, winnerId }) {
