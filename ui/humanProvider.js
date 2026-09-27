@@ -213,17 +213,20 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       const fromOptions = [['', 'No movement'], ...Object.entries(me.forces.onBoard).map(([id, n]) => [id, `${territoryName(id)} (${n} forces)`])];
       const range_ = movementEngine.moveRangeFor(state, factionId);
 
+      const eliteName = { emperor: 'Sardaukar', fremen: 'Fedaykin' }[factionId] ?? null;
       return ask('Shipment and movement',
         `<dl class="facts"><dt>Reserves</dt><dd>${me.forces.reserve}</dd><dt>Your spice</dt><dd>${me.spice}</dd><dt>Move range</dt><dd>${range_} territor${range_ === 1 ? 'y' : 'ies'}</dd></dl>
          <fieldset><legend>Ship from reserves</legend>
            <label class="field"><span>Destination</span><select name="shipTo">${options(shipOptions, '')}</select></label>
            <label class="field"><span>Forces</span><input type="number" name="shipAmount" min="1" max="${me.forces.reserve}" value="${Math.min(3, me.forces.reserve)}"></label>
+           ${eliteName && (me.forces.starredReserve ?? 0) > 0 ? `<label class="field"><span>of which ${eliteName}</span><input type="number" name="shipStarred" min="0" max="${me.forces.starredReserve}" value="${Math.min(me.forces.starredReserve, 3, me.forces.reserve)}"></label>` : ''}
            <p class="decision__cost" data-for="ship"></p>
          </fieldset>
          <fieldset><legend>Move one group</legend>
            <label class="field"><span>From</span><select name="moveFrom">${options(fromOptions, '')}</select></label>
            <label class="field"><span>To</span><select name="moveTo"><option value="">Choose a starting territory</option></select></label>
            <label class="field"><span>Forces</span><input type="number" name="moveAmount" min="1" value="1"></label>
+           ${eliteName ? `<label class="field" data-elite-move hidden><span>of which ${eliteName}</span><input type="number" name="moveStarred" min="0" value="0"></label>` : ''}
            <p class="decision__note">Your shipment happens first, then your move. Tip: tap ▾ to see the map, where legal choices are outlined; tapping a territory fills this in.</p>
          </fieldset>
          ${me.treacheryHand.includes('hajr') ? `<fieldset><legend>Hajr: an extra move (uses the card)</legend>
@@ -279,6 +282,21 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
                 if (!r.ok) problems.push(`Movement: ${r.reason}`);
               }
             }
+            // Elite troops: the split must fit what is in reserve / in the group.
+            if (field(p, 'shipTo').value && field(p, 'shipStarred')) {
+              const n = num(p, 'shipAmount'), st = num(p, 'shipStarred'), eliteRes = me.forces.starredReserve ?? 0;
+              if (st > n) problems.push(`You can't ship more ${eliteName} than forces in total.`);
+              else if (st > eliteRes) problems.push(`Only ${eliteRes} ${eliteName} in reserve.`);
+              else if (n - st > me.forces.reserve - eliteRes) problems.push(`Only ${me.forces.reserve - eliteRes} ordinary forces in reserve: ship more ${eliteName} or fewer forces.`);
+            }
+            const moveFromId = field(p, 'moveFrom').value;
+            if (moveFromId && field(p, 'moveStarred')) {
+              const here = me.forces.onBoard[moveFromId] ?? 0, eliteHere = me.forces.starredOnBoard?.[moveFromId] ?? 0;
+              const n = num(p, 'moveAmount'), st = eliteHere ? num(p, 'moveStarred') : 0;
+              if (st > n) problems.push(`You can't move more ${eliteName} than forces in total.`);
+              else if (st > eliteHere) problems.push(`Only ${eliteHere} ${eliteName} there.`);
+              else if (n - st > here - eliteHere) problems.push(`Only ${here - eliteHere} ordinary forces there: move more ${eliteName} or fewer forces.`);
+            }
             const gType = field(p, 'gType')?.value;
             if (gType) {
               if (field(p, 'shipTo').value) problems.push('Choose either a shipment from reserves or a Guild planet shipment, not both.');
@@ -290,7 +308,18 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             setError(p, problems.join(' ') || null);
             btn.disabled = problems.length > 0;
           };
-          field(p, 'moveFrom').onchange = () => { refreshDestinations(); check(); };
+          // Show the elite field only when the chosen group contains elite troops.
+          const refreshElite = () => {
+            const box = p.querySelector('[data-elite-move]');
+            if (!box) return;
+            const elite = me.forces.starredOnBoard?.[field(p, 'moveFrom').value] ?? 0;
+            box.hidden = !elite;
+            const input = field(p, 'moveStarred');
+            input.max = elite;
+            if (num(p, 'moveStarred') > elite) input.value = elite;
+          };
+          field(p, 'moveFrom').onchange = () => { refreshDestinations(); refreshElite(); check(); };
+          refreshElite();
           // Tapping the map fills the form: a reachable destination for the
           // chosen group, else one of my territories as the starting point,
           // else a shipment destination.
@@ -319,8 +348,9 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const shipTo = field(p, 'shipTo').value;
             const from = field(p, 'moveFrom').value;
             done({
-              shipment: shipTo ? { territoryId: shipTo, amount: num(p, 'shipAmount') } : null,
-              movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount') } : null,
+              shipment: shipTo ? { territoryId: shipTo, amount: num(p, 'shipAmount'), starred: field(p, 'shipStarred') ? num(p, 'shipStarred') : undefined } : null,
+              movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount'),
+                starred: field(p, 'moveStarred') && (me.forces.starredOnBoard?.[from] ?? 0) ? num(p, 'moveStarred') : undefined } : null,
               crossShip: field(p, 'gType')?.value === 'cross' ? { from: field(p, 'gFrom').value, to: field(p, 'gTo').value, amount: num(p, 'gAmount') } : null,
               retreat: field(p, 'gType')?.value === 'retreat' ? { from: field(p, 'gFrom').value, amount: num(p, 'gAmount') } : null,
               hajrMove: field(p, 'hajrFrom')?.value
