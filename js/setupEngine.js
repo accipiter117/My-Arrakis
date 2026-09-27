@@ -94,7 +94,7 @@ function initializeFactionResources(state, factionId, overrides = {}) {
 // --- Deck setup ------------------------------------------------------
 
 function setupSpiceDeck(state, spiceDeckData, territoriesData, rngShuffle) {
-  state.decks.spiceDeck = buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle);
+  state.decks.spiceDeck = buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle, { sandtrout: Boolean(state.rulesConfig.expansions?.ixTlCards) });
   state.decks.spiceDiscardA = [];
   state.decks.spiceDiscardB = [];
   return state;
@@ -131,7 +131,7 @@ function dealStartingTreachery(state, activeFactionIds) {
 }
 
 function setupTraitorDeck(state, leadersData, activeFactionIds, factionOrder, rngShuffle) {
-  const rawDeck = buildTraitorDeck(leadersData, activeFactionIds);
+  const rawDeck = buildTraitorDeck(leadersData, activeFactionIds, Boolean(state.rulesConfig.expansions?.ixTlCards));
   const shuffled = shuffleTraitors(rawDeck, rngShuffle);
   const remaining = dealTraitorHands(state, shuffled, factionOrder);
   state.decks.traitorDeck = remaining;
