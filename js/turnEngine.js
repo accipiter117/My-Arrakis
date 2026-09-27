@@ -59,6 +59,12 @@ const passiveDecisionProvider = {
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
   chooseTruthtrance() { return null; },
+  chooseIxianTechnology() { return null; },
+  chooseSuboidExchange(state, f, { max }) { return max; },
+  chooseEarlyLeaderRevival() { return null; },
+  chooseLeaderRevivalPrice() { return null; },
+  chooseAcceptLeaderRevivalPrice() { return false; },
+  chooseGholaRevival() { return null; },
   chooseIxianStartingCard() { return null; },
   chooseHmsPlacement() { return null; },
   chooseHmsMove() { return null; },
@@ -344,6 +350,18 @@ async function runBiddingPhase(state, decisionProvider) {
 
   while (state.bidding?.active) {
     const cardIndex = state.bidding.currentCardIndex;
+    // Ixian Technology (once per round, before the auction and before Atreides looks).
+    const ixT = state.factions.ixians;
+    if (ixT && !state.bidding.technologyUsed && ixT.treacheryHand.length && decisionProvider.chooseIxianTechnology) {
+      const upcoming = state.bidding.cardsUpForBid[cardIndex];
+      const give = await decisionProvider.chooseIxianTechnology(state, 'ixians', upcoming);
+      if (give && ixT.treacheryHand.includes(give)) {
+        ixT.treacheryHand = [...ixT.treacheryHand.filter(c => c !== give), upcoming];
+        state.bidding.cardsUpForBid[cardIndex] = give;
+        state.bidding.technologyUsed = true;
+        await observe(decisionProvider, { type: 'technology', factionId: 'ixians' }, state);
+      }
+    }
     const cardId = state.bidding.cardsUpForBid[cardIndex];
     // cardId travels with the event; the UI reveals it only to Atreides.
     await observe(decisionProvider, { type: 'auctionStart', cardId, index: cardIndex, total: state.bidding.cardsUpForBid.length }, state);
@@ -420,6 +438,39 @@ async function runRevivalPhase(state, decisionProvider) {
       if (decision.leaderFightingValue !== undefined &&
           revivalEngine.canReviveLeader(state, factionId, decision.leaderId, decision.leaderFightingValue).ok) {
         results.push(revivalEngine.reviveLeader(state, factionId, decision.leaderId, decision.leaderFightingValue));
+      }
+    }
+    // Tleilaxu: another faction may ask for a leader back early, for a price the Tleilaxu set.
+    const tlR = state.factions.tleilaxu;
+    if (tlR && factionId !== 'tleilaxu' && faction.leaders.killed.length && !revivalEngine.isEligibleForLeaderRevival(state, factionId)
+        && !faction.leaderRevivedThisTurn && decisionProvider.chooseEarlyLeaderRevival) {
+      const leaderId = await decisionProvider.chooseEarlyLeaderRevival(state, factionId);
+      if (leaderId && faction.leaders.killed.includes(leaderId)) {
+        const price = await decisionProvider.chooseLeaderRevivalPrice(state, 'tleilaxu', { factionId, leaderId });
+        if (price != null && faction.spice >= price && await decisionProvider.chooseAcceptLeaderRevivalPrice(state, factionId, { leaderId, price })) {
+          faction.spice -= price; tlR.spice += price;
+          faction.leaders.killed = faction.leaders.killed.filter(id => id !== leaderId);
+          faction.leaders.available.push(leaderId);
+          faction.leaderRevivedThisTurn = true;
+          results.push({ factionId, leaderId, earlyRevival: true, price });
+          await observe(decisionProvider, { type: 'earlyLeaderRevival', factionId, leaderId, price }, state);
+        }
+      }
+    }
+    // Tleilaxu Gholas: with fewer than five active leaders, revive another faction's dead leader at half value.
+    if (factionId === 'tleilaxu' && decisionProvider.chooseGholaRevival && faction.leaders.available.length < 5) {
+      const options = Object.entries(state.factions).filter(([f]) => f !== 'tleilaxu')
+        .flatMap(([f, x]) => x.leaders.killed.map(id => ({ leaderId: id, owner: f, cost: Math.ceil((leaderValueOf(state, id)) / 2) })))
+        .filter(o => o.cost <= faction.spice);
+      const pick = options.length ? await decisionProvider.chooseGholaRevival(state, 'tleilaxu', options) : null;
+      const o = options.find(x => x.leaderId === pick);
+      if (o) {
+        faction.spice -= o.cost; state.spiceBank.totalInCirculation += o.cost;
+        state.factions[o.owner].leaders.killed = state.factions[o.owner].leaders.killed.filter(id => id !== o.leaderId);
+        faction.leaders.available.push(o.leaderId);
+        faction.specialFactionState = { ...(faction.specialFactionState ?? {}), gholas: { ...(faction.specialFactionState?.gholas ?? {}), [o.leaderId]: o.owner } };
+        results.push({ factionId, leaderId: o.leaderId, ghola: true, cost: o.cost });
+        await observe(decisionProvider, { type: 'ghola', leaderId: o.leaderId, owner: o.owner, cost: o.cost }, state);
       }
     }
     if (canAct) {
@@ -593,6 +644,13 @@ function foreseeSpice(state) {
   state.factions.atreides.specialFactionState.foreseenSpice = top
     ? { type: top.type, territoryId: top.type === 'territory' ? top.id : null, amount: top.maxValue ?? null }
     : { reshuffle: true };
+}
+
+// A leader's printed value (Gholas keep their disc value).
+let LEADER_VALUES = null;
+function leaderValueOf(state, leaderId) {
+  if (!LEADER_VALUES) LEADER_VALUES = {};
+  return state.meta.leaderValues?.[leaderId] ?? LEADER_VALUES[leaderId] ?? 0;
 }
 
 // --- Tleilaxu Face Dancers ------------------------------------------------------------
@@ -820,6 +878,20 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
         faceDancer = { leaderId: match.leaderId, winnerId: fdWinner, returned: here, placed };
         if (tl.faceDancers.every(fd => fd.revealed)) recycleFaceDancers(state);
         await observe(decisionProvider, { type: 'faceDancer', territoryId, ...faceDancer }, state);
+      }
+    }
+
+    // Ixians: surviving Suboids may be exchanged, one for one, for Cyborgs lost in this battle.
+    if (fighting.includes('ixians') && outcome.winnerFactionId === 'ixians' && decisionProvider.chooseSuboidExchange) {
+      const ixB = state.factions.ixians;
+      const lost = Math.min(plans.ixians.starredForcesCommitted ?? 0, ixB.starredRevivalTanks ?? 0);
+      const suboids = (ixB.forces.onBoard[territoryId] ?? 0) - (ixB.forces.starredOnBoard?.[territoryId] ?? 0);
+      const max = Math.min(lost, suboids);
+      const n = max > 0 ? Math.max(0, Math.min(max, (await decisionProvider.chooseSuboidExchange(state, 'ixians', { territoryId, max })) ?? 0)) : 0;
+      if (n) {
+        ixB.forces.starredOnBoard[territoryId] = (ixB.forces.starredOnBoard[territoryId] ?? 0) + n;
+        ixB.starredRevivalTanks -= n;
+        await observe(decisionProvider, { type: 'suboidExchange', territoryId, count: n }, state);
       }
     }
 
