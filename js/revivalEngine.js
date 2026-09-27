@@ -19,8 +19,21 @@ const FREE_FORCE_REVIVAL = {
   emperor: 1,
   fremen: 3,
   guild: 1,
-  gesserit: 1
+  gesserit: 1,
+  tleilaxu: 2
 };
+
+// Revival terms (Tleilaxu advanced rules). With the Tleilaxu in the game:
+// other factions pay THEM for revival, and the Tleilaxu may raise a faction's
+// limit to 5 for the turn; the Tleilaxu revive with no limit at half price
+// (rounded up) paid to the Bank; the Tleilaxu's ally revives at half price.
+function revivalTerms(state, factionId) {
+  const terms = { cap: FORCE_REVIVAL_CAP_PER_TURN, halfPrice: false, payee: null };
+  if (!state.factions.tleilaxu) return terms;
+  if (factionId === 'tleilaxu') return { ...terms, cap: Infinity, halfPrice: true };
+  const allyOfF = (state.alliances ?? []).find(a => a.factions.includes(factionId))?.factions.find(f => f !== factionId);
+  return { cap: Math.max(terms.cap, state.meta.revivalLimitOverride?.[factionId] ?? 0), halfPrice: allyOfF === 'tleilaxu', payee: 'tleilaxu' };
+}
 
 const FORCE_REVIVAL_CAP_PER_TURN = 3;
 const FORCE_REVIVAL_SPICE_COST = 2;
@@ -48,10 +61,11 @@ function canReviveForces(state, factionId, amount, starredAmount = 0) {
   if (amount - starredAmount > tankedForces - tankedStarred) {
     return { ok: false, reason: 'Not enough ordinary forces in the Tleilaxu Tanks; the rest there are starred, and only one starred force can be revived per turn.' };
   }
-  if (amount > FORCE_REVIVAL_CAP_PER_TURN) {
-    return { ok: false, reason: `Cannot revive more than ${FORCE_REVIVAL_CAP_PER_TURN} forces per turn, regardless of spice.` };
+  const terms = revivalTerms(state, factionId);
+  if (amount > terms.cap) {
+    return { ok: false, reason: `Cannot revive more than ${terms.cap} forces per turn, regardless of spice.` };
   }
-  if ((faction.forcesRevivedThisTurn ?? 0) + amount > FORCE_REVIVAL_CAP_PER_TURN) {
+  if ((faction.forcesRevivedThisTurn ?? 0) + amount > terms.cap) {
     return { ok: false, reason: 'Would exceed the per-turn revival cap when combined with forces already revived this turn.' };
   }
   if (starredAmount > STARRED_REVIVAL_CAP_PER_TURN) {
@@ -65,13 +79,14 @@ function canReviveForces(state, factionId, amount, starredAmount = 0) {
   const alreadyUsedFree = Math.min(faction.forcesRevivedThisTurn ?? 0, freeAllowance);
   const remainingFree = Math.max(0, freeAllowance - alreadyUsedFree);
   const paidPortion = Math.max(0, amount - remainingFree);
-  const cost = paidPortion * FORCE_REVIVAL_SPICE_COST;
+  let cost = paidPortion * FORCE_REVIVAL_SPICE_COST;
+  if (terms.halfPrice) cost = Math.ceil(cost / 2);
 
   if (cost > faction.spice) {
     return { ok: false, reason: `Not enough spice, this revival needs ${cost} spice beyond the free allowance.` };
   }
 
-  return { ok: true, cost, freeUsed: amount - paidPortion, paidUsed: paidPortion };
+  return { ok: true, cost, freeUsed: amount - paidPortion, paidUsed: paidPortion, payee: terms.payee };
 }
 
 function reviveForces(state, factionId, amount, starredAmount = 0) {
@@ -83,7 +98,14 @@ function reviveForces(state, factionId, amount, starredAmount = 0) {
   faction.forces.reserve = (faction.forces.reserve ?? 0) + amount;
   faction.forcesRevivedThisTurn = (faction.forcesRevivedThisTurn ?? 0) + amount;
   faction.spice -= check.cost;
-  state.spiceBank.totalInCirculation += check.cost;
+  if (check.payee === 'tleilaxu') state.factions.tleilaxu.spice += check.cost;   // revival pays the Tleilaxu
+  else state.spiceBank.totalInCirculation += check.cost;
+  // The Tleilaxu take 1 spice from the Bank for each faction using free revival.
+  if (state.factions.tleilaxu && factionId !== 'tleilaxu' && check.freeUsed > 0 && !faction.freeRevivalTithed) {
+    faction.freeRevivalTithed = true;
+    state.factions.tleilaxu.spice += 1;
+    state.spiceBank.totalInCirculation -= 1;
+  }
 
   if (starredAmount > 0) {
     faction.starredRevivalTanks -= starredAmount;
@@ -158,6 +180,7 @@ function reviveLeader(state, factionId, leaderId, leaderFightingValue) {
 
 function resetRevivalTurnFlags(state) {
   for (const factionId of Object.keys(state.factions)) {
+    state.factions[factionId].freeRevivalTithed = false;
     state.factions[factionId].forcesRevivedThisTurn = 0;
     state.factions[factionId].starredForcesRevivedThisTurn = 0;
     state.factions[factionId].leaderRevivedThisTurn = false;
@@ -201,6 +224,7 @@ function noteLeaderRevived(faction, leaderId) {
 }
 
 export {
+  revivalTerms,
   noteLeaderRevived,
   isFaceDown,
   canEmperorReviveForAlly,
