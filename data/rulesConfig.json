@@ -158,6 +158,10 @@
       {
         "id": "ixTlSpecialCards",
         "justification": "Ixians & Tleilaxu special cards (M1 part 2). Sandtrout (spice deck): cancels all alliances; the next Shai-Hulud still devours but brings no Nexus; the card after it doubles its spice, or if another worm brings the Nexus. Thumper: at the start of the Spice Blow (not turn 1), pile A resolves as though Shai-Hulud had appeared, then draws on. Harvester: doubles a blow placed this phase, if still on the board (offered just after the reveals). Amal: every faction discards half its spice rounded up; the AI is offered it at the start of Bidding, the human plays it from the Hand between phases. Kull Wahad is worthless and enters only with worthless cards (D1). The Cheap Hero traitor matches any Cheap Hero an opponent plays and stays in its holder's hand."
+      },
+      {
+        "id": "tleilaxuCore",
+        "justification": "Tleilaxu (expansion M2, core). Start: 20 forces in reserve, 5 spice, 2 free revivals, nothing on Arrakis. No traitors: after the others choose, the Tleilaxu draw 3 Face Dancers from the traitor deck. When ANOTHER faction wins a battle with a Face Dancer leader, the Tleilaxu may reveal it: the win stands, the leader goes to the tanks (no spice for it), the winner's remaining forces there return to reserves and are replaced by Tleilaxu forces from reserve (up to the same number; taking forces from elsewhere on the planet is not yet offered). All three revealed: recycle and draw three new. Mentat Pause: may swap one unrevealed Face Dancer. Revival (advanced): other factions pay the Tleilaxu; the Tleilaxu revive with no limit at half price (rounded up) to the Bank and take 1 spice for each faction using free revival or a Ghola card; they may raise a faction's limit to 5 for the turn; their ally revives at half price. Zoal takes the value of the opposing leader disc (0 against a Cheap Hero). Not yet: Gholas, leader-price negotiation, Karama powers."
       }
     ]
   },
