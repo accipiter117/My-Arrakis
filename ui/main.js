@@ -205,6 +205,10 @@ function logEvent(e) {
     addLog('battle', turn, `Truthtrance${where}: ${nameOf(e.asker)} asked ${nameOf(e.target)} "${q}" Answer: ${e.answer ? 'yes' : 'no'}.`);
   }
   if (e.type === 'karama') addLog('battle', turn, `${nameOf(e.factionId)} played Karama to cancel ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[e.purpose]}${e.territoryId ? ` in ${territoryNameOf(e.territoryId)}` : ''}.`);
+  if (e.type === 'thumper') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Thumper: Shai-Hulud is called.`);
+  if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
+  if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
+  if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
   if (e.type === 'pledge') addLog('bidding', turn, `${nameOf(e.from)} pledged ${e.amount} spice to ally ${nameOf(e.to)} for this turn.`);
 }
 
@@ -397,7 +401,7 @@ function shuffleArray(array) {
 
 const nameOf = id => FACTION_NAMES[id] ?? id;
 const territoryNameOf = id => territoriesData?.territories?.[id]?.name ?? id;
-const leaderNameOf = id => leadersById[id]?.name ?? id;
+const leaderNameOf = id => id === 'cheapHeroTraitor' ? 'the Cheap Hero' : (leadersById[id]?.name ?? id);
 const cardNameOf = id => cardLookup[id]?.name ?? id;
 
 function addLog(phase, turn, text) {
@@ -558,6 +562,9 @@ function cardHelp(id) {
   if (help) return { text: help };
   if (id.startsWith('truthtrance')) return { text: 'Truthtrance. Ask another player one yes/no question about the game. They must answer truthfully, and everyone hears the answer.', truth: true };
   if (id.startsWith('karama')) return { text: 'Karama. Cancels an enemy faction advantage as it is used against you: the Voice, Atreides Prescience, or a Harkonnen capture. You will be offered it at that moment. (Each faction\'s once-per-game Karama power is not in this version yet.)' };
+  if (id === 'harvester') return { text: 'Harvester. Just after a Spice Blow lands, double its spice. You will be asked at that moment.' };
+  if (id === 'thumper') return { text: 'Thumper. At the start of a Spice Blow, call Shai-Hulud instead of revealing the first card: the worm devours the last spice territory and a Nexus follows. You will be asked at that moment.' };
+  if (id === 'amal') return { text: 'Amal. Every faction, including you, discards half its spice (rounded up) to the Spice Bank. Play it between phases.', amal: true };
   if (id === 'hajr') return { text: 'Hajr. One extra move in the Movement phase: it is offered in your Shipment and movement panel.' };
   if (id === 'ghola') return { text: 'Ghola. Revive a leader, or up to 5 troops, for free: it is offered in your Revival panel.' };
   return { text: 'A special card.' };
@@ -749,7 +756,7 @@ function renderHand() {
         const help = cardHelp(id);
         return `<li class="hand-card">
           <button class="hand-card__face" data-card="${id}">${cardNameOf(id)} <em>${(cardLookup[id]?.category ?? '').replace(/([A-Z])/g, ' $1').toLowerCase()}</em></button>
-          <div class="hand-card__info" hidden>${escapeHTML(help.text)}${help.discard ? ` <button class="btn hand-card__discard" data-discard="${id}">Discard</button>` : ''}${help.truth ? ` <button class="btn hand-card__discard" data-truth>Ask a question</button>` : ''}</div>
+          <div class="hand-card__info" hidden>${escapeHTML(help.text)}${help.discard ? ` <button class="btn hand-card__discard" data-discard="${id}">Discard</button>` : ''}${help.truth ? ` <button class="btn hand-card__discard" data-truth>Ask a question</button>` : ''}${help.amal ? ` <button class="btn hand-card__discard" data-amal>Play Amal</button>` : ''}</div>
         </li>`;
       }).join('')
     : '<li class="empty-note">No treachery cards.</li>';
@@ -910,6 +917,11 @@ $('hand-body').addEventListener('click', e => {
   const discard = e.target.closest('[data-discard]');
   if (discard) discardFromHand(discard.dataset.discard);
   if (e.target.closest('[data-truth]')) openTruthtrance();
+  if (e.target.closest('[data-amal]') && gameState && !busy) {
+    const r = cardEffects.playAmal(gameState, humanFactionId);
+    addLog(phaseEngine.currentPhase(gameState), gameState.meta.turn, `You played Amal: every faction discards half its spice (${Object.entries(r.losses).map(([f, n]) => `${nameOf(f)} ${n}`).join(', ')}).`);
+    saveGame(); render();
+  }
 });
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
