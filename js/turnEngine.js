@@ -32,6 +32,7 @@ import * as setupEngine from './setupEngine.js';
 import * as cardEffects from './cardEffects.js';
 import { random } from './random.js';
 import * as allySupport from './allySupport.js';
+import * as hms from './hms.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -58,6 +59,11 @@ const passiveDecisionProvider = {
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
   chooseTruthtrance() { return null; },
+  chooseIxianStartingCard() { return null; },
+  chooseHmsPlacement() { return null; },
+  chooseHmsMove() { return null; },
+  chooseIxianBury() { return null; },
+  chooseIxianAllySwap() { return false; },
   chooseRevealFaceDancer() { return false; },
   chooseFaceDancerToReplace() { return null; },
   chooseIncreaseRevivalLimit() { return false; },
@@ -143,6 +149,15 @@ const passiveDecisionProvider = {
 
 async function runStormPhase(state, decisionProvider) {
   const isFirstStorm = state.meta.turn === 1;
+  // Ixians: before the storm, the HMS may move up to 3 territories if they occupy it.
+  if (!isFirstStorm && state.factions.ixians && state.board.hms?.placed && (state.factions.ixians.forces.onBoard.hms ?? 0) > 0 && decisionProvider.chooseHmsMove) {
+    const reachable = hms.hmsReachable(state);
+    const dest = Object.keys(reachable).length ? await decisionProvider.chooseHmsMove(state, 'ixians', reachable) : null;
+    if (dest && reachable[dest]) {
+      const r = hms.moveHms(state, reachable[dest]);
+      await observe(decisionProvider, { type: 'hmsMove', ...r, path: reachable[dest] }, state);
+    }
+  }
   // Which two factions dial genuinely needs player-circle sector data for
   // the first storm (nearest either side of Storm Start) and is fully
   // derivable for later storms (last two who fought a battle) without any
@@ -176,6 +191,13 @@ async function runStormPhase(state, decisionProvider) {
   // The Fremen shuffle every Storm card back and secretly preview next turn's.
   if (state.factions.fremen) state.board.nextStormCard = stormEngine.drawStormCard(random);
   await observe(decisionProvider, { type: 'storm', from: previousPosition, to: state.board.stormPosition, sectors: sectorsToMove, dials, stormCard, first: isFirstStorm, damage }, state);
+  // Ixians: after the first storm, point the HMS at any non-stronghold territory.
+  if (state.factions.ixians && !state.board.hms?.placed) {
+    const sites = hms.hmsSites(state);
+    const pick = decisionProvider.chooseHmsPlacement ? await decisionProvider.chooseHmsPlacement(state, 'ixians', sites) : null;
+    hms.placeHms(state, sites.includes(pick) ? pick : (sites.includes('polarSink') ? 'polarSink' : sites[0]));
+    await observe(decisionProvider, { type: 'hmsPlaced', territoryId: state.board.hms.territoryId }, state);
+  }
 
   // First Player is genuinely blocked on player-circle sector data (see
   // docs/STORM_TODO.md), but leaving state.meta.firstPlayer as null broke
@@ -310,6 +332,14 @@ async function runBiddingPhase(state, decisionProvider) {
     }
   }
   biddingEngine.startBiddingPhase(state);
+  if (state.factions.ixians && state.decks.treacheryDeck.length && state.bidding.cardsUpForBid.length) {
+    const all = [...state.bidding.cardsUpForBid, state.decks.treacheryDeck.pop()];
+    const pick = decisionProvider.chooseIxianBury ? await decisionProvider.chooseIxianBury(state, 'ixians', all) : null;
+    const buried = all.includes(pick?.cardId) ? pick.cardId : all[all.length - 1];
+    if (pick?.where === 'top') state.decks.treacheryDeck.push(buried); else state.decks.treacheryDeck.unshift(buried);
+    state.bidding.cardsUpForBid = shuffleInPlace(all.filter(c => c !== buried));
+    state.factions.ixians.specialFactionState = { ...(state.factions.ixians.specialFactionState ?? {}), auctionSeen: [...state.bidding.cardsUpForBid] };
+  }
   const results = [];
 
   while (state.bidding?.active) {
@@ -343,6 +373,16 @@ async function runBiddingPhase(state, decisionProvider) {
     const winner = state.bidding.currentBidder;
     const price = state.bidding.currentBid;
     biddingEngine.resolveCurrentCard(state);
+    // Ixian alliance: the ally may discard the card just bought and draw the top card instead.
+    if (winner && state.factions.ixians && allianceEngine.allyOf(state, winner) === 'ixians' && state.decks.treacheryDeck.length
+        && decisionProvider.chooseIxianAllySwap && await decisionProvider.chooseIxianAllySwap(state, winner, cardId)) {
+      const hand = state.factions[winner].treacheryHand;
+      if (hand.includes(cardId)) {
+        state.factions[winner].treacheryHand = hand.filter(c => c !== cardId);
+        state.decks.treacheryDiscard.push(cardId);
+        state.factions[winner].treacheryHand.push(state.decks.treacheryDeck.pop());
+      }
+    }
     results.push(winner ? { winner, price } : { unsold: true, cardsReturned: state.bidding.cardsUpForBid.length - cardIndex });
     await observe(decisionProvider, winner ? { type: 'auctionWon', factionId: winner, price, bonus: winner === 'harkonnen' }
       : { type: 'auctionUnsold', returned: state.bidding.cardsUpForBid.length - cardIndex }, state);
@@ -457,7 +497,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     }
     if (decision.movement) {
       const { from, to, amount, starred } = decision.movement;
-      if (movementEngine.canMove(state, factionId, from, to, amount).ok) {
+      if (movementEngine.canMove(state, factionId, from, to, amount, starred).ok) {
         // Ornithopter access is decided at the start of the move: leaving
         // Arrakeen or Carthag in this very move still flies.
         const ornithopter = movementEngine.hasOrnithopterAccess(state, factionId);
@@ -670,6 +710,10 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const planFor = async (f, intel) => {
       let plan = await decisionProvider.chooseBattlePlan(state, f, territoryId, opponentOf(f), intel, voiceFor(f));
       plan = battleEngine.enforceVoice(state, f, { ...plan, territoryId }, voiceFor(f), cardLookup);
+      if (f === 'ixians') {
+        const st = Math.min(plan.supportedStarredCount ?? 0, plan.starredForcesCommitted ?? 0);
+        plan = { ...plan, supportedStarredCount: st, supportedOrdinaryCount: 0, spiceCommitted: st };
+      }
       const check = battleEngine.canDeclareBattlePlan(state, territoryId, f, plan, cardLookup);
       if (!check.ok) plan = { ...battleEngine.fallbackPlan(state, territoryId, f, cardLookup), refused: check.reason };
       return plan;
@@ -857,6 +901,17 @@ async function runTraitorSelection(state, decisionProvider) {
 // Every one-off decision made during setup: traitors, then (if Bene
 // Gesserit is playing) their secret Prediction.
 async function runSetupDecisions(state, decisionProvider) {
+  if (state.factions.ixians) {
+    const seated = Object.keys(state.factions);
+    for (const f of seated) { const c = state.factions[f].treacheryHand.shift(); if (c) state.decks.treacheryDeck.push(c); }
+    shuffleInPlace(state.decks.treacheryDeck);
+    const drawn = state.decks.treacheryDeck.splice(-seated.length);
+    const pick = decisionProvider.chooseIxianStartingCard ? await decisionProvider.chooseIxianStartingCard(state, 'ixians', drawn) : null;
+    const kept = drawn.includes(pick) ? pick : drawn[0];
+    const rest = shuffleInPlace(drawn.filter(c => c !== kept));
+    state.factions.ixians.treacheryHand.unshift(kept);
+    for (const f of seated.filter(x => x !== 'ixians')) state.factions[f].treacheryHand.unshift(rest.shift());
+  }
   // The Fremen split their 10 starting forces between Sietch Tabr, False
   // Wall South and False Wall West as they choose.
   if (state.factions.fremen && decisionProvider.chooseFremenPlacement) {
