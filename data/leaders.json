@@ -299,5 +299,47 @@
       "isSpecial": false,
       "traitorPoolEligible": true
     }
+  ],
+  "ixians": [
+    {
+      "id": "dominicVernius",
+      "name": "Dominic Vernius",
+      "faction": "ixians",
+      "fightingValue": 4,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "ctairPilru",
+      "name": "C'Tair Pilru",
+      "faction": "ixians",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "tessiaVernius",
+      "name": "Tessia Vernius",
+      "faction": "ixians",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "kaileaVernius",
+      "name": "Kailea Vernius",
+      "faction": "ixians",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "cammarPilru",
+      "name": "Cammar Pilru",
+      "faction": "ixians",
+      "fightingValue": 1,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
   ]
 }
