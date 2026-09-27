@@ -9,8 +9,7 @@
 
 import { random } from '../random.js';
 
-const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon'];
-const DEFENSES = ['poisonDefense', 'projectileDefense'];
+import { WEAPONS, DEFENSES } from '../battleEngine.js';
 
 export function createBiddingBrain({ cardLookup, rng = random }) {
   const cat = id => cardLookup[id]?.category;
