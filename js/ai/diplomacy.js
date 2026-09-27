@@ -40,7 +40,9 @@ export function createDiplomacy({ rng = random } = {}) {
     if (theirs.length - mine.length >= 2) score -= 2;
 
     // Late game, the special winners' victories are shared with an ally.
-    if (state.meta.turn >= maxTurns - 2 && (partner === 'guild' || partner === 'fremen')) score += 2;
+    const house = state.rulesConfig.houseRules ?? {};
+    const lateSpecial = (partner === 'guild' && !house.noGuildSpecialVictory && !house.noTurnLimit) || (partner === 'fremen' && state.meta.turn <= maxTurns);
+    if (state.meta.turn >= maxTurns - 2 && lateSpecial) score += 2;
 
     // Bene Gesserit: ally with the faction it secretly predicted.
     if (me === 'gesserit' && state.factions.gesserit.specialFactionState?.prediction?.factionId === partner) score += 3;
