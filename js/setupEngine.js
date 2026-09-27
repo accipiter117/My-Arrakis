@@ -60,6 +60,13 @@ const STARTING_CONDITIONS = {
     starredReserve: 0,
     onBoard: { tueksSietch: 5 }
   },
+  // Ixians & Tleilaxu expansion: 20 forces in reserve, no presence on Arrakis.
+  tleilaxu: {
+    spice: 5,
+    reserve: 20,
+    starredReserve: 0,
+    onBoard: {}
+  },
   gesserit: {
     spice: 5,
     reserve: 19,
@@ -133,7 +140,8 @@ function dealStartingTreachery(state, activeFactionIds) {
 function setupTraitorDeck(state, leadersData, activeFactionIds, factionOrder, rngShuffle) {
   const rawDeck = buildTraitorDeck(leadersData, activeFactionIds, Boolean(state.rulesConfig.expansions?.ixTlCards));
   const shuffled = shuffleTraitors(rawDeck, rngShuffle);
-  const remaining = dealTraitorHands(state, shuffled, factionOrder);
+  // The Tleilaxu take no traitors: they draw Face Dancers after everyone else chooses.
+  const remaining = dealTraitorHands(state, shuffled, factionOrder.filter(f => f !== 'tleilaxu'));
   state.decks.traitorDeck = remaining;
   return state;
 }
