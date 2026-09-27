@@ -25,13 +25,13 @@ import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
-const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
+const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'tleilaxu'];
 
 // --- Faction line-up: which factions play (any 2 to 6) --------------------------
 // Expansion factions appear as "coming soon" until their milestone ships
 // (docs/EXPANSION_STATUS.md).
 const EXPANSION_FACTIONS = [
-  ['ixians', 'Ixians'], ['tleilaxu', 'Tleilaxu'], ['choam', 'CHOAM'], ['richese', 'Richese']
+  ['ixians', 'Ixians'], ['choam', 'CHOAM'], ['richese', 'Richese']
 ];
 const LINEUP_KEY = 'my-arrakis-lineup';
 let lineup = (() => {
@@ -61,7 +61,8 @@ const FACTION_DISPLAY = {
   emperor: { name: 'Emperor', colorVar: '--faction-emperor' },
   fremen: { name: 'Fremen', colorVar: '--faction-fremen' },
   guild: { name: 'Spacing Guild', colorVar: '--faction-guild' },
-  gesserit: { name: 'Bene Gesserit', colorVar: '--faction-gesserit' }
+  gesserit: { name: 'Bene Gesserit', colorVar: '--faction-gesserit' },
+  tleilaxu: { name: 'Tleilaxu', colorVar: '--faction-tleilaxu' }
 };
 const FACTION_NAMES = Object.fromEntries(Object.entries(FACTION_DISPLAY).map(([k, v]) => [k, v.name]));
 
@@ -495,7 +496,7 @@ function describe(entry) {
 
 const FACTION_COLORS = {
   atreides: '#3f7047', harkonnen: '#9c2a24', emperor: '#66707e',
-  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72'
+  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440'
 };
 
 function ensureBoard(data) {
@@ -938,7 +939,11 @@ $('lineup-grid').addEventListener('click', e => {
   localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup));
   renderLineup();
 });
-$('lineup-all').addEventListener('click', () => { lineup = [...ALL_FACTIONS]; localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup)); renderLineup(); });
+$('lineup-all').addEventListener('click', () => {
+  // The six base factions, but always keeping your own (swapping out Bene Gesserit if you play an expansion faction).
+  const human = $('select-faction').value;
+  lineup = ALL_FACTIONS.filter(f => f !== 'tleilaxu');
+  if (human && !lineup.includes(human)) lineup = [...lineup.filter(f => f !== 'gesserit'), human]; localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup)); renderLineup(); });
 $('lineup-random').addEventListener('click', () => {
   const human = $('select-faction').value;
   const size = 3 + Math.floor(Math.random() * 4); // 3 to 6 factions
