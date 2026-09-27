@@ -33,6 +33,9 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseEmperorAllyRevival: (state, f, ally) => pick(f).chooseEmperorAllyRevival(state, f, ally),
     chooseAdvisor: (state, f, shipper) => pick(f).chooseAdvisor(state, f, shipper),
     choosePoisonToothUse: (state, f, ...rest) => pick(f).choosePoisonToothUse(state, f, ...rest),
+    chooseThumper: (state, f) => pick(f).chooseThumper(state, f),
+    chooseHarvester: (state, f, blows) => pick(f).chooseHarvester(state, f, blows),
+    chooseAmal: (state, f) => pick(f).chooseAmal(state, f),
     chooseGuildTiming: (state, others) => pick('guild').chooseGuildTiming(state, others),
     chooseFremenPlacement: (state, f) => pick(f).chooseFremenPlacement(state, f),
     // Diplomacy: each faction decides for itself, human or AI.
