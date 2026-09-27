@@ -46,7 +46,8 @@ assert(state.factions.atreides.leaders.available.length === 5, `atreides should 
 assert(state.factions.atreides.leaders.available.includes('thufirHawat'), 'thufir hawat specifically present among available leaders');
 
 console.log('\nTest 4: spice deck built correctly (21 cards: 6 worms + 15 territory)');
-assert(state.decks.spiceDeck.length === 21, `expected 21 spice deck cards, got ${state.decks.spiceDeck.length}`);
+const spiceInPlay = 21 + (rulesConfig.expansions?.ixTlCards ? 1 : 0); // + Sandtrout with the Ixians & Tleilaxu cards
+assert(state.decks.spiceDeck.length === spiceInPlay, `expected ${spiceInPlay} spice deck cards, got ${state.decks.spiceDeck.length}`);
 
 console.log('\nTest 5: treachery deck dealt correctly, Harkonnen gets 2 starting cards, everyone else gets 1');
 assert(state.factions.harkonnen.treacheryHand.length === 2, 'harkonnen starts with 2 treachery cards');
