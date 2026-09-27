@@ -778,11 +778,16 @@ function renderTerritories() {
 function renderLog() {
   const log = $('turn-log');
   const ticker = $('ticker');
+  const feed = $('console-feed');
   if (!logEntries.length) {
     log.innerHTML = '<li class="empty-note">Nothing has happened yet.</li>';
     ticker.textContent = 'Open the menu ☰ to start a game.';
+    feed.innerHTML = '<p class="console-feed__empty">Open the menu ☰ to start a game.</p>';
     return;
   }
+  // The console beneath the map shows the latest few events.
+  feed.innerHTML = logEntries.slice(-5).reverse()
+    .map((e, i) => `<p class="console-feed__line${i === 0 ? ' is-latest' : ''}"><span class="ticker__phase">${escapeHTML(PHASE_LABELS[e.phase] ?? e.phase)}</span>${escapeHTML(e.text)}</p>`).join('');
   log.innerHTML = logEntries.slice().reverse()
     .map(e => `<li><span class="log-phase">${PHASE_LABELS[e.phase] ?? e.phase}</span>T${e.turn}: ${escapeHTML(e.text)}</li>`)
     .join('');
@@ -822,6 +827,28 @@ document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('c
 $('scrim').addEventListener('click', closeSheets);
 $('btn-menu').addEventListener('click', () => openSheet('menu'));
 $('ticker').addEventListener('click', () => openSheet('log'));
+$('console-feed').addEventListener('click', () => openSheet('log'));
+
+// --- Phone layout: map on top, a console beneath it -------------------------------
+// On a tall screen the map is limited by the screen's width, leaving empty
+// space above and below. Pin the map to the top and use the space beneath as
+// a console where panels, cards and banners appear, so they never cover the map.
+function layoutConsole() {
+  const stage = document.querySelector('.stage');
+  const r = stage.getBoundingClientRect();
+  const on = r.height - r.width >= 150;
+  document.body.classList.toggle('has-console', on);
+  document.documentElement.style.setProperty('--board-size', `${Math.floor(on ? r.width : Math.min(r.width, r.height))}px`);
+  requestAnimationFrame(() => {
+    const b = document.querySelector('.board-wrap').getBoundingClientRect();
+    document.documentElement.style.setProperty('--below-board', `${Math.max(0, Math.floor(window.innerHeight - b.bottom))}px`);
+  });
+}
+window.addEventListener('resize', layoutConsole);
+// Also re-measure when the stage itself changes (e.g. the victory watch strip appearing).
+if (window.ResizeObserver) new ResizeObserver(() => layoutConsole()).observe(document.querySelector('.stage'));
+window.addEventListener('orientationchange', () => setTimeout(layoutConsole, 200));
+layoutConsole();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
 
 $('btn-new-game').addEventListener('click', () => { closeSheets(); startNewGame(); });
