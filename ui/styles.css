@@ -327,6 +327,7 @@ strong { color: var(--gold); }
 .save-actions { display: flex; gap: 0.4rem; }
 .save-actions .btn { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 11px; }
 
+.field[hidden], .row-field[hidden] { display: none; }
 .row-field, .field {
   display: flex;
   justify-content: space-between;
