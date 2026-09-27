@@ -58,6 +58,9 @@ const passiveDecisionProvider = {
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
   chooseTruthtrance() { return null; },
+  chooseRevealFaceDancer() { return false; },
+  chooseFaceDancerToReplace() { return null; },
+  chooseIncreaseRevivalLimit() { return false; },
   choosePoisonToothUse() { return true; },
   chooseThumper() { return false; },
   chooseHarvester() { return null; },
@@ -356,6 +359,11 @@ async function runRevivalPhase(state, decisionProvider) {
     const canAct = (faction.revivalTanks ?? 0) > 0 || faction.leaders.killed.length > 0 || faction.treacheryHand.includes('ghola');
     const tanksBefore = faction.revivalTanks ?? 0, deadBefore = faction.leaders.killed.length;
     if (canAct) await observe(decisionProvider, { type: 'turnStart', phase: 'revival', factionId }, state);
+    // Tleilaxu may raise this faction's revival limit from 3 to 5 for the turn.
+    if (state.factions.tleilaxu && factionId !== 'tleilaxu' && (faction.revivalTanks ?? 0) > 3 && decisionProvider.chooseIncreaseRevivalLimit
+        && await decisionProvider.chooseIncreaseRevivalLimit(state, 'tleilaxu', { factionId, tanks: faction.revivalTanks })) {
+      state.meta.revivalLimitOverride = { ...(state.meta.revivalLimitOverride ?? {}), [factionId]: 5 };
+    }
     const decision = await decisionProvider.chooseRevival(state, factionId);
     if (decision.forces > 0 && revivalEngine.canReviveForces(state, factionId, decision.forces, decision.starred).ok) {
       results.push(revivalEngine.reviveForces(state, factionId, decision.forces, decision.starred));
@@ -379,6 +387,7 @@ async function runRevivalPhase(state, decisionProvider) {
       await observe(decisionProvider, { type: 'turnEnd', phase: 'revival', factionId, acted: forces > 0 || leaders > 0, forces, leaders }, state);
     }
   }
+  delete state.meta.revivalLimitOverride;
   // Alliance advantage: the Emperor may pay for up to 3 extra forces for their ally.
   const emperorAlly = allySupport.allyOf(state, 'emperor');
   if (emperorAlly && decisionProvider.chooseEmperorAllyRevival) {
@@ -544,6 +553,33 @@ function foreseeSpice(state) {
   state.factions.atreides.specialFactionState.foreseenSpice = top
     ? { type: top.type, territoryId: top.type === 'territory' ? top.id : null, amount: top.maxValue ?? null }
     : { reshuffle: true };
+}
+
+// --- Tleilaxu Face Dancers ------------------------------------------------------------
+function shuffleInPlace(arr) {
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  return arr;
+}
+// All three revealed: they go back into the traitor deck and three new ones are drawn.
+function recycleFaceDancers(state) {
+  const tl = state.factions.tleilaxu;
+  state.decks.traitorDeck.push(...tl.faceDancers.map(({ revealed, ...card }) => card));
+  shuffleInPlace(state.decks.traitorDeck);
+  tl.faceDancers = state.decks.traitorDeck.splice(0, 3).map(c => ({ ...c, revealed: false }));
+}
+// Mentat Pause (advanced): the Tleilaxu may swap one unrevealed Face Dancer.
+async function faceDancerSwap(state, decisionProvider) {
+  const tl = state.factions.tleilaxu;
+  if (!tl || !decisionProvider.chooseFaceDancerToReplace) return;
+  const unrevealed = (tl.faceDancers ?? []).filter(fd => !fd.revealed);
+  if (!unrevealed.length || !state.decks.traitorDeck.length) return;
+  const leaderId = await decisionProvider.chooseFaceDancerToReplace(state, 'tleilaxu', unrevealed.map(fd => fd.leaderId));
+  const idx = tl.faceDancers.findIndex(fd => !fd.revealed && fd.leaderId === leaderId);
+  if (idx < 0) return;
+  const { revealed, ...old } = tl.faceDancers[idx];
+  state.decks.traitorDeck.push(old);
+  shuffleInPlace(state.decks.traitorDeck);
+  tl.faceDancers[idx] = { ...state.decks.traitorDeck.shift(), revealed: false };
 }
 
 // Lets the UI present each event as it happens (cards, sweeps, marches).
@@ -714,6 +750,35 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     // used are forgotten. The AI reads only this record, never real hands.
     recordKnownCards(state, winner, winner ? [plans[winner].weaponCardId, plans[winner].defenseCardId, plans[winner].cheapHeroCardId] : []);
 
+    // Tleilaxu Face Dancers: when ANOTHER faction wins with a leader that is
+    // one of their Face Dancers, the Tleilaxu may reveal it. The win stands,
+    // but the leader dies (no spice for it), the winner's remaining forces
+    // there go back to reserves, and Tleilaxu forces from reserve take their place.
+    let faceDancer = null;
+    const tl = state.factions.tleilaxu;
+    const fdWinner = outcome.winnerFactionId;
+    if (tl && fdWinner && fdWinner !== 'tleilaxu' && plans[fdWinner].leaderId) {
+      const match = (tl.faceDancers ?? []).find(fd => !fd.revealed && fd.leaderId === plans[fdWinner].leaderId);
+      if (match && decisionProvider.chooseRevealFaceDancer
+          && await decisionProvider.chooseRevealFaceDancer(state, 'tleilaxu', { territoryId, leaderId: match.leaderId, winnerId: fdWinner })) {
+        match.revealed = true;
+        const wf = state.factions[fdWinner];
+        if (wf.leaders.available.includes(match.leaderId)) battleEngine.killLeader(state, fdWinner, match.leaderId, 0);
+        const here = wf.forces.onBoard[territoryId] ?? 0, starredHere = wf.forces.starredOnBoard?.[territoryId] ?? 0;
+        if (here) {
+          wf.forces.reserve += here;
+          wf.forces.starredReserve = (wf.forces.starredReserve ?? 0) + starredHere;
+          delete wf.forces.onBoard[territoryId];
+          if (wf.forces.starredOnBoard) delete wf.forces.starredOnBoard[territoryId];
+        }
+        const placed = Math.min(here, tl.forces.reserve);
+        if (placed) { tl.forces.reserve -= placed; tl.forces.onBoard[territoryId] = (tl.forces.onBoard[territoryId] ?? 0) + placed; }
+        faceDancer = { leaderId: match.leaderId, winnerId: fdWinner, returned: here, placed };
+        if (tl.faceDancers.every(fd => fd.revealed)) recycleFaceDancers(state);
+        await observe(decisionProvider, { type: 'faceDancer', territoryId, ...faceDancer }, state);
+      }
+    }
+
     // 4. A captured leader Harkonnen used goes home after one battle.
     if (fighting.includes('harkonnen') && plans.harkonnen.leaderId) battleEngine.returnCapturedLeader(state, plans.harkonnen.leaderId);
 
@@ -744,7 +809,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       supportedOrdinary: plan.supportedOrdinaryCount ?? 0, leaderValue: plan.leaderFightingValue ?? 0,
       kwisatzHaderach: Boolean(plan.useKwisatzHaderach), forcesPresent: forcesBefore[plan === plans[aggressorId] ? aggressorId : defenderId]
     });
-    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor,
+    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor, faceDancer,
       plans: { [aggressorId]: reveal(plans[aggressorId]), [defenderId]: reveal(plans[defenderId]) }, ...outcome });
     await observe(decisionProvider, { type: 'battle', ...results[results.length - 1] }, state);
 
@@ -803,6 +868,12 @@ async function runSetupDecisions(state, decisionProvider) {
     }
   }
   const traitors = await runTraitorSelection(state, decisionProvider);
+  // The Tleilaxu draw 3 Face Dancers once everyone else has chosen.
+  if (state.factions.tleilaxu) {
+    shuffleInPlace(state.decks.traitorDeck);
+    state.factions.tleilaxu.faceDancers = state.decks.traitorDeck.splice(0, 3).map(c => ({ ...c, revealed: false }));
+    state.factions.tleilaxu.traitorHand = [];
+  }
   let prediction = null;
   if (state.factions.gesserit) {
     const choice = await decisionProvider.choosePrediction(state, 'gesserit');
@@ -841,7 +912,10 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
       break;
     case 'battle': result = await runBattlePhase(state, decisionProvider, cardLookup); break;
     case 'spiceCollection': result = runSpiceCollectionPhase(state); break;
-    case 'mentatPause': result = runMentatPausePhase(state, territoriesData); break;
+    case 'mentatPause':
+      await faceDancerSwap(state, decisionProvider);
+      result = runMentatPausePhase(state, territoriesData);
+      break;
     case 'victoryCheck': result = null; break; // victory already resolved inside mentatPause
     default:
       throw new Error(`turnEngine has no runner for phase "${phase}"`);
