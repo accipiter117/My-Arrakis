@@ -162,6 +162,7 @@ async function withPhaseAmbience(runPhase) {
   } finally {
     const next = gameState ? PHASE_AMBIENCE[phaseEngine.currentPhase(gameState)] : null;
     if (loop && next !== loop) sfx.stopLoop(loop);
+    board?.overview(speed ? 700 : 0); // pull back to the whole map between phases
   }
 }
 
@@ -467,6 +468,7 @@ function ensureBoard(data) {
     factionColors: FACTION_COLORS, onTap: tapTerritory,
     onZoom: zoomed => { $('zoom-reset').hidden = !zoomed; }
   });
+  board.setCamera(localStorage.getItem('my-arrakis-camera') !== 'off');
   presenter = createPresenter({
     board, layer: $('event-layer'), banner: $('turn-banner'), factionColors: FACTION_COLORS, getSpeed: () => speed,
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
@@ -485,6 +487,8 @@ function tapTerritory(id) {
   selectedTerritory = selectedTerritory === id && !$('territory-info').hidden ? null : id;
   renderBoard();
   renderTerritoryInfo();
+  // The camera frames the territory you picked.
+  if (selectedTerritory && board) board.focusOn([board.labelPoint(id)], { force: true, minW: 460, ms: 500 });
   // An open decision panel (e.g. shipment) can use the tap to fill a field.
   if (selectedTerritory) document.dispatchEvent(new CustomEvent('territory-tap', { detail: { id } }));
 }
@@ -669,10 +673,10 @@ function renderStatus() {
   $('status-storm').textContent = `Storm ${gameState.board.stormPosition ?? '—'}`;
   const me = humanFactionId && gameState.factions[humanFactionId];
   spicePill.hidden = !me;
-  if (me) spicePill.textContent = `${me.spice} spice`;
+  if (me) { spicePill.textContent = `◆ ${me.spice}`; spicePill.title = `${me.spice} spice`; }
   const ally = humanFactionId && gameState.alliances?.find(a => a.factions.includes(humanFactionId))?.factions.find(f => f !== humanFactionId);
   $('status-ally').hidden = !ally;
-  if (ally) $('status-ally').textContent = `Ally: ${FACTION_NAMES[ally]}`;
+  if (ally) { $('status-ally').innerHTML = `<img src="assets/counters/${ally}.png" alt="">`; $('status-ally').setAttribute('aria-label', `Ally: ${FACTION_NAMES[ally]}. Tap for what they give you.`); }
 }
 
 function renderPhaseTrack() {
@@ -842,6 +846,11 @@ $('hand-body').addEventListener('click', e => {
 });
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
+// Camera: follow the action (default) or stay where you put it.
+const CAMERA_KEY = 'my-arrakis-camera';
+const cameraOn = () => localStorage.getItem(CAMERA_KEY) !== 'off';
+$('select-camera').value = cameraOn() ? 'on' : 'off';
+$('select-camera').addEventListener('change', e => { localStorage.setItem(CAMERA_KEY, e.target.value); board?.setCamera(e.target.value === 'on'); });
 const describeDifficulty = () => { $('difficulty-note').textContent = DIFFICULTIES[$('select-ai').value]?.describe ?? 'Every faction passes: for testing the engine.'; };
 $('select-ai').addEventListener('change', describeDifficulty);
 describeDifficulty();
