@@ -144,6 +144,31 @@ export const FACTION_GUIDE = {
   }
 };
 
+FACTION_GUIDE.ixians = {
+  title: 'The Ixians',
+  tagline: 'Machines and secrets. Their stronghold moves.',
+  start: '10 spice. 3 Cyborgs and 3 Suboids in the Hidden Mobile Stronghold; 4 Cyborgs and 10 Suboids in reserve. 1 free revival a turn.',
+  powers: [
+    'Hidden Mobile Stronghold: counts towards victory, immune to storm and worms. Before each storm, while you occupy it, move it up to 3 territories, collecting 2 spice per force inside from each spice territory it enters. Only you can ship straight into it.',
+    'Cyborgs: worth 2 in battle, move 2, cost 3 spice to revive.',
+    'Suboids: worth ½ in battle and never boosted with spice; move 2 alongside a Cyborg, otherwise 1.',
+    'Starting draft: you choose your first treachery card from one per faction.',
+    'Each auction you see every card plus one extra, and put one back on the deck.',
+    'Not yet in this version: Technology (swapping the card about to be auctioned), Suboids replacing lost Cyborgs, and your Karama powers.'
+  ],
+  push: [
+    'Park the HMS by the richest spice and sweep it up each turn.',
+    'Lead with Cyborgs: they fight at double and drag Suboids along at speed.',
+    'You know every auction card: bid only for what you want, and let rivals overpay.'
+  ],
+  ally: ['After buying a treachery card, the ally may discard it and draw the top card of the deck.'],
+  counter: [
+    'Enter the HMS from the territory it points at: it is a stronghold anyone can take.',
+    'Suboids are weak: force battles where the Ixians have few Cyborgs.',
+    'Keep spice away from the HMS\'s reach.'
+  ]
+};
+
 FACTION_GUIDE.tleilaxu = {
   title: 'The Bene Tleilax',
   tagline: 'Masters of flesh. Death feeds them.',
@@ -176,4 +201,4 @@ export const ALLIANCE_BASICS = [
   'You cannot move into each other’s territories (except the Polar Sink), and you never fight each other.'
 ];
 
-export const GUIDE_ORDER = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'tleilaxu'];
+export const GUIDE_ORDER = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu'];
