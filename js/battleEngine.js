@@ -11,6 +11,7 @@
 // is where that distinction actually affects combat math.
 
 function starredUnitValueFor(factionId, opponentFactionId) {
+  if (factionId === 'ixians') return 2; // Cyborgs
   if (factionId === 'emperor') {
     return opponentFactionId === 'fremen' ? 1 : 2; // Sardaukar's stated exception
   }
@@ -156,6 +157,8 @@ function isLeaderAvailable(state, factionId, leaderId, territoryId) {
 // spice. Applied wherever strength is computed, so every dialed Fremen force
 // counts as supported (and the Fremen never need to commit spice).
 function fremenFullStrength(factionId, plan) {
+  // Ixian Suboids can never be boosted with spice: they always count half.
+  if (factionId === 'ixians') return { ...plan, supportedOrdinaryCount: 0 };
   if (factionId !== 'fremen') return plan;
   const starred = plan.starredForcesCommitted ?? 0;
   return { ...plan, supportedStarredCount: starred, supportedOrdinaryCount: (plan.forcesCommitted ?? 0) - starred };
