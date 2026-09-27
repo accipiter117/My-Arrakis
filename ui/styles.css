@@ -702,6 +702,26 @@ strong { color: var(--gold); }
 .turn-banner__phase { white-space: nowrap; font-family: var(--font-data); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--sand-dim); }
 .turn-banner__note { white-space: nowrap; font-size: 11.5px; color: var(--gold); margin-top: 1px; }
 
+/* --- Slim top of screen: more room for the map ------------------------------ */
+
+.topbar { padding: 0.2rem 0.45rem; gap: 0.4rem; }
+.topbar .icon-btn { width: 30px; height: 30px; font-size: 13px; }
+.topbar__phase { font-size: 13px; }
+.topbar__turn { font-size: 10px; }
+.pill { padding: 0.14rem 0.4rem; font-size: 10px; }
+.pill--ally { padding: 1px; line-height: 0; background: none; border-color: transparent; }
+.pill--ally img { width: 24px; height: 24px; display: block; }
+.pill--hand { display: inline-flex; align-items: center; padding: 0.1rem 0.35rem; }
+.pill--hand svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+/* The phase track becomes a thin progress bar: the phase name is in the top bar. */
+.phase-track { min-height: 0; height: 4px; font-size: 0; overflow: hidden; gap: 2px; padding: 0 2px; background: #0c0805; border-bottom: none; }
+.phase-track__step { flex: 1; padding: 0; border: none; background: var(--slab-3); height: 4px; }
+.phase-track__step--done { background: var(--bronze); }
+.phase-track__step--active { background: var(--spice); box-shadow: 0 0 6px var(--spice-glow); }
+.watch { padding: 0.28rem 0.6rem; font-size: 11px; }
+.stage { padding: 0.15rem; }
+.ticker { padding: 0.3rem 0.7rem; }
+
 /* --- Accessibility -------------------------------------------------------------------- */
 
 :focus-visible { outline: 2px solid var(--spice); outline-offset: 2px; }
