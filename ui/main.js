@@ -18,6 +18,7 @@ import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
 import * as cardEffects from '../js/cardEffects.js';
+import * as hmsModule from '../js/hms.js';
 import { assessVictoryWatch } from '../js/victoryWatch.js';
 import { FACTION_GUIDE, GUIDE_ORDER, ALLIANCE_BASICS } from './factionGuide.js';
 import { createPresenter } from './presenter.js';
@@ -25,13 +26,13 @@ import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
-const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'tleilaxu'];
+const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu'];
 
 // --- Faction line-up: which factions play (any 2 to 6) --------------------------
 // Expansion factions appear as "coming soon" until their milestone ships
 // (docs/EXPANSION_STATUS.md).
 const EXPANSION_FACTIONS = [
-  ['ixians', 'Ixians'], ['choam', 'CHOAM'], ['richese', 'Richese']
+  ['choam', 'CHOAM'], ['richese', 'Richese']
 ];
 const LINEUP_KEY = 'my-arrakis-lineup';
 let lineup = (() => {
@@ -62,7 +63,8 @@ const FACTION_DISPLAY = {
   fremen: { name: 'Fremen', colorVar: '--faction-fremen' },
   guild: { name: 'Spacing Guild', colorVar: '--faction-guild' },
   gesserit: { name: 'Bene Gesserit', colorVar: '--faction-gesserit' },
-  tleilaxu: { name: 'Tleilaxu', colorVar: '--faction-tleilaxu' }
+  tleilaxu: { name: 'Tleilaxu', colorVar: '--faction-tleilaxu' },
+  ixians: { name: 'Ixians', colorVar: '--faction-ixians' }
 };
 const FACTION_NAMES = Object.fromEntries(Object.entries(FACTION_DISPLAY).map(([k, v]) => [k, v.name]));
 
@@ -268,6 +270,7 @@ async function resumeGame(save) {
       const fresh = data.territories.territories[id];
       if (fresh) Object.assign(t, { adjacentDraft: fresh.adjacentDraft, stormSector: fresh.stormSector, stormShare: fresh.stormShare });
     }
+    hmsModule.linkHms(gameState); // the HMS's links live in the game, not the map data
     setRandomState(save.rng);
     logEntries = save.log ?? [];
     humanFactionId = save.humanFactionId ?? null;
@@ -496,7 +499,7 @@ function describe(entry) {
 
 const FACTION_COLORS = {
   atreides: '#3f7047', harkonnen: '#9c2a24', emperor: '#66707e',
-  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440'
+  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440', ixians: '#4f6fb8'
 };
 
 function ensureBoard(data) {
@@ -942,7 +945,7 @@ $('lineup-grid').addEventListener('click', e => {
 $('lineup-all').addEventListener('click', () => {
   // The six base factions, but always keeping your own (swapping out Bene Gesserit if you play an expansion faction).
   const human = $('select-faction').value;
-  lineup = ALL_FACTIONS.filter(f => f !== 'tleilaxu');
+  lineup = ALL_FACTIONS.filter(f => !['tleilaxu', 'ixians'].includes(f));
   if (human && !lineup.includes(human)) lineup = [...lineup.filter(f => f !== 'gesserit'), human]; localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup)); renderLineup(); });
 $('lineup-random').addEventListener('click', () => {
   const human = $('select-faction').value;
