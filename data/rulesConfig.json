@@ -154,6 +154,10 @@
       {
         "id": "ixTlBattleCards",
         "justification": "Ixians & Tleilaxu battle cards (expansion plan M1): each card's effect comes from what it counts as in its slot (battleEngine.slotKinds). Poison Blade is projectile and poison (only a Shield Snooper stops it); Weirding Way in the defence slot beside a weapon is a projectile defence; Chemistry in the weapon slot beside a defence is a poison weapon; Shield Snooper is both defences and counts as a Shield for Lasgun explosions and Artillery; Poison Tooth kills both leaders (not stopped by a Snooper) unless its owner withholds it after the reveal, and is discarded if used; Artillery Strike kills both leaders unless shielded, surviving leaders do not count, no spice is paid for the kills, and it is always discarded. The Voice names card types, and a card counts as every type it is. Controlled by expansions.ixTlCards."
+      },
+      {
+        "id": "ixTlSpecialCards",
+        "justification": "Ixians & Tleilaxu special cards (M1 part 2). Sandtrout (spice deck): cancels all alliances; the next Shai-Hulud still devours but brings no Nexus; the card after it doubles its spice, or if another worm brings the Nexus. Thumper: at the start of the Spice Blow (not turn 1), pile A resolves as though Shai-Hulud had appeared, then draws on. Harvester: doubles a blow placed this phase, if still on the board (offered just after the reveals). Amal: every faction discards half its spice rounded up; the AI is offered it at the start of Bidding, the human plays it from the Hand between phases. Kull Wahad is worthless and enters only with worthless cards (D1). The Cheap Hero traitor matches any Cheap Hero an opponent plays and stays in its holder's hand."
       }
     ]
   },
