@@ -10,7 +10,7 @@
 // deterministic once the deck order is set).
 
 import { random } from './random.js';
-function buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle) {
+function buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle, { sandtrout = false } = {}) {
   const wormCards = Array.from(
     { length: spiceDeckData.shaiHuludCount },
     (_, i) => ({ type: 'shaiHulud', id: `shaiHulud${i + 1}` })
@@ -23,6 +23,8 @@ function buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle) {
     }
     return { type: 'territory', id: territoryId, maxValue: territory.spiceBlow.maxValue };
   });
+  // Ixians & Tleilaxu: the Sandtrout card (an anti-Nexus).
+  if (sandtrout) territoryCards.push({ type: 'sandtrout', id: 'sandtrout' });
 
   return rngShuffle([...wormCards, ...territoryCards]);
 }
@@ -63,9 +65,32 @@ function resolvePile(state, pileKey) {
   const setAsideWorms = [];
   let triggeredNexus = false;
 
+  // Thumper (played at the start of the Spice Blow): pile A resolves as
+  // though Shai-Hulud had been revealed, then draws on as normal.
+  if (pileKey === 'A' && state.meta.thumperPending && !isFirstTurn) {
+    delete state.meta.thumperPending;
+    const discard = state.decks.spiceDiscardA;
+    const top = discard[discard.length - 1];
+    (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'worm', thumper: true, devoured: top?.type === 'territory' ? top.id : null });
+    devourTopOfPile(state, pileKey);
+    triggeredNexus = true;
+  }
+
   while (true) {
     const card = drawSpiceCard(state);
     if (!card) break; // deck exhausted mid-resolution, edge case, stop rather than loop forever
+
+    // Sandtrout: all alliances are cancelled; the next Shai-Hulud causes no
+    // Nexus; the card after that worm doubles its spice (or, if another
+    // worm, brings the Nexus after all).
+    if (card.type === 'sandtrout') {
+      if ((state.alliances ?? []).length) state.meta.alliancesCancelled = (state.alliances ?? []).map(a => a.factions);
+      state.alliances = [];
+      state.meta.sandtrout = 'pending';
+      (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'sandtrout' });
+      state.decks[`spiceDiscard${pileKey}`].push(card);
+      continue;
+    }
 
     if (card.type === 'shaiHulud') {
       if (isFirstTurn) {
@@ -78,17 +103,21 @@ function resolvePile(state, pileKey) {
 
       const discard = state.decks[`spiceDiscard${pileKey}`];
       const top = discard[discard.length - 1];
-      (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'worm', devoured: top?.type === 'territory' ? top.id : null });
+      const calmed = state.meta.sandtrout === 'pending';          // Sandtrout: this worm brings no Nexus
+      (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'worm', devoured: top?.type === 'territory' ? top.id : null, sandtrout: calmed });
       devourTopOfPile(state, pileKey);
       state.decks[`spiceDiscard${pileKey}`].push(card);
-      triggeredNexus = true;
+      if (calmed) state.meta.sandtrout = 'await';
+      else { triggeredNexus = true; if (state.meta.sandtrout === 'await') delete state.meta.sandtrout; }
       continue; // keep drawing until a territory card appears
     }
 
     // Territory card: place spice (unless the territory's sector is in
     // storm, per the rulebook, but sector/storm state isn't final yet).
-    placeSpiceBlow(state, card, pileKey);
-    (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'territory', territoryId: card.id, amount: card.maxValue });
+    const doubled = state.meta.sandtrout === 'await';              // the blow after a Sandtrout worm: double spice
+    if (doubled) delete state.meta.sandtrout;
+    placeSpiceBlow(state, doubled ? { ...card, maxValue: card.maxValue * 2 } : card, pileKey);
+    (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'territory', territoryId: card.id, amount: card.maxValue * (doubled ? 2 : 1), doubled });
     state.decks[`spiceDiscard${pileKey}`].push(card);
     break; // this pile is done for the phase
   }
