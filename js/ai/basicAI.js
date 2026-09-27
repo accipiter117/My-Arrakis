@@ -172,6 +172,38 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return false;
     },
 
+    // Ixian Technology: swap a dud from our hand for a strong card about to be auctioned.
+    chooseIxianTechnology(state, factionId, upcoming) {
+      const good = id => id.startsWith('karama') || [...WEAPON_CATEGORIES, ...DEFENSE_CATEGORIES].includes(cardLookup[id]?.category);
+      const dud = own(state, factionId).treacheryHand.find(id => cardLookup[id]?.category === 'worthless' || ['weatherControl', 'familyAtomics'].includes(id));
+      return good(upcoming) && dud ? dud : null;
+    },
+    chooseSuboidExchange(state, factionId, { max }) { return max; },
+
+    // Tleilaxu leader deals: ask for a strong leader back early when rich enough...
+    chooseEarlyLeaderRevival(state, factionId) {
+      const me = own(state, factionId);
+      const best = me.leaders.killed.slice().sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0))[0];
+      return best && (leaderValue[best] ?? 0) >= 4 && me.spice >= (leaderValue[best] ?? 0) + 5 ? best : null;
+    },
+    // ...set a price as the Tleilaxu (never help someone about to win)...
+    chooseLeaderRevivalPrice(state, factionId, { factionId: other, leaderId }) {
+      const held = Object.keys(state.board.territories).filter(t => state.board.territories[t].type === 'stronghold' && (state.factions[other].forces.onBoard[t] ?? 0) > 0).length;
+      if (held >= 2 && allianceEngine.allyOf(state, factionId) !== other) return null;
+      return (leaderValue[leaderId] ?? 0) + (allianceEngine.allyOf(state, factionId) === other ? 0 : 2);
+    },
+    // ...and accept a fair price.
+    chooseAcceptLeaderRevivalPrice(state, factionId, { leaderId, price }) {
+      return price <= (leaderValue[leaderId] ?? 0) + 3 && own(state, factionId).spice - price >= 3;
+    },
+    // Tleilaxu Gholas: take the strongest dead leader when short of leaders and spice allows.
+    chooseGholaRevival(state, factionId, options) {
+      const me = own(state, factionId);
+      if (me.leaders.available.length >= 4) return null;
+      const best = options.filter(o => me.spice - o.cost >= 4).sort((a, b) => (leaderValue[b.leaderId] ?? 0) - (leaderValue[a.leaderId] ?? 0))[0];
+      return best?.leaderId ?? null;
+    },
+
     // Ixians: keep the best starting card (Karama, Lasgun, Shield Snooper, a defence, a weapon).
     chooseIxianStartingCard(state, factionId, ids) {
       const rank = id => { const c = cardLookup[id]?.category;
