@@ -157,3 +157,20 @@ export function playKarama(state, factionId, purpose) {
   state.meta.karamas = [...(state.meta.karamas ?? []), record];
   return record;
 }
+
+// --- Ixians & Tleilaxu special cards ----------------------------------------------
+// Amal: every faction discards half its spice (rounded up) to the Spice Bank.
+export function playAmal(state, factionId) {
+  if (!holds(state, factionId, 'amal')) throw new Error('You do not hold Amal.');
+  discard(state, factionId, 'amal');
+  const losses = {};
+  for (const [id, f] of Object.entries(state.factions)) {
+    const loss = Math.ceil(f.spice / 2);
+    f.spice -= loss;
+    state.spiceBank.totalInCirculation += loss;
+    losses[id] = loss;
+  }
+  return { factionId, losses };
+}
+export function holdsCard(state, factionId, cardId) { return holds(state, factionId, cardId); }
+export function discardCard(state, factionId, cardId) { discard(state, factionId, cardId); }
