@@ -61,7 +61,8 @@
     },
     "choamRichese": {
       "enabled": false
-    }
+    },
+    "ixTlCards": true
   },
   "implementationDecisions": {
     "description": "Rules that exist only because a physical-table interaction needs a digital equivalent. Every entry here must have a one-line justification so it's auditable later.",
@@ -149,6 +150,10 @@
       {
         "id": "factionSelection",
         "justification": "Any 2 to 6 factions may play (GF9 supports 2 to 6 players). Seating follows the board order; the traitor deck only contains leaders of factions in play. Verified by 60 simulated games across every line-up size with no crashes or invariant breaks."
+      },
+      {
+        "id": "ixTlBattleCards",
+        "justification": "Ixians & Tleilaxu battle cards (expansion plan M1): each card's effect comes from what it counts as in its slot (battleEngine.slotKinds). Poison Blade is projectile and poison (only a Shield Snooper stops it); Weirding Way in the defence slot beside a weapon is a projectile defence; Chemistry in the weapon slot beside a defence is a poison weapon; Shield Snooper is both defences and counts as a Shield for Lasgun explosions and Artillery; Poison Tooth kills both leaders (not stopped by a Snooper) unless its owner withholds it after the reveal, and is discarded if used; Artillery Strike kills both leaders unless shielded, surviving leaders do not count, no spice is paid for the kills, and it is always discarded. The Voice names card types, and a card counts as every type it is. Controlled by expansions.ixTlCards."
       }
     ]
   },
