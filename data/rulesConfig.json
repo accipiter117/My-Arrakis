@@ -129,6 +129,10 @@
       {
         "id": "bordersFromDrawnMap",
         "justification": "What you see is what you can move across. Borders (adjacentDraft in data/territories.json, used for all movement, Fremen free shipping, worm rides and the AI) are computed from this game's own map outlines by tools/computeBorders.py: two territories border when they share at least 66px of edge. Every corner contact measured 60px or less and every real edge 72px or more, so the cut-off separates them cleanly. The original rulebook list is kept as adjacentBoard for reference."
+      },
+      {
+        "id": "noTurnLimit",
+        "justification": "House rules at the project owner's request, to see how games play when they can drag on: no 10-turn limit (play continues until a stronghold victory), no Spacing Guild special victory, the Fremen special victory kept as a one-time check at the end of turn 10 (it is defined at the last turn), and a draw if nobody has won by the end of turn 30 (houseRules.stalemateTurnCap) so a true stalemate cannot run forever. Set houseRules.noTurnLimit and noGuildSpecialVictory to false to restore the official game."
       }
     ]
   },
@@ -163,6 +167,9 @@
     "notes": "Confirmed directly from the base rulebook text. Solo win is 3 strongholds (or all 3 Tech Tokens if Ixian/Tleilaxu expansion is active, per that expansion's rulebook), alliance win is 4 (first player) held jointly. Two-player games use 4 regardless of alliance status."
   },
   "houseRules": {
-    "removeWorthlessCards": true
+    "removeWorthlessCards": true,
+    "noTurnLimit": true,
+    "noGuildSpecialVictory": true,
+    "stalemateTurnCap": 30
   }
 }
