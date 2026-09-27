@@ -244,6 +244,8 @@ function initializeGame(config) {
   state.meta.turn = 1;
 
   applyStartingStarredOnBoard(state);
+  // Every leader's printed value (used for Ghola prices and leader deals).
+  state.meta.leaderValues = Object.fromEntries(Object.values(leadersData).filter(Array.isArray).flat().map(l => [l.id, l.fightingValue ?? 0]));
   return state;
 }
 
