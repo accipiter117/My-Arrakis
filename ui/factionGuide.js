@@ -105,7 +105,7 @@ export const FACTION_GUIDE = {
       'May ship troops across the planet (territory to territory) or back to reserves (1 spice per 2 troops) instead of from reserves.',
       'May take its Shipment and Movement turn at any point in the order, for example last, after seeing everyone else move.',
       'Receives the spice other factions pay to ship.',
-      'Special victory: if nobody has won by the end of the last turn, the Guild win, together with their ally.'
+      'Special victory: if nobody has won by the end of the last turn, the Guild win, together with their ally. (Switched off by the current house rules: no turn limit.)'
     ],
     push: [
       'Stay rich and patient: every shipment others make funds you.',
