@@ -58,6 +58,7 @@ const passiveDecisionProvider = {
     return { factionId: other, turn: state.rulesConfig.victoryVariants.maxTurns };
   },
   chooseTruthtrance() { return null; },
+  choosePoisonToothUse() { return true; },
   chooseAdvisor() { return false; },
   chooseGuildTiming() { return null; }, // null: act last
   chooseFremenPlacement() { return null; }, // null: all 10 in Sietch Tabr
@@ -631,6 +632,14 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       }
     }
 
+    // Poison Tooth: once plans are revealed, its owner may withhold it.
+    for (const f of fighting) {
+      if (cardLookup[plans[f].weaponCardId]?.category !== 'poisonTooth' || traitorCalls[f] || traitorCalls[opponentOf(f)]) continue;
+      const use = decisionProvider.choosePoisonToothUse
+        ? await decisionProvider.choosePoisonToothUse(state, f, territoryId, opponentOf(f), plans[f], plans[opponentOf(f)]) : true;
+      if (!use) plans[f] = { ...plans[f], poisonToothWithheld: true };
+    }
+
     const forcesBefore = Object.fromEntries(fighting.map(f => [f, state.factions[f].forces.onBoard[territoryId] ?? 0]));
     const outcome = battleEngine.resolveBattle(state, territoryId, aggressorId, defenderId, plans[aggressorId], plans[defenderId], cardLookup, traitorCalls);
     for (const f of fighting) if (plans[f].leaderId) state.battle.leaderTerritory[plans[f].leaderId] = territoryId;
@@ -643,6 +652,11 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       const played = [plans[winner].weaponCardId, plans[winner].defenseCardId, plans[winner].cheapHeroCardId].filter(id => id && hand.includes(id));
       if (played.length) {
         discarded = ((await decisionProvider.chooseCardsToDiscard(state, winner, played)) ?? []).filter(id => played.includes(id));
+        // Always discarded, even by the winner: Artillery Strike, and a Poison Tooth that was used.
+        for (const id of played) {
+          const c = cardLookup[id]?.category;
+          if ((c === 'artilleryStrike' || (c === 'poisonTooth' && !plans[winner].poisonToothWithheld)) && !discarded.includes(id)) discarded.push(id);
+        }
         state.factions[winner].treacheryHand = hand.filter(id => !discarded.includes(id));
         state.decks.treacheryDiscard.push(...discarded);
       }
