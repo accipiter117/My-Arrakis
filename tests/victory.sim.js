@@ -5,7 +5,9 @@ import fs from 'fs';
 import { resolveMentatPause, checkFremenSpecialVictory } from '../js/victoryEngine.js';
 
 const territoriesData = JSON.parse(fs.readFileSync('./data/territories.json', 'utf8'));
-const rulesConfig = JSON.parse(fs.readFileSync('./data/rulesConfig.json', 'utf8'));
+const liveRules = JSON.parse(fs.readFileSync('./data/rulesConfig.json', 'utf8'));
+// These tests check the OFFICIAL end-of-game rules, whatever house rules are switched on.
+const rulesConfig = { ...liveRules, houseRules: { ...(liveRules.houseRules ?? {}), noTurnLimit: false, noGuildSpecialVictory: false } };
 
 function makeState(turn = 3) {
   return {
