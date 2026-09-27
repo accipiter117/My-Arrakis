@@ -37,7 +37,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
     if (!Array.isArray(list)) continue;
     for (const l of list) leader[l.id] = l;
   }
-  const leaderLabel = id => `${leader[id]?.name ?? id} (${leader[id]?.fightingValue ?? 0})`;
+  const leaderLabel = id => id === 'cheapHeroTraitor' ? 'Cheap Hero (any Cheap Hero an opponent plays)' : `${leader[id]?.name ?? id} (${leader[id]?.fightingValue ?? 0})`;
   const territoryName = id => territoriesData.territories[id]?.name ?? id;
   const cardName = id => cardLookup[id]?.name ?? id;
   const factionName = id => factionNames[id] ?? id;
@@ -478,6 +478,25 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'pos')));
     },
+
+    chooseThumper(state, factionId) {
+      const top = state.decks.spiceDiscardA[state.decks.spiceDiscardA.length - 1];
+      const where = top?.type === 'territory' ? territoryName(top.id) : 'no spice territory';
+      return ask('Play the Thumper?',
+        `<p>Instead of revealing the first Spice Blow card, call Shai-Hulud: the worm devours everything in <strong>${esc(where)}</strong>, and a Nexus follows.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Play the Thumper</button><button class="btn" data-default-action>Keep it</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+
+    chooseHarvester(state, factionId, blows) {
+      return ask('Play the Harvester?',
+        `<p>Double the spice of one blow that has just landed.</p>
+         <label class="field"><span>Blow</span><select name="t">${options([['', 'Keep the card'], ...blows.map(b => [b.territoryId, `${territoryName(b.territoryId)}: ${b.amount} to ${b.amount * 2}`])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 't').value || null));
+    },
+
+    chooseAmal() { return false; }, // you play Amal from your Hand
 
     choosePoisonToothUse(state, factionId, territoryId, opponentId, mine, theirs) {
       return ask('Use the Poison Tooth?',
