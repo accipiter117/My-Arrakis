@@ -13,8 +13,10 @@
 // the existing check, nothing extra to build.
 
 import { random } from './random.js';
-function buildTraitorDeck(leadersData, activeFactionIds) {
-  const deck = [];
+// includeCheapHero (Ixians & Tleilaxu): a traitor card that matches any
+// Cheap Hero an opponent plays.
+function buildTraitorDeck(leadersData, activeFactionIds, includeCheapHero = false) {
+  const deck = includeCheapHero ? [{ leaderId: 'cheapHeroTraitor', factionId: null }] : [];
   for (const factionId of activeFactionIds) {
     const factionLeaders = leadersData[factionId] ?? [];
     for (const leader of factionLeaders) {
