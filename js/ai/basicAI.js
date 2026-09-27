@@ -22,6 +22,7 @@ import { random } from '../random.js';
 import * as movementEngine from '../movementEngine.js';
 import * as revivalEngine from '../revivalEngine.js';
 import * as battleEngine from '../battleEngine.js';
+import * as allianceEngine from '../allianceEngine.js';
 
 // Card types that fill each slot come from the battle engine (base game plus
 // the Ixians & Tleilaxu cards), so new cards are handled everywhere at once.
@@ -169,6 +170,31 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
     chooseAllianceResponse() {
       return false;
+    },
+
+    // Thumper: call a worm onto the last spice territory if it would swallow a
+    // big enemy stack (and none of ours or our ally's).
+    chooseThumper(state, factionId) {
+      const top = state.decks.spiceDiscardA[state.decks.spiceDiscardA.length - 1];
+      if (top?.type !== 'territory') return false;
+      const ally = allianceEngine.allyOf(state, factionId);
+      let mine = 0, theirs = 0;
+      for (const [f, x] of Object.entries(state.factions)) {
+        const n = x.forces.onBoard[top.id] ?? 0;
+        if (f === factionId || f === ally) mine += n; else if (f !== 'fremen') theirs += n;
+      }
+      return mine === 0 && theirs >= 5;
+    },
+    // Harvester: double the richest blow we have troops in or next to.
+    chooseHarvester(state, factionId, blows) {
+      const near = t => [t, ...(state.board.territories[t]?.adjacentDraft ?? [])].some(x => (own(state, factionId).forces.onBoard[x] ?? 0) > 0);
+      const best = blows.filter(b => near(b.territoryId)).sort((a, b) => b.amount - a.amount)[0];
+      return best ? best.territoryId : null;
+    },
+    // Amal: when a rival is far richer, halve everyone's spice.
+    chooseAmal(state, factionId) {
+      const richest = Math.max(...Object.entries(state.factions).filter(([f]) => f !== factionId).map(([, x]) => x.spice));
+      return richest >= 12 && own(state, factionId).spice * 2 < richest;
     },
 
     // Poison Tooth, after the reveal: withhold it if it would cost us a better
