@@ -12,6 +12,7 @@
 // Every form's default action is always legal (pass, no shipment, a
 // straightforward battle plan), so the player can never get stuck.
 
+import { forcesAfterReveal, usableNoFields } from '../js/noField.js';
 import { TECH_TOKENS } from '../js/techTokens.js';
 import { battleSpice, battleSupportFor, spendingPower } from '../js/allySupport.js';
 import * as biddingEngine from '../js/biddingEngine.js';
@@ -224,6 +225,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <fieldset><legend>Ship from reserves</legend>
            <label class="field"><span>Destination</span><select name="shipTo">${options(shipOptions, '')}</select></label>
            <label class="field"><span>Forces</span><input type="number" name="shipAmount" min="1" max="${me.forces.reserve}" value="${Math.min(3, me.forces.reserve)}"></label>
+           ${factionId === 'richese' && usableNoFields(state).length ? `<label class="field"><span>No-Field</span><select name="shipNF">${options([['', 'Ship forces normally'], ...usableNoFields(state).map(v => [v, `Token ${v}: pay for 1 force, ${v} arrive when revealed`])], '')}</select></label>
+           ${state.factions.richese.noField.onPlanet ? `<p class="decision__note">Your No-Field token (${state.factions.richese.noField.onPlanet.value}) in ${esc(territoryName(state.factions.richese.noField.onPlanet.territoryId))} is revealed first if you place another.</p>` : ''}` : ''}
            ${eliteName && (me.forces.starredReserve ?? 0) > 0 ? `<label class="field"><span>of which ${eliteName}</span><input type="number" name="shipStarred" min="0" max="${me.forces.starredReserve}" value="${Math.min(me.forces.starredReserve, 3, me.forces.reserve)}"></label>` : ''}
            <p class="decision__cost" data-for="ship"></p>
          </fieldset>
@@ -353,7 +356,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const shipTo = field(p, 'shipTo').value;
             const from = field(p, 'moveFrom').value;
             done({
-              shipment: shipTo ? { territoryId: shipTo, amount: num(p, 'shipAmount'), starred: field(p, 'shipStarred') ? num(p, 'shipStarred') : undefined } : null,
+              shipment: shipTo ? (field(p, 'shipNF')?.value ? { territoryId: shipTo, amount: 1, noField: Number(field(p, 'shipNF').value) }
+                : { territoryId: shipTo, amount: num(p, 'shipAmount'), starred: field(p, 'shipStarred') ? num(p, 'shipStarred') : undefined }) : null,
               movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount'),
                 starred: field(p, 'moveStarred') && (me.forces.starredOnBoard?.[from] ?? 0) ? num(p, 'moveStarred') : undefined } : null,
               crossShip: field(p, 'gType')?.value === 'cross' ? { from: field(p, 'gFrom').value, to: field(p, 'gTo').value, amount: num(p, 'gAmount') } : null,
@@ -472,6 +476,13 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           p.querySelector('[data-action="yes"]').onclick = () => done(true);
           p.querySelector('[data-default-action]').onclick = () => done(false);
         });
+    },
+
+    chooseRevealNoField(state, factionId, { territoryId, value }) {
+      return ask('Reveal your No-Field token?',
+        `<p>Your No-Field token in ${esc(territoryName(territoryId))} is worth ${value}. Revealing it now places ${value} forces from your reserves there (it is revealed anyway in a battle, or if the storm or a worm catches it).</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Reveal it</button><button class="btn btn--primary" data-default-action>Keep it hidden</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
     },
 
     // --- Richese cache auctions ------------------------------------------------
@@ -870,6 +881,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <div class="choices">
            ${[['weapon', 'Their weapon', 'protect your leader'], ['defense', 'Their defence', 'pick a weapon that gets through'],
               ['leader', 'Their leader', 'check it against your traitor'], ['number', 'Forces they dial', 'know what you must beat']]
+             .filter(([v]) => !(v === 'number' && opponentId === 'richese' && state.meta.currentBattle?.noField)) // No-Field hides the dial
              .map(([v, label, why], i) => `<label class="choice"><input type="radio" name="element" value="${v}"${i === 0 ? ' checked' : ''}> <span>${label} <em>${why}</em></span></label>`).join('')}
          </div>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Ask</button></div>`,
@@ -879,7 +891,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
 
     chooseBattlePlan(state, factionId, territoryId, opponentId, intel, voice) {
       const me = state.factions[factionId];
-      const present = me.forces.onBoard[territoryId] ?? 0;
+      const present = forcesAfterReveal(state, factionId, territoryId);
       const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
       const theirs = state.factions[opponentId].forces.onBoard[territoryId] ?? 0;
       const hand = me.treacheryHand.map(id => ({ id, category: cardLookup[id]?.category }));
