@@ -888,7 +888,9 @@ function renderHand() {
     ${foresight}
     <ul class="hand-list">${cards}</ul>
     <p class="hand-meta"><em>Tap a card to see what it does.</em></p>
-    <p class="hand-meta"><strong>Traitor:</strong> ${traitors}</p>
+    ${humanFactionId === 'tleilaxu'
+      ? `<p class="hand-meta"><strong>Face Dancers:</strong> ${(me.faceDancers ?? []).map(fd => `${fd.leaderId === 'cheapHeroTraitor' ? 'the Cheap Hero' : leaderNameOf(fd.leaderId)}${fd.leaderId === 'cheapHeroTraitor' ? '' : ` (${nameOf(leadersById[fd.leaderId]?.faction)})`}${fd.revealed ? ' <em>revealed</em>' : ''}`).join(', ') || 'None yet'}</p>`
+      : `<p class="hand-meta"><strong>Traitor:</strong> ${traitors}</p>`}
     <p class="hand-meta"><strong>Leaders:</strong> ${leaders}</p>
     ${humanFactionId === 'fremen' && gameState.board.nextStormCard ? `<p class="hand-meta"><strong>Next storm:</strong> ${gameState.board.nextStormCard} sectors <em>(only you can see this)</em></p>` : ''}
     ${me.specialFactionState?.prediction ? `<p class="hand-meta"><strong>Prediction:</strong> ${nameOf(me.specialFactionState.prediction.factionId)} on turn ${me.specialFactionState.prediction.turn}</p>` : ''}`;
