@@ -225,7 +225,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <fieldset><legend>Ship from reserves</legend>
            <label class="field"><span>Destination</span><select name="shipTo">${options(shipOptions, '')}</select></label>
            <label class="field"><span>Forces</span><input type="number" name="shipAmount" min="1" max="${me.forces.reserve}" value="${Math.min(3, me.forces.reserve)}"></label>
-           ${factionId === 'richese' && usableNoFields(state).length ? `<label class="field"><span>No-Field</span><select name="shipNF">${options([['', 'Ship forces normally'], ...usableNoFields(state).map(v => [v, `Token ${v}: pay for 1 force, ${v} arrive when revealed`])], '')}</select></label>
+           ${(factionId === 'richese' || state.alliances?.some(a => a.factions.includes('richese') && a.factions.includes(factionId))) && usableNoFields(state).length ? `<label class="field"><span>No-Field</span><select name="shipNF">${options([['', 'Ship forces normally'], ...usableNoFields(state).map(v => [v, `Token ${v}: pay for 1 force, ${v} arrive when revealed`])], '')}</select></label>
            ${state.factions.richese.noField.onPlanet ? `<p class="decision__note">Your No-Field token (${state.factions.richese.noField.onPlanet.value}) in ${esc(territoryName(state.factions.richese.noField.onPlanet.territoryId))} is revealed first if you place another.</p>` : ''}` : ''}
            ${eliteName && (me.forces.starredReserve ?? 0) > 0 ? `<label class="field"><span>of which ${eliteName}</span><input type="number" name="shipStarred" min="0" max="${me.forces.starredReserve}" value="${Math.min(me.forces.starredReserve, 3, me.forces.reserve)}"></label>` : ''}
            <p class="decision__cost" data-for="ship"></p>
@@ -235,6 +235,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
            <label class="field"><span>To</span><select name="moveTo"><option value="">Choose a starting territory</option></select></label>
            <label class="field"><span>Forces</span><input type="number" name="moveAmount" min="1" value="1"></label>
            ${eliteName ? `<label class="field" data-elite-move hidden><span>of which ${eliteName}</span><input type="number" name="moveStarred" min="0" value="0"></label>` : ''}
+           ${me.treacheryHand.includes('ornithopter') ? '<label class="choice"><input type="checkbox" name="thopter"> <span>Play the Ornithopter card: this move may go up to 3 territories</span></label>' : ''}
            <p class="decision__note">Your shipment happens first, then your move. Tip: tap ▾ to see the map, where legal choices are outlined; tapping a territory fills this in.</p>
          </fieldset>
          ${me.treacheryHand.includes('hajr') ? `<fieldset><legend>Hajr: an extra move (uses the card)</legend>
@@ -255,7 +256,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           const btn = p.querySelector('[data-default-action]');
           const refreshDestinations = () => {
             const from = field(p, 'moveFrom').value;
-            const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, range_) : [];
+            const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, field(p, 'thopter')?.checked ? Math.max(3, range_) : range_) : [];
             field(p, 'moveTo').innerHTML = from
               ? options(reachable.map(id => [id, territoryName(id)]), reachable[0])
               : '<option value="">Choose a starting territory</option>';
@@ -266,7 +267,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           const highlight = () => {
             const from = field(p, 'moveFrom').value;
             const ids = from
-              ? movementEngine.reachableTerritories(state, factionId, from, range_)
+              ? movementEngine.reachableTerritories(state, factionId, from, field(p, 'thopter')?.checked ? Math.max(3, range_) : range_)
               : territoryIds.filter(id => movementEngine.canShip(state, factionId, id, Math.max(1, num(p, 'shipAmount'))).ok);
             document.dispatchEvent(new CustomEvent('board-highlight', { detail: { ids } }));
           };
@@ -286,7 +287,9 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             if (from) {
               if (!to) problems.push('Movement: nothing reachable from there.');
               else {
+                if (field(p, 'thopter')?.checked) state.meta.ornithopterFar = factionId; // checked as the Ornithopter card would allow
                 const r = movementEngine.canMove(state, factionId, from, to, num(p, 'moveAmount'));
+                delete state.meta.ornithopterFar;
                 if (!r.ok) problems.push(`Movement: ${r.reason}`);
               }
             }
@@ -346,7 +349,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           };
           if (field(p, 'hajrFrom')) field(p, 'hajrFrom').onchange = () => {
             const from = field(p, 'hajrFrom').value;
-            const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, range_) : [];
+            const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, field(p, 'thopter')?.checked ? Math.max(3, range_) : range_) : [];
             field(p, 'hajrTo').innerHTML = from ? options(reachable.map(id => [id, territoryName(id)]), reachable[0]) : '<option value="">Choose a starting territory</option>';
             if (from) field(p, 'hajrAmount').value = me.forces.onBoard[from];
           };
@@ -356,6 +359,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const shipTo = field(p, 'shipTo').value;
             const from = field(p, 'moveFrom').value;
             done({
+              ornithopter: field(p, 'thopter')?.checked ? 'far' : null,
               shipment: shipTo ? (field(p, 'shipNF')?.value ? { territoryId: shipTo, amount: 1, noField: Number(field(p, 'shipNF').value) }
                 : { territoryId: shipTo, amount: num(p, 'shipAmount'), starred: field(p, 'shipStarred') ? num(p, 'shipStarred') : undefined }) : null,
               movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount'),
@@ -478,6 +482,107 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         });
     },
 
+    // --- Richese cards, Black Market, alliance --------------------------------------
+    chooseNullentropy(state, factionId, { cards }) {
+      return ask('Nullentropy Box',
+        `<p>Pay 2 spice to take any card from the discard pile (it is then shuffled, with the Box on top).</p>
+         <label class="field"><span>Take</span><select name="c">${options([['', 'Not now'], ...cards.map(id => [id, cardName(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value || null));
+    },
+    chooseDistrans(state, factionId, { targets, cards }) {
+      return ask('Distrans',
+        `<p>Give another player one card from your hand (a dud clogs their hand).</p>
+         <label class="field"><span>Give</span><select name="c">${options([['', 'Not now'], ...cards.map(id => [id, cardName(id)])], '')}</select></label>
+         <label class="field"><span>To</span><select name="t">${options(targets.map(t => [t, factionName(t)]), targets[0])}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value ? { cardId: field(p, 'c').value, targetId: field(p, 't').value } : null));
+    },
+    chooseBlackMarket(state, factionId, { hand }) {
+      const names = [...new Set(Object.values(cardLookup).filter(c => !c.cache).map(c => c.name))].sort();
+      const idFor = n => Object.keys(cardLookup).find(id => cardLookup[id].name === n);
+      return ask('Black Market?',
+        `<p>Before this round's cards are declared you may sell one card from your hand. Say what it is (you may lie); nobody sees it, except Atreides. If nobody bids any spice, you keep it. If it sells, one fewer normal card is auctioned and all the spice is yours.</p>
+         <label class="field"><span>Sell</span><select name="c">${options([['', 'Nothing this round'], ...hand.map(id => [id, cardName(id)])], '')}</select></label>
+         <label class="field"><span>Announce it as</span><select name="n">${options([['', 'The truth'], ...names.map(n => [n, n])], '')}</select></label>
+         <label class="field"><span>Auction</span><select name="m">${options([['normal', 'Normal bidding'], ['onceAround', 'Once Around'], ['silent', 'Silent']], 'normal')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => { const c = field(p, 'c').value; const n = field(p, 'n').value;
+          done(c ? { cardId: c, claimId: n ? idFor(n) : c, method: field(p, 'm').value } : null); });
+    },
+    chooseJuiceOfSapho(state, factionId, { use, territoryId, opponentId }) {
+      if (use === 'aggressor') return ask('Juice of Sapho?',
+        `<p>Play Juice of Sapho to be the aggressor against ${esc(factionName(opponentId))} in ${esc(territoryName(territoryId))} (the aggressor wins ties)?</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Play it</button><button class="btn btn--primary" data-default-action>Keep it</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done('aggressor'); p.querySelector('[data-default-action]').onclick = () => done(null); });
+      return ask('Juice of Sapho?',
+        `<p>Play Juice of Sapho to go first or last in Shipment and Movement this turn?</p>
+         <label class="field"><span>Use</span><select name="u">${options([['', 'Keep it'], ['first', 'Go first'], ['last', 'Go last']], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'u').value || null));
+    },
+    chooseAllyNoField(state, factionId, { allyId, value, territoryId }) {
+      return ask('Ship your ally with a No-Field?',
+        `<p>${esc(factionName(allyId))} ask to ship up to ${value} forces to ${esc(territoryName(territoryId))} with your No-Field token ${value}, paying for one force. Their forces are revealed at once, and the token is then face up.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Agree</button><button class="btn btn--primary" data-default-action>Refuse</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+    chooseResidualPoison(state, factionId, { opponentId }) {
+      return ask('Residual Poison?',
+        `<p>Before plans are made, kill one of ${esc(factionName(opponentId))}'s available leaders at random (no spice for it)?</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Play it</button><button class="btn btn--primary" data-default-action>Keep it</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+    choosePortableSnooper(state, factionId, { opponentPlan }) {
+      return ask('Portable Snooper?',
+        `<p>Plans are revealed. Their weapon: <strong>${esc(opponentPlan.weaponCardId ? cardName(opponentPlan.weaponCardId) : 'none')}</strong>. You played no defence: add Portable Snooper as a poison defence?</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Add it</button><button class="btn btn--primary" data-default-action>Keep it</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+    chooseStoneBurnerMode(state, factionId, { opponentPlan }) {
+      return ask('Stone Burner',
+        `<p>Kill both leaders, or reduce both leaders to 0? Either way the side with more undialled forces wins, and dialled forces are lost normally. Their leader: ${esc(opponentPlan.leaderId ? leaderLabel(opponentPlan.leaderId) : 'none')}.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Reduce both to 0</button><button class="btn btn--primary" data-default-action>Kill both</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done('zero'); p.querySelector('[data-default-action]').onclick = () => done('kill'); });
+    },
+    chooseSemuta(state, factionId, { cards }) {
+      return ask('Semuta Drug?',
+        `<p>Take one of the cards another player has just discarded?</p>
+         <label class="field"><span>Take</span><select name="c">${options([['', 'Not now'], ...cards.map(id => [id, cardName(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value || null));
+    },
+    chooseGiveCacheCard(state, factionId, { allyId, cards }) {
+      return ask('Give your ally a Richese card?',
+        `<p>You may give ${esc(factionName(allyId))} one of your Richese cards.</p>
+         <label class="field"><span>Give</span><select name="c">${options([['', 'Not now'], ...cards.map(id => [id, cardName(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value || null));
+    },
+    chooseGholaBuyBack(state, factionId, { leaderId }) {
+      const me = state.factions[factionId];
+      return ask('Buy back your leader?',
+        `<p>The Tleilaxu hold <strong>${esc(leaderLabel(leaderId))}</strong> as a Ghola. Offer them a price to return it? They may refuse.</p>
+         <label class="field"><span>Offer</span><select name="p">${options([['', 'No offer'], ...range(1, me.spice).map(n => [n, `${n} spice`])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'p').value; done(v === '' ? null : Number(v)); });
+    },
+    chooseAcceptGholaBuyBack(state, factionId, { leaderId, owner, price }) {
+      return ask('Sell a Ghola back?',
+        `<p>${esc(factionName(owner))} offer <strong>${price} spice</strong> for <strong>${esc(leaderLabel(leaderId))}</strong>. If you sell, you may revive a different leader as a Ghola.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Sell for ${price}</button><button class="btn btn--primary" data-default-action>Refuse</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+    chooseFaceDancerSources(state, factionId, { territoryId, count, reserve, board }) {
+      const rows = Object.entries(board).map(([t, n]) => `<label class="field"><span>From ${esc(territoryName(t))}</span><select name="t_${t}">${options(range(0, Math.min(n, count)).map(k => [k, k]), 0)}</select></label>`).join('');
+      return ask('Face Dancer: replace their forces',
+        `<p>Up to ${count} of your forces take ${esc(territoryName(territoryId))}, from reserves and/or anywhere on the planet.</p>
+         <label class="field"><span>From reserves</span><select name="r">${options(range(0, Math.min(count, reserve)).map(k => [k, k]), Math.min(count, reserve))}</select></label>
+         ${rows}
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done({ reserve: num(p, 'r'), from: Object.fromEntries(Object.keys(board).map(t => [t, num(p, `t_${t}`)])) }));
+    },
+
     chooseRevealNoField(state, factionId, { territoryId, value }) {
       return ask('Reveal your No-Field token?',
         `<p>Your No-Field token in ${esc(territoryName(territoryId))} is worth ${value}. Revealing it now places ${value} forces from your reserves there (it is revealed anyway in a battle, or if the storm or a worm catches it).</p>
@@ -502,10 +607,11 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'd').value));
     },
-    chooseOnceAroundBid(state, factionId, { cardId, highBid }) {
+    chooseOnceAroundBid(state, factionId, { cardId, highBid, blackMarket, actualId }) {
       const max = spendingPower(state, factionId);
-      return ask(`Richese auction: ${cardName(cardId)}`,
-        `<p>Once Around: this is your only chance to bid. High bid so far: ${highBid || 'none'}. Richese may outbid the final high bid.</p>
+      const bm = blackMarket ? `<p class="decision__note">Black Market: Richese say this card is <strong>${esc(cardName(cardId))}</strong>, and may be lying.${actualId ? ` Prescience: it is really <strong>${esc(cardName(actualId))}</strong>.` : ''}</p>` : '';
+      return ask(blackMarket ? 'Black Market' : `Richese auction: ${cardName(cardId)}`,
+        `${bm}<p>${blackMarket === 'normal' ? 'Bid higher or pass (passing takes you out of this auction).' : 'Once Around: this is your only chance to bid.'} High bid so far: ${highBid || 'none'}.${blackMarket ? '' : ' Richese may outbid the final high bid.'}</p>
          <label class="field"><span>Your bid</span><select name="b">${options([['', 'Pass'], ...range(highBid + 1, Math.max(highBid, max)).map(n => [n, `${n} spice`])], '')}</select></label>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'b').value; done(v === '' ? null : Number(v)); });
@@ -518,10 +624,10 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'b').value; done(v === '' ? null : Number(v)); });
     },
-    chooseSilentBid(state, factionId, { cardId }) {
+    chooseSilentBid(state, factionId, { cardId, blackMarket, actualId }) {
       const max = spendingPower(state, factionId);
-      return ask(`Silent auction: ${cardName(cardId)}`,
-        `<p>Everyone names a price in secret; the highest wins (ties go to the earlier faction in storm order). 0 is allowed.</p>
+      return ask(blackMarket ? 'Black Market: silent auction' : `Silent auction: ${cardName(cardId)}`,
+        `${blackMarket ? `<p class="decision__note">Richese say this card is <strong>${esc(cardName(cardId))}</strong>, and may be lying.${actualId ? ` Prescience: it is really <strong>${esc(cardName(actualId))}</strong>.` : ''}</p>` : ''}<p>Everyone names a price in secret; the highest wins (ties go to the earlier faction in storm order). 0 is allowed.</p>
          <label class="field"><span>Your price</span><select name="b">${options(range(0, max).map(n => [n, `${n} spice`]), 0)}</select></label>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Seal it</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'b')));
