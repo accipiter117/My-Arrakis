@@ -10,6 +10,7 @@
 // a real isSectorInStorm(territoryId, sector) implementation is a one-line
 // change at each of the two TODO markers below, not a redesign.
 
+import { recordTrigger } from './techTokens.js';
 import { spendingPower, paySpice } from './allySupport.js';
 const ORNITHOPTER_STRONGHOLDS = ['arrakeen', 'carthag'];
 
@@ -162,6 +163,11 @@ function executeShipment(state, factionId, destinationTerritoryId, amount, starr
   } else {
     state.spiceBank.totalInCirculation -= check.totalCost;
   }
+
+  // Tech Tokens: a shipment from off-planet triggers Heighliners. Fremen
+  // forces come from the deep desert, not off-planet, so theirs does not
+  // (the same reading as Bene Gesserit Spiritual Advisors).
+  if (factionId !== 'fremen') recordTrigger(state, 'heighliner', factionId);
 
   // Bene Gesserit: free 1-force shipment into the Polar Sink whenever any
   // OTHER faction ships from off-planet. Reactive trigger, not yet auto-fired
