@@ -183,6 +183,10 @@
       {
         "id": "richeseCache",
         "justification": "Richese part 1 (expansion M6, C&R rulebook). Start: 5 spice, 20 in reserve, 2 free revivals, five leaders (treachery.online values, to confirm). A separate 10-card cache, never in the Treachery Deck. Every Bidding Round while the cache lasts, one fewer normal card is dealt and Richese auctions one cache card, announced first or last, by Once Around (Richese picks a direction; each faction able to bid gets one bid starting beside Richese; Richese may then outbid) or Silent (sealed bids from every faction able to bid, Richese included; ties by storm order from the First Player). No bids: Richese take it free (hand permitting) or remove it from the game. Others pay Richese; Richese buying pays the Emperor or the Bank. Harkonnen draw their bonus card. Karama is never offered for these auctions. Cache card texts come from treachery.online pending the printed cards; only the Richese Karama is live so far, the other nine are marked unbuilt (holders may discard them). Not yet built: No-Field, Black Market, Richese alliance powers, cache card effects, Richese Karama power."
+      },
+      {
+        "id": "stoneBurnerWording",
+        "justification": "Project owner's decision: Stone Burner follows the treachery.online wording. Weapon, special; after plans are revealed its player chooses to kill both leaders or reduce both leaders' strength to 0; the player with the most undialled forces wins the battle; dialled forces are lost normally; discard after use. The other Richese cache card texts also follow treachery.online."
       }
     ]
   },
