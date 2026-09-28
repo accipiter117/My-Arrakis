@@ -149,11 +149,15 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
   }
 
   // Value of one battle outcome to me.
+  // lastWin: whether the last utility() call was a win (for the export's AI record).
+  let lastWin = false;
   function utility(state, me, opp, territoryId, mine, theirs, isAggressor) {
+    lastWin = false;
     const myForces = state.factions[me].forces.onBoard[territoryId] ?? 0;
     const worth = territoryWorth(state, territoryId);
     const myLeaderValue = (mine.leaderId ? (leaderValue[mine.leaderId] ?? 0) : 0) + 1.5;
     if ((state.factions[me].traitorHand ?? []).includes(theirs.leaderId)) {
+      lastWin = true;
       return worth + (theirs.leaderFightingValue ?? 0); // we'd spring our traitor: free win
     }
     const agg = isAggressor ? mine : theirs, def = isAggressor ? theirs : mine;
@@ -168,6 +172,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     const shed = cat(mine.weaponCardId) === 'worthless' ? 0.3 : 0;
     const spiceCost = mine.spiceCommitted * 0.5;
     const leaderPay = wd.noSpiceForKills ? 0 : (theirKilled ? theirs.leaderFightingValue ?? 0 : 0) + (myKilled ? mine.leaderFightingValue ?? 0 : 0);
+    lastWin = iWin;
     if (iWin) return worth - mine.forcesCommitted - spiceCost + leaderPay * 0.6 - (myKilled ? myLeaderValue : 0) + shed;
     return -myForces - spiceCost - (myKilled ? myLeaderValue : 0) - 1 + shed;
   }
@@ -187,13 +192,16 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
         const risk = traitorRisk(state, me, opp, plan.leaderId);
         const myForces = state.factions[me].forces.onBoard[territoryId] ?? 0;
         const betrayed = -myForces - (plan.leaderId ? (leaderValue[plan.leaderId] ?? 0) + 1.5 : 0);
-        let total = 0;
-        for (const theirs of futures) total += utility(state, me, opp, territoryId, plan, theirs, isAggressor);
+        let total = 0, wins = 0;
+        for (const theirs of futures) { total += utility(state, me, opp, territoryId, plan, theirs, isAggressor); if (lastWin) wins++; }
         const expected = (1 - risk) * (total / futures.length) + risk * betrayed;
-        if (!best || expected > best.expected) best = { plan, expected };
+        if (!best || expected > best.expected) best = { plan, expected, wins, risk };
       }
       if (!best) return null;
       const { starredUnitValue, ...plan } = best.plan;
+      // What the AI believed when it chose (read by the match export; the engine ignores it).
+      plan._ai = { winChance: Math.round((1 - best.risk) * (best.wins / futures.length) * 100) / 100, traitorRisk: Math.round(best.risk * 100) / 100,
+        expectedValue: Math.round(best.expected * 10) / 10, samples: futures.length };
       return plan;
     }
   };
