@@ -101,3 +101,74 @@ export function cacheCardValue(cardId, unbuilt = []) {
   if (unbuilt.includes(cardId)) return 1;
   return { karamaRichese: 8, stoneBurner: 6, mirrorWeapon: 5, residualPoison: 4, portableSnooper: 3 }[cardId] ?? 2;
 }
+
+// --- Black Market (advanced) -------------------------------------------------------
+// At the start of the Bidding Round Richese may offer one card from its hand,
+// announcing a name (true or not). Sold normally, Once Around (Richese does not
+// bid) or Silent. No spice bid: Richese keeps it. Sold: one fewer normal card,
+// and all payment goes to Richese.
+// A normal auction for the Black Market card: rounds in storm order until nobody raises.
+// Atreides are told the real card (Prescience still works on the Black Market).
+async function runNormalFor(state, dp, cardLabelId, bidders, actualId) {
+  let high = { factionId: null, amount: 0 };
+  const out = new Set();
+  for (let guard = 0; guard < 300; guard++) {
+    const live = bidders.filter(f => !out.has(f) && f !== high.factionId);
+    if (!live.length || (high.factionId && live.length === 0)) break;
+    let anyone = false;
+    for (const f of live) {
+      if (out.has(f) || f === high.factionId) continue;
+      const bid = await dp.chooseOnceAroundBid?.(state, f, { cardId: cardLabelId, highBid: high.amount, blackMarket: 'normal', actualId: f === 'atreides' ? actualId : undefined });
+      if (Number.isInteger(bid) && bid > high.amount && bid <= spendingPower(state, f)) { high = { factionId: f, amount: bid }; anyone = true; }
+      else out.add(f);
+    }
+    if (!anyone) break;
+  }
+  return { winnerId: high.factionId, amount: high.amount };
+}
+
+export async function runBlackMarket(state, dp, offer, observe) {
+  const r = state.factions.richese;
+  if (!offer || !r.treacheryHand.includes(offer.cardId)) return { sold: false };
+  const method = ['onceAround', 'silent'].includes(offer.method) ? offer.method : 'normal';
+  const claimId = offer.claimId ?? offer.cardId;
+  await observe({ type: 'blackMarketStart', cardId: offer.cardId, claimId, method });
+  const bidders = stormOrder(state).filter(f => f !== 'richese' && canBidHere(state, f));
+  let result;
+  if (method === 'silent') {
+    const bids = {};
+    for (const f of bidders) bids[f] = Math.max(0, Math.min(Math.floor((await dp.chooseSilentBid?.(state, f, { cardId: claimId, blackMarket: true, actualId: f === 'atreides' ? offer.cardId : undefined })) ?? 0), spendingPower(state, f)));
+    const max = Math.max(0, ...Object.values(bids));
+    result = { winnerId: max > 0 ? bidders.find(f => bids[f] === max) : null, amount: max, bids };
+  } else if (method === 'onceAround') {
+    let high = { factionId: null, amount: 0 };
+    for (const f of onceAroundOrder(state, 'cw').filter(x => bidders.includes(x))) {
+      const bid = await dp.chooseOnceAroundBid?.(state, f, { cardId: claimId, highBid: high.amount, blackMarket: true, actualId: f === 'atreides' ? offer.cardId : undefined });
+      if (Number.isInteger(bid) && bid > high.amount && bid <= spendingPower(state, f)) high = { factionId: f, amount: bid };
+    }
+    result = { winnerId: high.factionId, amount: high.amount };
+  } else result = await runNormalFor(state, dp, claimId, bidders, offer.cardId);
+  if (!result.winnerId || result.amount <= 0) {
+    await observe({ type: 'blackMarketEnd', sold: false, claimId, method });
+    return { sold: false };
+  }
+  paySpice(state, result.winnerId, result.amount);
+  r.spice += result.amount;
+  r.treacheryHand = r.treacheryHand.filter(c => c !== offer.cardId);
+  state.factions[result.winnerId].treacheryHand.push(offer.cardId);
+  if (result.winnerId === 'harkonnen' && state.factions.harkonnen.treacheryHand.length < handLimitFor('harkonnen')) {
+    const extra = drawTreacheryCard(state);
+    if (extra) state.factions.harkonnen.treacheryHand.push(extra);
+  }
+  await observe({ type: 'blackMarketEnd', sold: true, claimId, cardId: offer.cardId, winnerId: result.winnerId, amount: result.amount, method, bids: result.bids });
+  return { sold: true, winnerId: result.winnerId, amount: result.amount, cardId: offer.cardId };
+}
+
+// Richese alliance: ship the ally's forces with a No-Field token, revealed at once.
+export function useNoFieldForAlly(state, nfState) {
+  // nfState: the token value; rotation as for Richese's own use, but nothing stays on the planet.
+  const nf = state.factions.richese.noField;
+  nf.available = nf.available.filter(v => v !== nfState);
+  if (nf.lastUsed !== null) nf.available.push(nf.lastUsed);
+  nf.lastUsed = nfState;
+}
