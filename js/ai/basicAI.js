@@ -18,6 +18,7 @@
 // canX() validators a human action would use, so an illegal proposal is
 // simply refused rather than bending the rules.
 
+import { withNoField, forcesAfterReveal } from '../noField.js';
 import * as cardEffects from '../cardEffects.js';
 import { spendingPower } from '../allySupport.js';
 import { cacheCardValue } from '../richese.js';
@@ -238,6 +239,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return { cardId: best, position: rich ? 'first' : 'last', method: rich >= 2 ? 'silent' : 'onceAround' };
     },
     chooseOnceAroundDirection() { return 'cw'; },
+    chooseRevealNoField() { return false; }, // keep rivals guessing until a battle, storm or worm
     // Bid up to the card's worth, keeping 3 spice for shipping.
     chooseOnceAroundBid(state, factionId, { cardId, highBid }) {
       const cap = Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS), spendingPower(state, factionId) - 3);
@@ -505,7 +507,8 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
 
     // One shipment and one move, each only if it clearly improves things.
-    chooseShipmentAndMovement(state, factionId) {
+    chooseShipmentAndMovement(state, factionId) { return withNoField(state, factionId, this.baseShipmentAndMovement(state, factionId)); },
+    baseShipmentAndMovement(state, factionId) {
       const me = own(state, factionId);
       let shipment = null;
       let movement = null;
@@ -613,7 +616,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
 
     chooseBattlePlan(state, factionId, territoryId, opponentId, intel) {
       const me = own(state, factionId);
-      const present = me.forces.onBoard[territoryId] ?? 0;
+      const present = forcesAfterReveal(state, factionId, territoryId);
       const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
       const isStronghold = state.board.territories[territoryId]?.type === 'stronghold';
 
