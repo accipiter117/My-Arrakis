@@ -62,7 +62,8 @@
     "choamRichese": {
       "enabled": false
     },
-    "ixTlCards": true
+    "ixTlCards": true,
+    "techTokens": "auto"
   },
   "implementationDecisions": {
     "description": "Rules that exist only because a physical-table interaction needs a digital equivalent. Every entry here must have a one-line justification so it's auditable later.",
@@ -170,6 +171,10 @@
       {
         "id": "ixTlFactionsComplete",
         "justification": "Ixians: Technology (once per bidding round, before an auction, swap the card about to be auctioned for one from the Ixian hand); after a battle the Ixians win, surviving Suboids may be exchanged one for one for Cyborgs lost in that battle (rulebook example tested). Tleilaxu: Gholas (with fewer than five active leaders, revive another faction's dead leader at half its value, rounded up, paid to the Bank; a dead Ghola returns to its original owner's tanks); early leader revival (a faction with some but not all leaders dead may ask; the Tleilaxu name a price or refuse; paid to the Tleilaxu; counts as that faction's leader revival this turn). Ghola buy-back and all faction-specific Karama powers are not yet built."
+      },
+      {
+        "id": "techTokens",
+        "justification": "Tech Tokens variant (expansion plan M4, I&T rulebook p.4-5). expansions.techTokens: 'auto' (on when the Ixians or Tleilaxu are seated, plan default D3, to confirm), 'on' or 'off'; chosen per game in the menu. Default owners (Tleilaxu Axlotl Tanks, Ixians Heighliners, Fremen Spice Production) take theirs at setup; the rest are dealt at random after the first storm, one each to factions without a token, in turn order from the First Player. Tokens left over when every faction holds one stay out of play (rulebook wording, to confirm). Income is paid from the Bank at the end of the phase: 1 spice per token held, once per phase per token, not when the excluded faction is the only trigger. Triggers: any free force revival (the Fremen ally's 3 free count; a Ghola card does not); any shipment from reserves to the planet, including a Bene Gesserit advisor, but not a Fremen shipment (their reserves are the deep desert, the same reading as Spiritual Advisors) nor Guild cross-planet or back-to-reserve shipping; any CHOAM Charity claim. The battle winner takes one of the loser's tokens (their choice) before any Face Dancer reveal; no transfer when neither side wins. One faction holding all three counts as one stronghold (TECH_STRONGHOLD in victory counting); allies cannot combine them."
       }
     ]
   },
