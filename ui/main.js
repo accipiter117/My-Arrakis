@@ -539,7 +539,8 @@ function describe(entry) {
         const place = territoryNameOf(r.territoryId);
         const voiced = r.voice ? ` Voice: ${nameOf(r.voice.target)} ${r.voice.command === 'play' ? 'must play' : 'must not play'} ${r.voice.category.replace(/([A-Z])/g, ' $1').toLowerCase()}.` : '';
         const canSee = r.capture && (humanFactionId === 'harkonnen' || humanFactionId === r.capture.from || !humanFactionId);
-        const captured = r.capture ? ` Harkonnen captured ${canSee ? leaderNameOf(r.capture.leaderId) : 'a leader'} from ${nameOf(r.capture.from)}${r.capture.action === 'kill' ? ' and killed them for 2 spice' : ''}.` : '';
+        const captured = !r.capture ? '' : r.capture.action === 'prevented' ? ` Karama stopped the Harkonnen capture.`
+          : ` Harkonnen captured ${canSee ? leaderNameOf(r.capture.leaderId) : 'a leader'} from ${nameOf(r.capture.from)}${r.capture.action === 'kill' ? ' and killed them for 2 spice' : ''}.`;
         const saw = r.prescience ? ` Prescience: Atreides saw ${nameOf(r.prescience.opponentId)}'s ${r.prescience.element === 'number' ? 'force count' : r.prescience.element}.` : '';
         const plans = r.plans ? ` [${describePlan(r.aggressorId, r.plans[r.aggressorId])} | ${describePlan(r.defenderId, r.plans[r.defenderId])}]` : '';
         if (r.explosion) log(`Lasgun/shield explosion in ${place}: everything there is destroyed.${plans}`);
