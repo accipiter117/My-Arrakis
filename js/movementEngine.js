@@ -30,6 +30,8 @@ function moveRangeFor(state, factionId, cyborgsMoving = 0) {
 
   // CHOAM's Kulon: one extra territory this turn.
   const kulon = factionId === 'choam' && state.choamEffects?.kulon ? 1 : 0;
+  // Richese Ornithopter card: this move may go up to 3 territories.
+  if (state.meta?.ornithopterFar === factionId && !hasOrnithopters) return Math.max(3, 1 + kulon);
   if (hasOrnithopters) return 3 + kulon;
   if (kulon) return 1 + kulon;
   // Ixians: Cyborgs move 2, and Suboids move 2 when accompanied by a Cyborg.
