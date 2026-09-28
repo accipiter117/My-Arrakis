@@ -9,6 +9,8 @@
 // Kwisatz Haderach are both implemented here. forces.onBoard/starredOnBoard
 // in gameState.js track total vs starred counts per territory; this module
 // is where that distinction actually affects combat math.
+import { battleSupportFor, battleSpice } from './allySupport.js';
+import { takeForcesShare } from './choam.js';
 
 function starredUnitValueFor(factionId, opponentFactionId) {
   if (factionId === 'ixians') return 2; // Cyborgs
@@ -95,7 +97,7 @@ function canDeclareBattlePlan(state, territoryId, factionId, plan, cardLookup) {
   if (starredForcesCommitted > starredPresent) {
     return { ok: false, reason: `Cannot commit more starred forces (${starredForcesCommitted}) than present in the territory (${starredPresent}).` };
   }
-  if (spiceCommitted > faction.spice) {
+  if (spiceCommitted > battleSpice(state, factionId)) {
     return { ok: false, reason: 'Cannot commit more spice than currently held.' };
   }
   if (spiceCommitted > forcesCommitted) {
@@ -390,9 +392,19 @@ function applyBattleOutcome(state, territoryId, outcome) {
 
   // Spice for battle: goes to the bank win or lose (unless a traitor was
   // revealed, handled separately in resolveTraitorWin/resolveMutualTraitors).
-  winner.spice -= winnerPlan.spiceCommitted;
-  loser.spice -= loserPlan.spiceCommitted;
-  state.spiceBank.totalInCirculation += winnerPlan.spiceCommitted + loserPlan.spiceCommitted;
+  // A CHOAM ally spends what CHOAM offered first. CHOAM (advanced) takes half
+  // (rounded down) of what any other faction paid itself; CHOAM's own payments,
+  // including what it pays for its ally, go to the Bank.
+  let choamShare = 0;
+  for (const [fid, plan] of [[winnerFactionId, winnerPlan], [loserFactionId, loserPlan]]) {
+    const amount = plan.spiceCommitted ?? 0;
+    if (!amount) continue;
+    const fromChoam = Math.min(amount, battleSupportFor(state, fid));
+    if (fromChoam) state.factions.choam.spice -= fromChoam;
+    state.factions[fid].spice -= amount - fromChoam;
+    state.spiceBank.totalInCirculation += amount;
+    if (!state.meta?.currentBattle?.choamForcesBlocked) choamShare += takeForcesShare(state, fid, amount - fromChoam);
+  }
 
   // Killed leaders: both go to the Tanks. The WINNER collects the combined
   // spice value of every leader killed this battle, including their own.
@@ -412,7 +424,7 @@ function applyBattleOutcome(state, territoryId, outcome) {
   // layer, not resolved automatically here.
   discardPlanCards(state, loserFactionId, loserPlan);
 
-  return { winnerFactionId, loserFactionId, spiceOwedToWinner };
+  return { winnerFactionId, loserFactionId, spiceOwedToWinner, choamShare };
 }
 
 // Returns the leader's fighting value, which is the spice the battle
@@ -457,6 +469,7 @@ function isTraitorAgainst(state, revealerId, leaderId) {
 function captureCandidates(state, loserId, territoryId) {
   const captured = capturedLeaders(state);
   return state.factions[loserId].leaders.available.filter(id => {
+    if (id === 'auditor') return false; // the Auditor cannot be captured
     const usedIn = state.battle?.leaderTerritory?.[id];
     return (!usedIn || usedIn === territoryId) && !captured[id];
   });
