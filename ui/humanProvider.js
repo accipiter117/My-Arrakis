@@ -13,6 +13,7 @@
 // straightforward battle plan), so the player can never get stuck.
 
 import { TECH_TOKENS } from '../js/techTokens.js';
+import { battleSpice, battleSupportFor } from '../js/allySupport.js';
 import * as biddingEngine from '../js/biddingEngine.js';
 import * as revivalEngine from '../js/revivalEngine.js';
 import * as movementEngine from '../js/movementEngine.js';
@@ -473,6 +474,82 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         });
     },
 
+    // --- CHOAM -------------------------------------------------------------
+    chooseChoamDiscards(state, factionId, { duplicates, worthless }) {
+      const rows = [...duplicates.map(id => [id, `${cardName(id)}: duplicate, 3 spice (the pair is shown to everyone)`]),
+        ...worthless.filter(id => !duplicates.includes(id)).map(id => [id, `${cardName(id)}: worthless, 2 spice`])];
+      return ask('Cash in cards?',
+        `<p>End of the phase: you may discard duplicates for 3 spice each and worthless cards for 2 each. A worthless card you keep can be used later for its special effect, at its moment.</p>
+         ${rows.map(([id, label]) => `<label class="choice"><input type="checkbox" name="d" value="${esc(id)}"${duplicates.includes(id) ? ' checked' : ''}> <span>${esc(label)}</span></label>`).join('')}
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done([...p.querySelectorAll('[name="d"]:checked')].map(i => i.value)));
+    },
+
+    chooseChoamEffect(state, factionId, { cardId, options: opts, context = {} }) {
+      const what = {
+        baliset: 'Play Baliset to stop one faction moving into a territory you occupy this turn? (They may still ship in.)',
+        jubbaCloak: 'Play Jubba Cloak to shelter your forces in one territory from this storm?',
+        kullWahad: `Play Kull Wahad to stop ${esc(factionName(opts[0]))} playing Karama${context.purpose ? ` (against ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[context.purpose] ?? context.purpose})` : ''} this phase?`,
+        kulon: 'Play Kulon to move your forces one extra territory this turn?',
+        laLaLa: 'Play La La La to stop one faction taking free revival this turn?',
+        tripToGamont: 'Play Trip to Gamont to send one force of another faction back to its reserves?'
+      }[cardId];
+      const label = o => typeof o === 'string'
+        ? (cardId === 'jubbaCloak' ? territoryName(o) : factionName(o))
+        : `${factionName(o.factionId)} in ${territoryName(o.territoryId)}`;
+      const multi = !['kulon', 'kullWahad'].includes(cardId);
+      return ask(cardName(cardId),
+        `<p>${what}</p>
+         ${multi ? `<label class="field"><span>Target</span><select name="o">${options([['', 'Keep the card'], ...opts.map((o, i) => [String(i), label(o)])], '')}</select></label>` : ''}
+         <div class="decision__actions">${multi ? '<button class="btn btn--primary" data-default-action>Confirm</button>'
+           : '<button class="btn" data-action="yes">Play it</button><button class="btn btn--primary" data-default-action>Keep it</button>'}</div>`,
+        (p, done) => {
+          if (multi) p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'o').value; done(v === '' ? null : opts[Number(v)]); };
+          else { p.querySelector('[data-action="yes"]').onclick = () => done(opts[0]); p.querySelector('[data-default-action]').onclick = () => done(null); }
+        });
+    },
+
+    chooseInflation(state, factionId) {
+      return ask('Inflation?',
+        `<p>Once a game you may place the Inflation token for next turn's CHOAM Charity. <strong>Double</strong> doubles every charity payment, your own 2 per faction included; <strong>Cancel</strong> means nobody collects. It flips to the other side the turn after, then leaves the game.</p>
+         <label class="field"><span>Place</span><select name="i">${options([['', 'Not yet'], ['double', 'Double'], ['cancel', 'Cancel']], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'i').value || null));
+    },
+
+    chooseCancelAudit(state, factionId, { cost }) {
+      return ask('CHOAM audit',
+        `<p>CHOAM's Auditor will look at ${cost} random card${cost > 1 ? 's' : ''} from your hand. Pay CHOAM ${cost} spice to cancel the whole audit? You have ${state.factions[factionId].spice}.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Pay ${cost}</button><button class="btn btn--primary" data-default-action>Let them look</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+
+    chooseChoamAllyTrade(state, factionId, allyId) {
+      const hand = state.factions[factionId].treacheryHand;
+      return ask('Trade with your ally?',
+        `<p>Once a turn you may trade one treachery card with ${esc(factionName(allyId))}: you give one and they give one back.</p>
+         <label class="field"><span>Offer</span><select name="c">${options([['', 'No trade this time'], ...hand.map(id => [id, cardName(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value || null));
+    },
+
+    chooseChoamAllyTradeResponse(state, factionId, { offered }) {
+      const hand = state.factions[factionId].treacheryHand;
+      return ask('CHOAM offers a trade',
+        `<p>Your ally CHOAM offers you <strong>${esc(cardName(offered))}</strong> in exchange for one of your cards.</p>
+         <label class="field"><span>Give</span><select name="c">${options([['', 'Refuse the trade'], ...hand.map(id => [id, cardName(id)])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'c').value || null));
+    },
+
+    chooseChoamBattleSupport(state, factionId, { allyId, territoryId, max }) {
+      return ask('Pay for your ally’s forces?',
+        `<p>${esc(factionName(allyId))} fight in ${esc(territoryName(territoryId))}. You may pay for some or all of their forces in this battle; they spend your offer before their own spice. Spice you pay goes to the Bank.</p>
+         <label class="field"><span>Offer up to</span><select name="n">${options(range(0, max).map(n => [n, n ? `${n} spice` : 'Nothing']), 0)}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'n')));
+    },
+
     chooseTechTokenToTake(state, factionId, tokens, from) {
       const what = { axlotl: 'Axlotl Tanks (pays in Revival)', heighliner: 'Heighliners (pays in Shipment and Movement)', spiceProd: 'Spice Production (pays in CHOAM Charity)' };
       const mine = TECH_TOKENS.filter(t => state.techTokens?.[t]?.owner === factionId).length;
@@ -795,12 +872,12 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         ? `<p class="decision__note">Your traitor${myTraitors.length > 1 ? 's' : ''}: ${esc(myTraitors.join('; '))}. If ${esc(factionName(opponentId))} plays ${myTraitors.length > 1 ? 'one of them' : 'them'}, you'll be offered the reveal.</p>` : '';
       return ask(`Battle in ${territoryName(territoryId)}`,
         `${voiceNote}${revealed}${knownNote}${traitorNote}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
-         <dt>Your forces here</dt><dd>${present}${starredPresent ? ` (${starredPresent} starred)` : ''}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
+         <dt>Your forces here</dt><dd>${present}${starredPresent ? ` (${starredPresent} starred)` : ''}</dd><dt>Your spice</dt><dd>${me.spice}${battleSupportFor(state, factionId) ? ` + ${battleSupportFor(state, factionId)} from CHOAM` : ''}</dd></dl>
          <p>The side with the higher total wins; ties go to the aggressor. Forces you dial are lost even if you win. If you lose, you lose every force here. Each dialed force counts fully only if backed by 1 spice.</p>
          <label class="field"><span>Forces to dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
          ${starredPresent ? `<label class="field"><span>Of which starred</span><select name="starred">${options(range(0, starredPresent).map(n => [n, n]), 0)}</select></label>` : ''}
          ${factionId === 'fremen' ? '<p class="decision__note">Fremen fight at full strength without spice: no need to commit any.</p><input type="hidden" name="spice" value="0">'
-           : `<label class="field"><span>Spice to back them</span><select name="spice">${options(range(0, Math.min(present, me.spice)).map(n => [n, n]), 0)}</select></label>`}
+           : `<label class="field"><span>Spice to back them</span><select name="spice">${options(range(0, Math.min(present, battleSpice(state, factionId))).map(n => [n, n]), 0)}</select></label>`}
          <label class="field"><span>Leader</span><select name="leader">${options(leaderOptions, leaderOptions[0][0])}</select></label>
          <label class="field"><span>Weapon</span><select name="weapon">${options(weaponOptions, '')}</select></label>
          <label class="field"><span>Defence</span><select name="defense">${options(defenseOptions, '')}</select></label>
