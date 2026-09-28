@@ -642,7 +642,8 @@ strong { color: var(--gold); }
 .battle-side__total { font-family: var(--font-data); font-weight: 700; font-size: 20px; color: var(--spice); margin-top: 0.2rem; }
 .event-card--battle .event-card__detail { text-align: center; font-weight: 700; color: var(--gold); }
 
-.hms__hull { fill: rgba(40, 30, 20, 0.85); stroke: var(--bronze-bright); stroke-width: 3; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6)); }
+.hms__art { filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6)); pointer-events: none; }
+.hms__hull { fill: rgba(40, 30, 20, 0.35); stroke: var(--bronze-bright); stroke-width: 3; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.6)); }
 .hms__label { font-family: var(--font-data); font-size: 12px; font-weight: 700; fill: var(--gold); text-anchor: middle; paint-order: stroke; stroke: #120b06; stroke-width: 3px; letter-spacing: 0.1em; }
 .token--ghost .token__disc { filter: drop-shadow(0 6px 5px rgba(0, 0, 0, 0.6)); }
 .fx-ship__shadow { fill: rgba(20, 10, 4, 0.55); filter: blur(3px); }
@@ -781,3 +782,9 @@ body.has-console .scrim { background: rgba(6, 3, 1, 0.14); backdrop-filter: none
   .mote, .board__storm-swirl, .token__spice-bg { animation: none; }
   .motes { display: none; }
 }
+
+/* Tech Tokens beside their holder on the Factions sheet */
+.tech-tokens { display: inline-flex; gap: 3px; margin-top: 3px; }
+.tech-tokens img { width: 22px; height: 22px; border-radius: 50%; }
+.tech-tokens--key { flex-wrap: wrap; gap: 4px 10px; }
+.tech-tokens--key span { display: inline-flex; align-items: center; gap: 4px; }
