@@ -219,7 +219,7 @@ function logEvent(e) {
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
   if (e.type === 'techTokensAssigned') {
-    const held = Object.entries(e.owners).map(([t, f]) => `${TOKEN_NAMES[t]}: ${f ? nameOf(f) : 'nobody (out of play)'}`).join('; ');
+    const held = Object.entries(e.owners).map(([t, f]) => `${TOKEN_NAMES[t]}: ${f ? nameOf(f) : 'nobody'}`).join('; ');
     addLog('storm', turn, `Tech Tokens: ${held}.`);
   }
   if (e.type === 'techIncome') addLog(TOKEN_PHASE[e.token], turn, `${TOKEN_NAMES[e.token]} paid ${nameOf(e.factionId)} ${e.amount} spice.`);
@@ -944,7 +944,7 @@ $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
 $('select-ixtl').value = localStorage.getItem('my-arrakis-ixtl') ?? 'on';
 $('select-ixtl').addEventListener('change', e => localStorage.setItem('my-arrakis-ixtl', e.target.value));
-$('select-tech').value = localStorage.getItem('my-arrakis-tech') ?? 'auto';
+$('select-tech').value = localStorage.getItem('my-arrakis-tech') ?? 'on';
 $('select-tech').addEventListener('change', e => localStorage.setItem('my-arrakis-tech', e.target.value));
 $('lineup-grid').addEventListener('click', e => {
   const b = e.target.closest('[data-lineup]');
