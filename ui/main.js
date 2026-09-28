@@ -8,6 +8,7 @@
 // factions' spice and traitors are hidden. Treachery hand sizes and board
 // positions are public in the physical game, so they stay visible.
 
+import { TECH_TOKENS, TOKEN_NAMES, TOKEN_PHASE, tokensOwnedBy } from '../js/techTokens.js';
 import { initializeGame } from '../js/setupEngine.js';
 import * as turnEngine from '../js/turnEngine.js';
 import * as phaseEngine from '../js/phaseEngine.js';
@@ -37,7 +38,7 @@ const EXPANSION_FACTIONS = [
 const LINEUP_KEY = 'my-arrakis-lineup';
 let lineup = (() => {
   try { const saved = JSON.parse(localStorage.getItem(LINEUP_KEY)); if (Array.isArray(saved) && saved.length >= 2) return saved.filter(f => ALL_FACTIONS.includes(f)); } catch {}
-  return [...ALL_FACTIONS];
+  return ALL_FACTIONS.slice(0, 6); // first visit: the base six (all eight would exceed the 6-seat limit)
 })();
 function renderLineup() {
   const human = $('select-faction').value;
@@ -53,7 +54,8 @@ function lineupForNewGame() {
   const human = $('select-faction').value;
   if (human && !lineup.includes(human)) lineup = [...lineup, human];
   const seated = ALL_FACTIONS.filter(f => lineup.includes(f)); // board seating order
-  return seated.length >= 2 ? seated : [...ALL_FACTIONS];
+  if (seated.length > 6) { const keep = new Set([human, ...seated.filter(f => f !== human)].filter(Boolean).slice(0, 6)); return seated.filter(f => keep.has(f)); }
+  return seated.length >= 2 ? seated : ALL_FACTIONS.slice(0, 6);
 }
 
 const FACTION_DISPLAY = {
@@ -143,7 +145,7 @@ async function startNewGame() {
       activeFactionIds: seated,
       playerCircleOrder: seated,
       // Expansion card sets are chosen per game in the menu.
-      rulesConfig: { ...data.rulesConfig, expansions: { ...(data.rulesConfig.expansions ?? {}), ixTlCards: $('select-ixtl').value === 'on' } },
+      rulesConfig: { ...data.rulesConfig, expansions: { ...(data.rulesConfig.expansions ?? {}), ixTlCards: $('select-ixtl').value === 'on', techTokens: $('select-tech').value } },
       spiceDeckData: data.spiceDeck,
       territoriesData: data.territories,
       treacheryDeckData: data.treacheryDeck,
@@ -216,6 +218,12 @@ function logEvent(e) {
   if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
+  if (e.type === 'techTokensAssigned') {
+    const held = Object.entries(e.owners).map(([t, f]) => `${TOKEN_NAMES[t]}: ${f ? nameOf(f) : 'nobody (out of play)'}`).join('; ');
+    addLog('storm', turn, `Tech Tokens: ${held}.`);
+  }
+  if (e.type === 'techIncome') addLog(TOKEN_PHASE[e.token], turn, `${TOKEN_NAMES[e.token]} paid ${nameOf(e.factionId)} ${e.amount} spice.`);
+  if (e.type === 'techTokenTaken') addLog('battle', turn, `${nameOf(e.to)} took ${TOKEN_NAMES[e.token]} from ${nameOf(e.from)} in ${territoryNameOf(e.territoryId)}.`);
   if (e.type === 'pledge') addLog('bidding', turn, `${nameOf(e.from)} pledged ${e.amount} spice to ally ${nameOf(e.to)} for this turn.`);
 }
 
@@ -802,12 +810,13 @@ function renderFactions() {
     const hidden = humanFactionId && f !== humanFactionId;
     const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
     return `<tr${f === humanFactionId ? ' class="is-you"' : ''}>
-      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
+      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${tokensOwnedBy(gameState, f).length ? `<br><span class="tech-tokens">${tokensOwnedBy(gameState, f).map(t => `<img src="assets/tokens/tech-${t}.png" alt="${TOKEN_NAMES[t]}" title="${TOKEN_NAMES[t]}">`).join('')}</span>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
       <td>${hidden ? '?' : faction.spice}</td><td>${faction.treacheryHand.length}</td><td>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</td>
       <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
   }).join('');
   const anyKnown = Object.keys(gameState.meta.knownCards ?? {}).length;
-  grid.innerHTML = (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const techNote = gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.png" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '';
+  grid.innerHTML = techNote + (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderTerritories() {
@@ -935,6 +944,8 @@ $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
 $('select-ixtl').value = localStorage.getItem('my-arrakis-ixtl') ?? 'on';
 $('select-ixtl').addEventListener('change', e => localStorage.setItem('my-arrakis-ixtl', e.target.value));
+$('select-tech').value = localStorage.getItem('my-arrakis-tech') ?? 'auto';
+$('select-tech').addEventListener('change', e => localStorage.setItem('my-arrakis-tech', e.target.value));
 $('lineup-grid').addEventListener('click', e => {
   const b = e.target.closest('[data-lineup]');
   if (!b) return;
