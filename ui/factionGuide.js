@@ -198,6 +198,32 @@ FACTION_GUIDE.tleilaxu = {
   ]
 };
 
+FACTION_GUIDE.choam = {
+  title: 'CHOAM',
+  tagline: 'The Imperium’s purse. Every trade pays them.',
+  start: '20 troops in reserve, nothing on Arrakis, 2 spice. No free revival, but no limit and only 1 spice a force. Hand of up to 5 cards.',
+  powers: [
+    'Charity: before anyone collects CHOAM Charity, you take 2 spice per faction in the game; everyone else\'s charity is then paid from your spice.',
+    'Treachery: at the end of any phase, discard duplicates of the same card for 3 spice each (revealing them) and worthless cards for 2 each.',
+    'Or play a worthless card for its effect: Baliset (a faction may not move into a territory you hold this turn), Jubba Cloak (shelter one territory from the storm), Kull Wahad (block a Karama as it is played), Kulon (move one extra territory), La La La (a faction may not take free revival), Trip to Gamont (send one enemy force home at the Mentat Pause).',
+    'Inflation: once a game, at a Mentat Pause, place Double or Cancel on next turn\'s Charity; it flips the turn after, then leaves the game.',
+    'Forces: half (rounded down) of the spice others pay for their forces in battle comes to you, unless a traitor is revealed.',
+    'The Auditor: a sixth leader. After a battle it leads, see 2 random cards of your opponent (1 if the Auditor died), unless they pay you 1 spice a card. It can be revived any turn, and cannot be captured or become a Ghola.',
+    'Not yet in this version: your Karama power.'
+  ],
+  push: [
+    'Stockpile cards and spice early, then ship in hard once you can win the battles you pick.',
+    'Time Inflation: Double when others are rich and you are not, so the flip to Cancel lands when they are poor.',
+    'Lead with the Auditor in cheap fights to learn what your rivals hold.'
+  ],
+  ally: ['Once a turn, trade a treachery card with CHOAM.', 'CHOAM may pay for some or all of your forces in a battle.'],
+  counter: [
+    'Every spice you pay for forces in battle half-feeds CHOAM: fight with fewer, better-backed forces.',
+    'Take charity sparingly when CHOAM is short: it comes out of their purse.',
+    'They start with nothing on the board: hold the strongholds before they can afford to ship.'
+  ]
+};
+
 // True of every alliance.
 export const ALLIANCE_BASICS = [
   'You win together with 4 strongholds between you.',
@@ -205,4 +231,4 @@ export const ALLIANCE_BASICS = [
   'You cannot move into each other’s territories (except the Polar Sink), and you never fight each other.'
 ];
 
-export const GUIDE_ORDER = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu'];
+export const GUIDE_ORDER = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu', 'choam'];
