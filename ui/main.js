@@ -27,13 +27,13 @@ import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
-const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu'];
+const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu', 'choam'];
 
 // --- Faction line-up: which factions play (any 2 to 6) --------------------------
 // Expansion factions appear as "coming soon" until their milestone ships
 // (docs/EXPANSION_STATUS.md).
 const EXPANSION_FACTIONS = [
-  ['choam', 'CHOAM'], ['richese', 'Richese']
+  ['richese', 'Richese']
 ];
 const LINEUP_KEY = 'my-arrakis-lineup';
 let lineup = (() => {
@@ -66,7 +66,8 @@ const FACTION_DISPLAY = {
   guild: { name: 'Spacing Guild', colorVar: '--faction-guild' },
   gesserit: { name: 'Bene Gesserit', colorVar: '--faction-gesserit' },
   tleilaxu: { name: 'Tleilaxu', colorVar: '--faction-tleilaxu' },
-  ixians: { name: 'Ixians', colorVar: '--faction-ixians' }
+  ixians: { name: 'Ixians', colorVar: '--faction-ixians' },
+  choam: { name: 'CHOAM', colorVar: '--faction-choam' }
 };
 const FACTION_NAMES = Object.fromEntries(Object.entries(FACTION_DISPLAY).map(([k, v]) => [k, v.name]));
 
@@ -218,6 +219,29 @@ function logEvent(e) {
   if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
+  if (e.type === 'choamEffect') {
+    const t = { baliset: `Baliset: ${nameOf(e.factionId)} may not move into ${territoryNameOf(e.territoryId)} this turn`,
+      jubbaCloak: `Jubba Cloak: CHOAM forces in ${territoryNameOf(e.territoryId)} are sheltered from this storm`,
+      kullWahad: `Kull Wahad: ${nameOf(e.factionId)} may not play Karama this phase`,
+      kulon: 'Kulon: CHOAM forces move one extra territory this turn',
+      laLaLa: `La La La: ${nameOf(e.factionId)} may not take free revival this turn`,
+      tripToGamont: `Trip to Gamont: one ${nameOf(e.factionId)} force in ${territoryNameOf(e.territoryId)} goes back to reserves` }[e.cardId];
+    addLog(phaseEngine.currentPhase(gameState), turn, `CHOAM played ${t}.`);
+  }
+  if (e.type === 'choamDiscards') {
+    const total = e.discards.reduce((n, d) => n + d.spice, 0);
+    const shown = e.revealed.length ? ` (revealed duplicates: ${e.revealed.map(cardNameOf).join(', ')})` : '';
+    addLog(phaseEngine.currentPhase(gameState), turn, `CHOAM cashed in ${e.discards.length} card${e.discards.length > 1 ? 's' : ''} for ${total} spice${shown}.`);
+  }
+  if (e.type === 'choamTrade') addLog(phaseEngine.currentPhase(gameState), turn, `CHOAM traded a card with its ally ${nameOf(e.ally)}.`);
+  if (e.type === 'choamSupport') addLog('battle', turn, `CHOAM offered ${e.amount} spice toward ${nameOf(e.allyId)}'s forces in ${territoryNameOf(e.territoryId)}.`);
+  if (e.type === 'inflation') addLog('mentatPause', turn, e.placed ? `CHOAM placed Inflation: ${e.status === 'double' ? 'Double' : 'Cancel'} for next turn's Charity.`
+    : e.status === 'removed' ? 'The Inflation token leaves the game.' : `Inflation flips to ${e.status === 'double' ? 'Double' : 'Cancel'} for next turn's Charity.`);
+  if (e.type === 'audit') {
+    const canSee = !humanFactionId || humanFactionId === 'choam' || humanFactionId === e.factionId;
+    addLog('battle', turn, e.cancelled ? `${nameOf(e.factionId)} paid CHOAM ${e.cost} spice to cancel the Auditor's audit.`
+      : `CHOAM's Auditor looked at ${e.count} of ${nameOf(e.factionId)}'s cards${canSee && e.cards?.length ? `: ${e.cards.map(cardNameOf).join(', ')}` : ''}.`);
+  }
   if (e.type === 'techTokensAssigned') {
     const held = Object.entries(e.owners).map(([t, f]) => `${TOKEN_NAMES[t]}: ${f ? nameOf(f) : 'nobody'}`).join('; ');
     addLog('storm', turn, `Tech Tokens: ${held}.`);
@@ -454,9 +478,15 @@ function describe(entry) {
         : ` ${nameOf(d.by)} breaks with ${nameOf(d.of)}.`).join('');
       return log(`Spice blow: ${text}.${result.nexus ? ' Shai-Hulud appeared, a Nexus follows.' : ''}${rides}${diplomacy}`);
     }
-    case 'charity':
-      if (result.length) log(result.map(r => `${nameOf(r.factionId)} +${r.amountReceived}`).join(', ') + ' spice.');
+    case 'charity': {
+      if (result.some(r => r.inflation === 'cancel')) return log('Inflation: CHOAM Charity is cancelled this turn.');
+      const paid = result.filter(r => r.factionId && !r.choamAdvantage);
+      const own = result.find(r => r.choamAdvantage);
+      const parts = [own ? `CHOAM collected ${own.amountReceived} (2 per faction${result.some(r => r.inflation === 'double') ? ', doubled' : ''})` : null,
+        paid.length ? paid.map(r => `${nameOf(r.factionId)} +${r.amountReceived}${r.paidByChoam ? ' from CHOAM' : ''}`).join(', ') : null].filter(Boolean);
+      if (parts.length) log(parts.join('; ') + ' spice.');
       return;
+    }
     case 'bidding': {
       const parts = result.filter(r => r.winner).map(r => `${nameOf(r.winner)} bought a card for ${r.price}`);
       const unsold = result.find(r => r.unsold);
@@ -511,7 +541,7 @@ function describe(entry) {
 
 const FACTION_COLORS = {
   atreides: '#3f7047', harkonnen: '#9c2a24', emperor: '#66707e',
-  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440', ixians: '#4f6fb8'
+  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440', ixians: '#4f6fb8', choam: '#a8862e'
 };
 
 function ensureBoard(data) {
@@ -815,7 +845,9 @@ function renderFactions() {
       <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
   }).join('');
   const anyKnown = Object.keys(gameState.meta.knownCards ?? {}).length;
-  const techNote = gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.png" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '';
+  const inf = gameState.factions.choam?.specialFactionState?.inflation?.status;
+  const infNote = inf && inf !== 'unused' ? `<p class="sheet__note">CHOAM Inflation: ${inf === 'removed' ? 'used and gone' : `${inf === 'double' ? 'Double' : 'Cancel'} for next turn's Charity`}.</p>` : '';
+  const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.png" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
   grid.innerHTML = techNote + (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
@@ -960,7 +992,7 @@ $('lineup-grid').addEventListener('click', e => {
 $('lineup-all').addEventListener('click', () => {
   // The six base factions, but always keeping your own (swapping out Bene Gesserit if you play an expansion faction).
   const human = $('select-faction').value;
-  lineup = ALL_FACTIONS.filter(f => !['tleilaxu', 'ixians'].includes(f));
+  lineup = ALL_FACTIONS.filter(f => !['tleilaxu', 'ixians', 'choam'].includes(f));
   if (human && !lineup.includes(human)) lineup = [...lineup.filter(f => f !== 'gesserit'), human]; localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup)); renderLineup(); });
 $('lineup-random').addEventListener('click', () => {
   const human = $('select-faction').value;
