@@ -842,6 +842,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     participants.add(defenderId);
     const opponentOf = f => (f === aggressorId ? defenderId : aggressorId);
     const fighting = [aggressorId, defenderId];
+    // Announce the battle before anything is decided, so the camera can go there first.
+    await observe(decisionProvider, { type: 'battleStart', territoryId, aggressorId, defenderId }, state);
 
     // 0. Truthtrance: a combatant may ask the opponent one factual question.
     for (const f of fighting) {
