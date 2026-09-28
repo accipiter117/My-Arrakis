@@ -11,7 +11,7 @@
 // Opponent spice and hands are never read.
 
 import { withNoField } from '../noField.js';
-import { ownsAllTechTokens, TECH_STRONGHOLD } from '../techTokens.js';
+import { ownsAllTechTokens, TECH_STRONGHOLD, tokensOwnedBy } from '../techTokens.js';
 import { createBasicAI } from './basicAI.js';
 import * as movementEngine from '../movementEngine.js';
 import { createDiplomacy } from './diplomacy.js';
@@ -62,6 +62,20 @@ export function createStrategicAI(options) {
       if (missing <= 1) threats.push({ kind: 'strongholds', group, held: groupHeld, urgency: missing <= 0 ? 3 : 2 });
     }
 
+    // Tech Tokens: a rival with two tokens, or the full set, is fought for them.
+    if (state.techTokens) {
+      for (const f of Object.keys(state.factions)) {
+        if (f === me || f === myAlly) continue;
+        const n = tokensOwnedBy(state, f).length;
+        if (n < 2) continue;
+        const ally = allyOf(state, f);
+        const group = ally ? [f, ally] : [f];
+        const needed = ally ? state.rulesConfig.victoryVariants.allianceStrongholdCount : state.rulesConfig.victoryVariants.soloStrongholdCount;
+        const real = [...new Set(group.flatMap(x => held(state, x)))].filter(t => t !== TECH_STRONGHOLD).length;
+        if (real + 1 >= needed - (n === 3 ? 0 : 1)) threats.push({ kind: 'techTokens', holder: f, group, held: [], urgency: n === 3 && real + 1 >= needed ? 3 : 2 });
+      }
+    }
+
     // Fremen special condition: only matters near the final turn.
     if (state.factions.fremen && me !== 'fremen' && myAlly !== 'fremen' && state.meta.turn >= maxTurns - 2 && state.meta.turn <= maxTurns) {
       const cleanOf = t => occupants(state, t).every(f => f === 'fremen' || f === allyOf(state, 'fremen'));
@@ -104,6 +118,25 @@ export function createStrategicAI(options) {
     return best;
   }
 
+  // The HMS cannot be shipped into (except by the Ixians): ship to the territory
+  // it is over, then move the group straight in, all in one turn.
+  function enterTarget(state, me, t, need) {
+    if (t !== 'hms') return shipTo(state, me, t, need) ?? moveTo(state, me, t, need);
+    const direct = moveTo(state, me, 'hms', need);
+    if (direct && direct.amount >= Math.min(need, 3)) return direct;
+    const host = state.board.hms?.placed ? state.board.hms.territoryId : null;
+    if (!host) return null;
+    const ship = shipTo(state, me, host, need);
+    if (!ship) return null;
+    // Checked as if the shipment had landed.
+    const fx = state.factions[me].forces;
+    fx.reserve -= ship.amount; fx.onBoard[host] = (fx.onBoard[host] ?? 0) + ship.amount;
+    const amount = fx.onBoard[host];
+    const ok = movementEngine.canMove(state, me, host, 'hms', amount).ok;
+    fx.reserve += ship.amount; fx.onBoard[host] -= ship.amount; if (!fx.onBoard[host]) delete fx.onBoard[host];
+    return ok ? { shipment: ship, movement: { from: host, to: 'hms', amount } } : null;
+  }
+
   // Forces needed to have a fair chance of taking a territory: defenders
   // plus a margin for their leader and spice support.
   const forcesToContest = (state, t, me) =>
@@ -122,13 +155,23 @@ export function createStrategicAI(options) {
       }
       return null;
     }
-    // Break the threat's weakest stronghold.
+    // Tech Tokens: attack the holder's weakest stack; winning that battle takes a token.
+    if (threat.kind === 'techTokens') {
+      const stacks = Object.entries(state.factions[threat.holder].forces.onBoard).filter(([t, n]) => n > 0 && t !== 'polarSink')
+        .map(([t]) => ({ t, need: forcesToContest(state, t, me) })).sort((a, b) => a.need - b.need);
+      for (const { t, need } of stacks) {
+        const action = enterTarget(state, me, t, need);
+        if (action && (action.amount ?? action.movement?.amount ?? 0) >= Math.min(need, 3)) return { action, reason: `fight ${threat.holder} for their Tech Tokens` };
+      }
+      return null;
+    }
+    // Break the threat's weakest stronghold (the HMS included, by ship-then-move).
     const targets = threat.held.filter(t => t !== TECH_STRONGHOLD) // a full token set is broken in battle, not by moving in
       .map(t => ({ t, need: forcesToContest(state, t, me) }))
       .sort((a, b) => a.need - b.need);
     for (const { t, need } of targets) {
-      const action = shipTo(state, me, t, need) ?? moveTo(state, me, t, need);
-      if (action && (action.amount ?? 0) >= Math.min(need, 3)) {
+      const action = enterTarget(state, me, t, need);
+      if (action && (action.amount ?? action.movement?.amount ?? 0) >= Math.min(need, 3)) {
         return { action, reason: `stop ${threat.group.join(' and ')} reaching victory` };
       }
     }
@@ -146,7 +189,7 @@ export function createStrategicAI(options) {
       .map(t => ({ t, need: forcesToContest(state, t, me) }))
       .sort((a, b) => a.need - b.need);
     for (const { t, need } of targets) {
-      const action = shipTo(state, me, t, need + 1) ?? moveTo(state, me, t, need + 1);
+      const action = enterTarget(state, me, t, need + 1);
       if (action) return { action, reason: 'take the stronghold that wins the game' };
     }
     return null;
@@ -208,6 +251,7 @@ export function createStrategicAI(options) {
       if (!goal) return plan;
 
       const { action, reason } = goal;
+      if (action.shipment && action.movement) return { ...plan, shipment: action.shipment, movement: action.movement, hajrMove: null, reason };
       if (action.territoryId) {
         return { ...plan, shipment: action, reason };
       }
