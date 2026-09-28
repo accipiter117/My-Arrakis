@@ -35,6 +35,7 @@ import * as allySupport from './allySupport.js';
 import * as hms from './hms.js';
 import * as techTokens from './techTokens.js';
 import * as choam from './choam.js';
+import * as richese from './richese.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -83,6 +84,12 @@ const passiveDecisionProvider = {
   chooseGuildTiming() { return null; }, // null: act last
   chooseFremenPlacement() { return null; }, // null: all 10 in Sietch Tabr
   chooseTechTokenToTake(state, f, options) { return techTokens.defaultTokenChoice(state, f, options); },
+  chooseCacheAuction(state, f, { cache }) { return { cardId: cache[0], position: 'first', method: 'onceAround' }; },
+  chooseOnceAroundDirection() { return 'cw'; },
+  chooseOnceAroundBid() { return null; },
+  chooseOnceAroundFinal() { return null; },
+  chooseSilentBid() { return 0; },
+  chooseFreeOrRemove() { return 'take'; },
   chooseChoamDiscards(state, f, { duplicates, worthless }) { return [...new Set([...duplicates, ...worthless])]; },
   chooseChoamEffect() { return null; },
   chooseInflation() { return null; },
@@ -372,6 +379,15 @@ async function runBiddingPhase(state, decisionProvider) {
     }
   }
   biddingEngine.startBiddingPhase(state);
+  // Richese: announce this round's cache auction (card, first or last, method).
+  let cacheChoice = null;
+  const cacheResults = [];
+  if (richese.cacheOf(state).length) {
+    const cache = richese.cacheOf(state);
+    const c = (decisionProvider.chooseCacheAuction ? await decisionProvider.chooseCacheAuction(state, 'richese', { cache }) : null) ?? {};
+    cacheChoice = { cardId: cache.includes(c.cardId) ? c.cardId : cache[0], position: c.position === 'last' ? 'last' : 'first', method: c.method === 'silent' ? 'silent' : 'onceAround' };
+    if (cacheChoice.position === 'first') cacheResults.push(await richese.runCacheAuction(state, decisionProvider, cacheChoice, e => observe(decisionProvider, e, state)));
+  }
   if (state.factions.ixians && state.decks.treacheryDeck.length && state.bidding.cardsUpForBid.length) {
     const all = [...state.bidding.cardsUpForBid, state.decks.treacheryDeck.pop()];
     const pick = decisionProvider.chooseIxianBury ? await decisionProvider.chooseIxianBury(state, 'ixians', all) : null;
@@ -440,6 +456,8 @@ async function runBiddingPhase(state, decisionProvider) {
       : { type: 'auctionUnsold', returned: state.bidding.cardsUpForBid.length - cardIndex }, state);
   }
 
+  if (cacheChoice?.position === 'last') cacheResults.push(await richese.runCacheAuction(state, decisionProvider, cacheChoice, e => observe(decisionProvider, e, state)));
+  for (const r of cacheResults) results.push(r.winnerId ? { winner: r.winnerId, price: r.amount, cache: true, cardId: r.cardId } : { cache: true, removed: true, cardId: r.cardId });
   return results;
 }
 
