@@ -19,6 +19,7 @@
 //     exposed as separate functions rather than automated inside
 //     initializeGame() itself.
 
+import { techTokensWanted, initTechTokens } from './techTokens.js';
 import { shuffle, setSeed, newSeed } from './random.js';
 import { createInitialGameState } from './gameState.js';
 import { buildSpiceDeck } from './spiceEngine.js';
@@ -244,6 +245,8 @@ function initializeGame(config) {
   state.meta.turn = 1;
 
   applyStartingStarredOnBoard(state);
+  // Tech Tokens variant: default owners take theirs now, the rest after the first storm.
+  if (techTokensWanted(rulesConfig, activeFactionIds)) initTechTokens(state);
   // Every leader's printed value (used for Ghola prices and leader deals).
   state.meta.leaderValues = Object.fromEntries(Object.values(leadersData).filter(Array.isArray).flat().map(l => [l.id, l.fightingValue ?? 0]));
   return state;
