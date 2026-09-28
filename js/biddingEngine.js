@@ -40,6 +40,9 @@ function startBiddingPhase(state) {
   let normalCardCount = biddingFactionIds.length;
   // Richese auction a cache card every round while any remain: one fewer normal card.
   if ((state.factions.richese?.cache ?? []).length) normalCardCount -= 1;
+  // A card sold on the Black Market this round: one fewer again.
+  if (state.meta.blackMarketSold) normalCardCount -= 1;
+  normalCardCount = Math.max(0, normalCardCount);
   if (false) {
     // TODO: prompt Richese for Once Around vs Silent Auction and
     // first-or-last placement once the Richese cache exists in state.
