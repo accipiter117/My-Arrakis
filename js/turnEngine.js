@@ -33,6 +33,7 @@ import * as cardEffects from './cardEffects.js';
 import { random } from './random.js';
 import * as allySupport from './allySupport.js';
 import * as hms from './hms.js';
+import * as techTokens from './techTokens.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -80,6 +81,7 @@ const passiveDecisionProvider = {
   chooseAdvisor() { return false; },
   chooseGuildTiming() { return null; }, // null: act last
   chooseFremenPlacement() { return null; }, // null: all 10 in Sietch Tabr
+  chooseTechTokenToTake(state, f, options) { return techTokens.defaultTokenChoice(state, f, options); },
   chooseKaramaCancel() { return false; },
   chooseAllyPledge() { return 0; },
   chooseEmperorAllyRevival() { return 0; },
@@ -216,6 +218,16 @@ async function runStormPhase(state, decisionProvider) {
   const turnOrder = state.meta.turnOrder ?? [];
   if (turnOrder.length > 0) {
     state.meta.firstPlayer = turnOrder[(state.meta.turn - 1) % turnOrder.length];
+  }
+
+  // Tech Tokens: after the first storm, tokens without their default owner
+  // go at random to factions without one, in turn order from the First Player.
+  if (isFirstStorm && state.techTokens && !state.meta.techTokensAssigned) {
+    const start = Math.max(0, turnOrder.indexOf(state.meta.firstPlayer));
+    const order = [...turnOrder.slice(start), ...turnOrder.slice(0, start)];
+    const dealt = techTokens.assignRemainingTechTokens(state, order, random);
+    await observe(decisionProvider, { type: 'techTokensAssigned', dealt,
+      owners: Object.fromEntries(techTokens.TECH_TOKENS.map(t => [t, state.techTokens[t].owner])) }, state);
   }
 
   // Damage and First Player determination are genuinely blocked on sector
@@ -526,6 +538,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
             && await decisionProvider.chooseAdvisor(state, 'gesserit', factionId)) {
           state.factions.gesserit.forces.reserve -= 1;
           state.factions.gesserit.forces.onBoard.polarSink = (state.factions.gesserit.forces.onBoard.polarSink ?? 0) + 1;
+          techTokens.recordTrigger(state, 'heighliner', 'gesserit'); // an advisor ships from off-planet too
           results.push({ factionId: 'gesserit', type: 'advisor', territoryId: 'polarSink', amount: 1 });
           await observe(decisionProvider, { type: 'shipment', factionId: 'gesserit', territoryId: 'polarSink', amount: 1, advisor: true }, state);
         }
@@ -852,6 +865,19 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     // used are forgotten. The AI reads only this record, never real hands.
     recordKnownCards(state, winner, winner ? [plans[winner].weaponCardId, plans[winner].defenseCardId, plans[winner].cheapHeroCardId] : []);
 
+    // Tech Tokens: the winner takes one of the loser's tokens (their choice).
+    // Before any Face Dancer reveal: that battle still counts as a win.
+    let techToken = null;
+    const loser = outcome.loserFactionId;
+    if (winner && loser && winner !== loser && techTokens.tokensOwnedBy(state, loser).length) {
+      const owned = techTokens.tokensOwnedBy(state, loser);
+      const asked = owned.length > 1 && decisionProvider.chooseTechTokenToTake
+        ? await decisionProvider.chooseTechTokenToTake(state, winner, owned, loser) : null;
+      const pick = owned.includes(asked) ? asked : techTokens.defaultTokenChoice(state, winner, owned);
+      techToken = techTokens.transferTechToken(state, loser, winner, pick);
+      await observe(decisionProvider, { type: 'techTokenTaken', territoryId, ...techToken }, state);
+    }
+
     // Tleilaxu Face Dancers: when ANOTHER faction wins with a leader that is
     // one of their Face Dancers, the Tleilaxu may reveal it. The win stands,
     // but the leader dies (no spice for it), the winner's remaining forces
@@ -925,7 +951,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       supportedOrdinary: plan.supportedOrdinaryCount ?? 0, leaderValue: plan.leaderFightingValue ?? 0,
       kwisatzHaderach: Boolean(plan.useKwisatzHaderach), forcesPresent: forcesBefore[plan === plans[aggressorId] ? aggressorId : defenderId]
     });
-    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor, faceDancer,
+    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor, faceDancer, techToken,
       plans: { [aggressorId]: reveal(plans[aggressorId]), [defenderId]: reveal(plans[defenderId]) }, ...outcome });
     await observe(decisionProvider, { type: 'battle', ...results[results.length - 1] }, state);
 
@@ -1046,6 +1072,14 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
     case 'victoryCheck': result = null; break; // victory already resolved inside mentatPause
     default:
       throw new Error(`turnEngine has no runner for phase "${phase}"`);
+  }
+
+  // Tech Tokens pay out at the end of their phase (Shipment and Movement
+  // share one runner, so Heighliners pay once, at the end of 'shipment').
+  if (state.techTokens && ['charity', 'revival', 'shipment'].includes(phase)) {
+    for (const paid of techTokens.payTechTokens(state, phase)) {
+      await observe(decisionProvider, { type: 'techIncome', ...paid }, state);
+    }
   }
 
   return { phase, result, turn };
