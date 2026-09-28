@@ -35,9 +35,10 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
 - M5 CHOAM: DONE (core). js/choam.js; Charity and Inflation, duplicate and worthless discards, all six worthless effects,
   revival terms, Forces share, the Auditor, alliance trade and battle support; AI and player decisions, guide, log, Factions
   sheet; tests (tests/choam.sim.js, incl. 24 AI games across 2 to 6 factions). REMAINING: Karama power and Karama against CHOAM
-  (Karama milestone), turn audio. Open questions: audit after a traitor kills the Auditor; where CHOAM's ally support goes.
+  (Karama milestone), turn audio. Owner decisions: a traitor-killed Auditor still audits 1 card; ally support goes to the Bank.
 - M6 Richese: PART 1 DONE. Faction, leaders, the 10-card cache, cache auction every round (first or last, Once Around or Silent,
   free-or-remove), payments, Harkonnen bonus; AI and player decisions, guide, log; tests (tests/richese.sim.js, incl. 20 AI games).
-  REMAINING: No-Field tokens, Black Market, alliance (No-Field ally shipping, giving cache cards), cache card effects (Distrans,
+  No-Field tokens DONE (js/noField.js: shipping, one force for every effect, storm/worm/battle/choice reveals, hidden value, AI use).
+  REMAINING: Black Market, alliance (No-Field ally shipping, giving cache cards), cache card effects (Distrans,
   Juice of Sapho, Mirror Weapon, Portable Snooper, Ornithopter, Nullentropy Box, Semuta Drug, Residual Poison, Stone Burner).
 - Not started (was: M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
