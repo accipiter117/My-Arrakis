@@ -796,7 +796,7 @@ function renderTechTray() {
     const cls = !f ? ' tech-slot--empty' : counts[f] === 3 ? ' tech-slot--set' : counts[f] === 2 ? ' tech-slot--two' : '';
     const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'nobody';
     return `<button class="tech-slot${cls}" data-token="${t}" style="--slot-colour:${f ? FACTION_COLORS[f] : '#555'}" title="${TOKEN_NAMES[t]}: ${who}" aria-label="${TOKEN_NAMES[t]}, held by ${who}">
-      <img src="assets/tokens/tech-${t}.png" alt="">${f ? `<img class="tech-slot__owner" src="assets/counters/${f}.png" alt="">` : ''}</button>`;
+      <img src="assets/tokens/tech-${t}.png?v=2" alt="">${f ? `<img class="tech-slot__owner" src="assets/counters/${f}.png" alt="">` : ''}</button>`;
   }).join('');
 }
 
@@ -909,14 +909,14 @@ function renderFactions() {
     const hidden = humanFactionId && f !== humanFactionId;
     const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
     return `<tr${f === humanFactionId ? ' class="is-you"' : ''}>
-      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${tokensOwnedBy(gameState, f).length ? `<br><span class="tech-tokens">${tokensOwnedBy(gameState, f).map(t => `<img src="assets/tokens/tech-${t}.png" alt="${TOKEN_NAMES[t]}" title="${TOKEN_NAMES[t]}">`).join('')}</span>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
+      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${tokensOwnedBy(gameState, f).length ? `<br><span class="tech-tokens">${tokensOwnedBy(gameState, f).map(t => `<img src="assets/tokens/tech-${t}.png?v=2" alt="${TOKEN_NAMES[t]}" title="${TOKEN_NAMES[t]}">`).join('')}</span>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
       <td>${hidden ? '?' : faction.spice}</td><td>${faction.treacheryHand.length}</td><td>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</td>
       <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
   }).join('');
   const anyKnown = Object.keys(gameState.meta.knownCards ?? {}).length;
   const inf = gameState.factions.choam?.specialFactionState?.inflation?.status;
   const infNote = inf && inf !== 'unused' ? `<p class="sheet__note">CHOAM Inflation: ${inf === 'removed' ? 'used and gone' : `${inf === 'double' ? 'Double' : 'Cancel'} for next turn's Charity`}.</p>` : '';
-  const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.png" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
+  const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.png?v=2" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
   grid.innerHTML = techNote + (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
