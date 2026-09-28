@@ -5,7 +5,7 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
 ## Decisions (section 1 of the plan)
 - D1 Worthless cards: return only when needed (CHOAM, Leader Skills or Stronghold Cards). Decided.
 - D2 Faction selection: any 2 to 6 of the available factions. Built (M0).
-- D3 Tech Tokens: built as a menu choice, default on when Ixians or Tleilaxu are seated (plan default). Awaiting confirmation.
+- D3 Tech Tokens: on in every game by default (menu: Always / With Ixians or Tleilaxu / Off). Decided.
 - D4 Leader Skills / Stronghold Cards: toggles, off until M7 / M8 ship (plan default).
 - D5 CHOAM charity: CHOAM collects spice for every player, so it can always pay. Decided.
 - D6 Bribes: not implemented in the app; record the Inflation flag only.
@@ -25,11 +25,11 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
   DONE. REMAINING: Karama powers, audio.
 - M4 Tech Tokens: DONE. js/techTokens.js; assignment (defaults at setup, the rest dealt after the first storm in turn order from the
   First Player), income at the end of Charity, Revival and Shipment/Movement with the rulebook exclusions, battle transfer (before a
-  Face Dancer reveal), a full set counts as a stronghold (not across allies). Menu: With Ixians or Tleilaxu / Always / Off. AI and
+  Face Dancer reveal), a full set counts as a stronghold (not across allies). Menu: Always / With Ixians or Tleilaxu / Off. AI and
   player decisions, Factions sheet, victory watch, log, tests (tests/techTokens.sim.js; every third AI batch game plays with tokens).
-  OPEN: leftover tokens in small games stay out of play (rulebook wording) pending the owner's decision.
+  Owner decisions: on in every game by default; in two-player games the leftover token is dealt round again.
 - Art: counters, ships and ornithopters for Ixians, Tleilaxu, CHOAM and Richese installed; HMS token and the three Tech Token faces
-  installed (assets/tokens). A black orb token (assets/tokens/orb.png) is stored but unused until its purpose is confirmed.
+  installed (assets/tokens), plus the Richese No-Field token (assets/tokens/nofield.png, used from M6).
   Turn announcement audio for the new factions still to come.
 - Alliance perks: all eight factions verified (tests/alliancePerks.sim.js).
 - Not started (was: M5 CHOAM, M6 Richese, M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
