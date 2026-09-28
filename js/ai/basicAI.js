@@ -18,6 +18,9 @@
 // canX() validators a human action would use, so an illegal proposal is
 // simply refused rather than bending the rules.
 
+import * as cardEffects from '../cardEffects.js';
+import { spendingPower } from '../allySupport.js';
+import { cacheCardValue } from '../richese.js';
 import { battleSpice } from '../allySupport.js';
 import { defaultTokenChoice } from '../techTokens.js';
 import { random } from '../random.js';
@@ -227,6 +230,28 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const best = Object.entries(reachable).sort((a, b) => gain(b[1]) - gain(a[1]))[0];
       return best && gain(best[1]) > 0 ? best[0] : null;
     },
+    // --- Richese cache auctions --------------------------------------------------
+    // Auction the card rivals will pay most for: Silent when two or more rivals are rich.
+    chooseCacheAuction(state, factionId, { cache }) {
+      const best = cache.slice().sort((a, b) => cacheCardValue(b, cardEffects.UNBUILT_CARDS) - cacheCardValue(a, cardEffects.UNBUILT_CARDS))[0];
+      const rich = Object.entries(state.factions).filter(([f, x]) => f !== factionId && x.spice >= 8).length;
+      return { cardId: best, position: rich ? 'first' : 'last', method: rich >= 2 ? 'silent' : 'onceAround' };
+    },
+    chooseOnceAroundDirection() { return 'cw'; },
+    // Bid up to the card's worth, keeping 3 spice for shipping.
+    chooseOnceAroundBid(state, factionId, { cardId, highBid }) {
+      const cap = Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS), spendingPower(state, factionId) - 3);
+      return cap > highBid ? highBid + 1 : null;
+    },
+    chooseOnceAroundFinal(state, factionId, { cardId, highBid }) {
+      const cap = Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS), spendingPower(state, factionId) - 3);
+      return cap > highBid ? highBid + 1 : null; // only keep a card rivals value cheaply
+    },
+    chooseSilentBid(state, factionId, { cardId }) {
+      return Math.max(0, Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS) - 1, spendingPower(state, factionId) - 3));
+    },
+    chooseFreeOrRemove() { return 'take'; },
+
     // --- CHOAM ---------------------------------------------------------------
     // End of a phase: cash every duplicate; cash worthless cards too, keeping at
     // most one effect card (Kull Wahad first, then La La La) while spice is healthy.
