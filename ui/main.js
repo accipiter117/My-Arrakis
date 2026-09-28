@@ -580,6 +580,7 @@ function updateConsoleMute() {
 }
 new MutationObserver(updateConsoleMute).observe($('turn-banner'), { attributes: true, attributeFilter: ['hidden'] });
 new MutationObserver(updateConsoleMute).observe($('event-layer'), { attributes: true, attributeFilter: ['hidden'] });
+$('tech-tray').addEventListener('click', () => openSheet('factions'));
 
 function ensureBoard(data) {
   if (board) return;
@@ -594,6 +595,7 @@ function ensureBoard(data) {
     board, layer: $('event-layer'), banner: $('turn-banner'), factionColors: FACTION_COLORS, getSpeed: () => speed,
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
     renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds, viewer: humanFactionId ?? null }),
+    techTray: $('tech-tray'), onTechChange: () => renderTechTray(),
     renderReal: renderBoard,
     getViewer: () => humanFactionId,
     sfx,
@@ -781,7 +783,25 @@ function renderGuide() {
   }).join('') + `<h3 class="sheet__sub">Every alliance</h3>${list(ALLIANCE_BASICS)}<p class="sheet__note">Tuned to the rules as built in this version. Advanced rules are always on.</p>`;
 }
 
+// Tech Tokens tray: always on the map, each token ringed in its holder's colour.
+function renderTechTray() {
+  const tray = $('tech-tray');
+  const tt = gameState?.techTokens;
+  tray.hidden = !tt;
+  if (!tt) return;
+  const counts = {};
+  for (const t of TECH_TOKENS) if (tt[t].owner) counts[tt[t].owner] = (counts[tt[t].owner] ?? 0) + 1;
+  tray.innerHTML = TECH_TOKENS.map(t => {
+    const f = tt[t].owner;
+    const cls = !f ? ' tech-slot--empty' : counts[f] === 3 ? ' tech-slot--set' : counts[f] === 2 ? ' tech-slot--two' : '';
+    const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'nobody';
+    return `<button class="tech-slot${cls}" data-token="${t}" style="--slot-colour:${f ? FACTION_COLORS[f] : '#555'}" title="${TOKEN_NAMES[t]}: ${who}" aria-label="${TOKEN_NAMES[t]}, held by ${who}">
+      <img src="assets/tokens/tech-${t}.png" alt="">${f ? `<img class="tech-slot__owner" src="assets/counters/${f}.png" alt="">` : ''}</button>`;
+  }).join('');
+}
+
 function render() {
+  renderTechTray();
   renderWatch();
   renderBoard();
   renderTerritoryInfo();
