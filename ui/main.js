@@ -163,7 +163,7 @@ async function startNewGame() {
     render();
 
     const setup = await turnEngine.runSetupDecisions(gameState, decisionProvider);
-    addLog('setup', 1, `Traitors chosen by ${setup.traitors.length} factions (Harkonnen keeps all four).${setup.prediction ? ' Bene Gesserit has sealed a secret Prediction.' : ''}`);
+    addLog('setup', 1, `Traitors chosen by ${setup.traitors.length} factions${gameState.factions.harkonnen ? ' (Harkonnen keeps all four)' : ''}.${gameState.factions.tleilaxu ? ' The Tleilaxu hold three Face Dancers.' : ''}${setup.prediction ? ' Bene Gesserit has sealed a secret Prediction.' : ''}`);
     phaseEngine.nextPhase(gameState);
     saveGame();
   } catch (err) {
@@ -218,6 +218,7 @@ function logEvent(e) {
   if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
+  if (e.type === 'faceDancer') addLog('battle', turn, `Face Dancer! ${leaderNameOf(e.leaderId)} was a Tleilaxu Face Dancer: ${nameOf(e.winnerId)}'s ${e.returned} force${e.returned === 1 ? '' : 's'} in ${territoryNameOf(e.territoryId)} go back to reserves, and ${e.placed} Tleilaxu force${e.placed === 1 ? '' : 's'} take their place.`);
   if (e.type === 'richeseCard') {
     const who = nameOf(e.factionId);
     const t = { nullentropyBox: `${who} used the Nullentropy Box to take a card from the discard pile`,
