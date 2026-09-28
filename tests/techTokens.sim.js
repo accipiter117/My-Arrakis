@@ -13,17 +13,17 @@ const L = p => JSON.parse(fs.readFileSync('./data/' + p, 'utf8'));
 const [territories, spiceDeck, treacheryDeck, leaders, rulesConfig] = ['territories.json', 'spiceDeck.json', 'treacheryDeck.json', 'leaders.json', 'rulesConfig.json'].map(L);
 const cards = Object.fromEntries(treacheryDeck.cards.map(c => [c.id, c]));
 const assert = (c, m) => { if (!c) throw new Error('FAILED: ' + m); console.log('  ok - ' + m); };
-const rules = mode => ({ ...rulesConfig, expansions: { ...rulesConfig.expansions, techTokens: mode } });
-const game = (ids, mode = 'auto', seed = 11) => initializeGame({ activeFactionIds: ids, playerCircleOrder: ids, rulesConfig: rules(mode), seed,
+const rules = mode => ({ ...rulesConfig, expansions: { ...rulesConfig.expansions, techTokens: mode ?? rulesConfig.expansions.techTokens } });
+const game = (ids, mode, seed = 11) => initializeGame({ activeFactionIds: ids, playerCircleOrder: ids, rulesConfig: rules(mode), seed,
   spiceDeckData: spiceDeck, territoriesData: territories, treacheryDeckData: treacheryDeck, leadersData: leaders });
 const owner = (s, t) => s.techTokens[t].owner;
 const BASE = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit'];
 const EXP = ['atreides', 'harkonnen', 'fremen', 'gesserit', 'ixians', 'tleilaxu'];
 
 console.log('Test 1: when the variant is on');
-assert(!game(BASE).techTokens, 'auto: off with neither Ixians nor Tleilaxu seated');
-assert(Boolean(game(EXP).techTokens), 'auto: on with them seated');
-assert(!game(EXP, 'off').techTokens && Boolean(game(BASE, 'on').techTokens), '"off" and "on" override the default');
+assert(Boolean(game(BASE, undefined).techTokens) && Boolean(game(BASE, 'on').techTokens), 'on by default in every game (project owner\'s choice)');
+assert(!game(BASE, 'auto').techTokens && Boolean(game(EXP, 'auto').techTokens), '"auto": only with Ixians or Tleilaxu seated');
+assert(!game(EXP, 'off').techTokens, '"off" turns them off');
 
 console.log('\nTest 2: default owners take their tokens at setup');
 let s = game(EXP);
@@ -51,7 +51,8 @@ assert(new Set(owners).size === 3 && owners.every(f => firstThree.includes(f)), 
 console.log('\nTest 5: two players, three tokens');
 s = game(['atreides', 'harkonnen'], 'on');
 await turnEngine.runStormPhase(s, turnEngine.passiveDecisionProvider);
-assert(tech.TECH_TOKENS.filter(t => owner(s, t)).length === 2 && tech.tokensOwnedBy(s, 'atreides').length === 1, 'one each; the third stays out of play');
+const first = s.meta.firstPlayer;
+assert(tech.TECH_TOKENS.every(t => owner(s, t)) && tech.tokensOwnedBy(s, first).length === 2, `every token has an owner: one each, then the third goes round again to the First Player (${first})`);
 
 console.log('\nTest 6: Axlotl Tanks income');
 s = game(EXP);
