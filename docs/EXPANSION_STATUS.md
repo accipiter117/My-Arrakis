@@ -3,7 +3,7 @@
 Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Richese).
 
 ## Decisions (section 1 of the plan)
-- D1 Worthless cards: return only when needed (CHOAM, Leader Skills or Stronghold Cards). Decided.
+- D1 Worthless cards: return only when needed (CHOAM, Leader Skills or Stronghold Cards). Built (M5).
 - D2 Faction selection: any 2 to 6 of the available factions. Built (M0).
 - D3 Tech Tokens: on in every game by default (menu: Always / With Ixians or Tleilaxu / Off). Decided.
 - D4 Leader Skills / Stronghold Cards: toggles, off until M7 / M8 ship (plan default).
@@ -32,4 +32,8 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
   installed (assets/tokens), plus the Richese No-Field token (assets/tokens/nofield.png, used from M6).
   Turn announcement audio for the new factions still to come.
 - Alliance perks: all eight factions verified (tests/alliancePerks.sim.js).
-- Not started (was: M5 CHOAM, M6 Richese, M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
+- M5 CHOAM: DONE (core). js/choam.js; Charity and Inflation, duplicate and worthless discards, all six worthless effects,
+  revival terms, Forces share, the Auditor, alliance trade and battle support; AI and player decisions, guide, log, Factions
+  sheet; tests (tests/choam.sim.js, incl. 24 AI games across 2 to 6 factions). REMAINING: Karama power and Karama against CHOAM
+  (Karama milestone), turn audio. Open questions: audit after a traitor kills the Auditor; where CHOAM's ally support goes.
+- Not started (was: M6 Richese, M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
