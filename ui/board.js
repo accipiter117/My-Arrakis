@@ -253,16 +253,17 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     const spice = {};
     for (const m of state.board.spiceBlowMarkers) spice[m.territoryId] = (spice[m.territoryId] ?? 0) + m.amount;
 
-    // The Ixians' Hidden Mobile Stronghold: a bronze hexagon beside its host, with anyone inside it.
+    // The Ixians' Hidden Mobile Stronghold: its token beside its host, with anyone inside it.
     if (state.board.territories.hms && (state.board.hms?.placed || Object.values(state.factions).some(f => f.forces.onBoard.hms))) {
       const [hx, hy] = hmsPoint();
       const g = el('g', { class: 'hms', transform: `translate(${hx},${hy})` }, tokenLayer);
       const pts = Array.from({ length: 6 }, (_, i) => { const a = Math.PI / 6 + i * Math.PI / 3; return `${Math.cos(a) * 34},${Math.sin(a) * 34}`; }).join(' ');
-      el('polygon', { points: pts, class: 'hms__hull' }, g);
-      const tag = el('text', { class: 'hms__label', y: -40 }, g); tag.textContent = 'HMS';
+      el('polygon', { points: pts, class: 'hms__hull' }, g); // shows until the art loads
+      el('image', { href: new URL('../assets/tokens/hms.png', import.meta.url).href, x: -48, y: -56, width: 96, height: 96, class: 'hms__art' }, g);
+      const tag = el('text', { class: 'hms__label', y: -54 }, g); tag.textContent = 'HMS';
       const inside = Object.entries(state.factions).filter(([, f]) => (f.forces.onBoard.hms ?? 0) > 0);
       inside.forEach(([f, x], i) => {
-        const c = el('g', { class: 'token', transform: `translate(${(i - (inside.length - 1) / 2) * 44},0) scale(0.8)` }, g);
+        const c = el('g', { class: 'token', transform: `translate(${(i - (inside.length - 1) / 2) * 44},14) scale(0.8)` }, g);
         drawCounter(c, f, x.forces.onBoard.hms);
       });
     }
