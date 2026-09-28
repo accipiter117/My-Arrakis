@@ -55,6 +55,7 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseTechTokenToTake: (state, f, options, from) => pick(f).chooseTechTokenToTake(state, f, options, from),
     chooseChoamDiscards: (state, f, info) => pick(f).chooseChoamDiscards(state, f, info),
     chooseCacheAuction: (state, f, info) => pick(f).chooseCacheAuction(state, f, info),
+    chooseRevealNoField: (state, f, info) => pick(f).chooseRevealNoField(state, f, info),
     chooseOnceAroundDirection: (state, f, info) => pick(f).chooseOnceAroundDirection(state, f, info),
     chooseOnceAroundBid: (state, f, info) => pick(f).chooseOnceAroundBid(state, f, info),
     chooseOnceAroundFinal: (state, f, info) => pick(f).chooseOnceAroundFinal(state, f, info),
