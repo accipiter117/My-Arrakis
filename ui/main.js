@@ -16,6 +16,7 @@ import { createBasicAI } from '../js/ai/basicAI.js';
 import { createStrategicAI } from '../js/ai/strategicAI.js';
 import { createAI, DIFFICULTIES } from '../js/ai/difficulty.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
+import { createRecorder, summarise } from './recorder.js';
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
 import * as cardEffects from '../js/cardEffects.js';
@@ -85,6 +86,7 @@ let territoriesData = null;
 let leadersById = {};
 let cardLookup = {};
 let logEntries = [];
+let recorder = createRecorder(); // the match record carried in saves and exports
 let decisionProvider = turnEngine.passiveDecisionProvider;
 let humanFactionId = null;
 let busy = false;
@@ -155,6 +157,10 @@ async function startNewGame() {
     });
 
     aiChoice = $('select-ai').value;
+    recorder = createRecorder();
+    recorder.start(gameState, { appVersion: appVersion(), seed: gameState.meta.seed, humanFactionId, aiChoice, lineup: seated,
+      speed: $('select-speed')?.value ?? null, expansions: clone(gameState.rulesConfig.expansions ?? {}), houseRules: clone(gameState.rulesConfig.houseRules ?? {}),
+      startedAt: new Date().toISOString() });
     decisionProvider = buildProvider(data);
 
     logEntries = [];
@@ -180,7 +186,7 @@ async function startNewGame() {
 // before the engine carries on.
 function buildProvider(data) {
   const provider = buildDecisionMaker(data);
-  return { ...provider, observe: (event, state) => { logEvent(event); return presenter?.observe(event, state); } };
+  return { ...provider, observe: (event, state) => { recorder.event(event, state); logEvent(event); return presenter?.observe(event, state); } };
 }
 
 // Phase ambiences: the auction through Bidding, the Tleilaxu tanks through
@@ -279,8 +285,8 @@ function logEvent(e) {
 
 function buildDecisionMaker(data) {
   const level = { strategic: 'hard', basic: 'easy' }[aiChoice] ?? aiChoice; // older saves
-  const ai = level === 'passive' ? turnEngine.passiveDecisionProvider
-    : createAI(level, { leadersData: data.leaders, cardLookup });
+  const ai = recorder.wrapAI(level === 'passive' ? turnEngine.passiveDecisionProvider
+    : createAI(level, { leadersData: data.leaders, cardLookup }), () => gameState);
   return humanFactionId
     ? createMixedProvider({
         humanFactionId, ai,
@@ -296,7 +302,7 @@ function buildDecisionMaker(data) {
 // position, so a resumed game plays on exactly as it would have.
 function snapshot() {
   return { version: 1, savedAt: new Date().toISOString(), state: gameState, rng: getRandomState(),
-           log: logEntries, humanFactionId, aiChoice };
+           log: logEntries, humanFactionId, aiChoice, record: recorder.data };
 }
 
 function saveGame() {
@@ -304,7 +310,14 @@ function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify(snapshot()));
   } catch (err) {
-    console.warn('Could not save the game', err); // private browsing or storage full
+    // Storage full (long games carry a big match record): keep the game, slim the record.
+    try {
+      const slim = { ...recorder.data, ai: recorder.data.ai.map(({ input, output, ...keep }) => keep), events: recorder.data.events.filter(e => e.type !== 'phaseResult') };
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ ...snapshot(), record: slim }));
+      console.warn('Saved with a slimmed match record (storage nearly full)');
+    } catch (err2) {
+      console.warn('Could not save the game', err2); // private browsing or storage full
+    }
   }
   renderMenu();
 }
@@ -335,6 +348,7 @@ async function resumeGame(save) {
     hmsModule.linkHms(gameState); // the HMS's links live in the game, not the map data
     setRandomState(save.rng);
     logEntries = save.log ?? [];
+    recorder = createRecorder(save.record ?? null);
     humanFactionId = save.humanFactionId ?? null;
     aiChoice = save.aiChoice ?? 'hard';
     decisionProvider = buildProvider(data);
@@ -351,7 +365,11 @@ async function resumeGame(save) {
 
 function exportSave() {
   if (!gameState) return;
-  const blob = new Blob([JSON.stringify(snapshot(), null, 1)], { type: 'application/json' });
+  // The export adds a review block: summary stats, hidden information revealed, checks.
+  let review = null;
+  try { review = { exportedAt: new Date().toISOString(), appVersion: appVersion(), ...summarise(recorder.data, gameState, cardLookup) }; }
+  catch (err) { review = { error: `Summary failed: ${err.message}` }; }
+  const blob = new Blob([JSON.stringify({ ...snapshot(), review })], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `my-arrakis-turn${gameState.meta.turn}-seed${gameState.meta.seed}.json`;
@@ -389,11 +407,21 @@ function renderMenu() {
   $('btn-export').disabled = !gameState;
 }
 
+// One phase, recorded for the match export (spice before and after, the result).
+async function recordedStep() {
+  const before = recorder.spiceNow(gameState);
+  const entry = await withPhaseAmbience(() => turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup));
+  try { recorder.phase(entry, before, gameState); } catch (err) { console.warn('Match record failed', err); }
+  return entry;
+}
+const appVersion = () => document.querySelector('.build-version')?.textContent.replace('Version', '').trim() ?? null;
+const clone = v => JSON.parse(JSON.stringify(v));
+
 async function stepPhase() {
   if (!gameState || gameState.victory.achieved || busy) return;
   setBusy(true);
   try {
-    describe(await withPhaseAmbience(() => turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup)));
+    describe(await recordedStep());
     saveGame();
     checkVictory();
   } catch (err) {
@@ -412,7 +440,7 @@ async function runTurn() {
     // as the turn unfolds, which matters while waiting on your decisions.
     const startTurn = gameState.meta.turn;
     while (!gameState.victory.achieved && gameState.meta.turn === startTurn) {
-      describe(await withPhaseAmbience(() => turnEngine.stepOnePhase(gameState, decisionProvider, territoriesData, cardLookup)));
+      describe(await recordedStep());
       saveGame(); // after every completed phase, so a reload never loses more than one phase
       render();
     }
