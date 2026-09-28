@@ -86,7 +86,9 @@ export function playGhola(state, factionId, choice) {
 // Weather Control and Family Atomics (need the storm's sector data). Until they work, their holder
 // may discard them so they don't sit dead in a hand. A temporary
 // implementation decision (data/rulesConfig.json: unbuiltCardDiscard).
-export const UNBUILT_CARDS = ['weatherControl', 'familyAtomics'];
+// Richese cache cards whose effects are not built yet (M6 in progress) join the list.
+export const UNBUILT_CARDS = ['weatherControl', 'familyAtomics', 'distrans', 'juiceOfSapho', 'mirrorWeapon', 'portableSnooper',
+  'ornithopter', 'nullentropyBox', 'semutaDrug', 'residualPoison', 'stoneBurner'];
 
 export function canDiscardUnbuilt(state, factionId, cardId) {
   if (!UNBUILT_CARDS.includes(cardId)) return { ok: false, reason: 'Only cards whose effects are not in the game yet can be discarded freely.' };
@@ -137,7 +139,7 @@ export function playTruthtrance(state, askerId, targetId, question, cardLookup) 
 // Built: its core use, cancelling a faction advantage at the moment it is
 // used against you (the Voice, Prescience, a Harkonnen capture). Not yet:
 // each faction's once-per-game advanced Karama power.
-const KARAMA_CARDS = ['karama1', 'karama2'];
+const KARAMA_CARDS = ['karama1', 'karama2', 'karamaRichese'];
 
 const WORTHLESS_IDS = ['baliset', 'jubbaCloak', 'kulon', 'laLaLa', 'tripToGamont'];
 function worthlessHeld(state, factionId) {
