@@ -98,7 +98,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     view.x = clamp(view.x, 0, FULL - view.w);
     view.y = clamp(view.y, 0, FULL - view.w);
     svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.w}`);
-    onZoom?.(view.w < FULL - 1);
+    onZoom?.(view.w < FULL - 1, manual);
   }
   // Screen point to map coordinates (the SVG letterboxes to a square).
   function toMap(clientX, clientY) {
