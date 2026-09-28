@@ -485,9 +485,19 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     ring.remove();
   }
 
+  // Screen position (CSS pixels) of a point on the map.
+  function screenPointOf([x, y]) {
+    const m = svg.getScreenCTM();
+    if (!m) return null;
+    const p = svg.createSVGPoint(); p.x = x; p.y = y;
+    const s = p.matrixTransform(m);
+    return { x: s.x, y: s.y };
+  }
+
   return {
     render,
     labelPoint,
+    screenPointOf,
     pathBetween,
     offBoardPoint,
     animateToken,
