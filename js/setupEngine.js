@@ -132,7 +132,8 @@ function treacheryCardsInPlay(rulesConfig, treacheryDeckData, factionIds = []) {
   const leaveOutWorthless = rulesConfig.houseRules?.removeWorthlessCards && !worthlessCardsNeeded(rulesConfig, factionIds);
   return treacheryDeckData.cards.filter(c =>
     !(leaveOutWorthless && c.category === 'worthless')
-    && !(c.expansion === 'ixTl' && !rulesConfig.expansions?.ixTlCards));
+    && !(c.expansion === 'ixTl' && !rulesConfig.expansions?.ixTlCards)
+    && !c.cache); // the Richese cache is never part of the Treachery Deck
 }
 
 function setupTreacheryDeck(state, treacheryDeckData, rngShuffle) {
@@ -255,6 +256,8 @@ function initializeGame(config) {
   state.meta.turn = 1;
 
   applyStartingStarredOnBoard(state);
+  // Richese: a separate cache of 10 cards, not part of the hand.
+  if (state.factions.richese) state.factions.richese.cache = treacheryDeckData.cards.filter(c => c.cache).map(c => c.id);
   // Tech Tokens variant: default owners take theirs now, the rest after the first storm.
   if (techTokensWanted(rulesConfig, activeFactionIds)) initTechTokens(state);
   // Every leader's printed value (used for Ghola prices and leader deals).
