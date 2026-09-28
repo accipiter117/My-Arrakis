@@ -95,8 +95,8 @@ for (let g = 0; g < GAMES; g++) {
   try {
     const state = initializeGame({
       activeFactionIds: ALL, playerCircleOrder: ALL,
-      // Every third game plays with the Tech Tokens variant on (it is off by default without Ixians or Tleilaxu).
-      rulesConfig: g % 3 === 2 ? { ...rulesConfig, expansions: { ...rulesConfig.expansions, techTokens: 'on' } } : rulesConfig,
+      // Tech Tokens are on by default; every third game plays without them so both paths stay covered.
+      rulesConfig: g % 3 === 2 ? { ...rulesConfig, expansions: { ...rulesConfig.expansions, techTokens: 'off' } } : rulesConfig,
       spiceDeckData, territoriesData, treacheryDeckData, leadersData,
       rngShuffle: shuffleWith(rng)
     });
