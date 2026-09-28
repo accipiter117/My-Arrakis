@@ -14,7 +14,8 @@ const CATEGORY_TEXT = { poisonWeapon: 'a poison weapon', projectileWeapon: 'a pr
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export function createPresenter({ board, layer, banner = null, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null, cardLookup = null }) {
+export function createPresenter({ board, layer, banner = null, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null, cardLookup = null,
+  techTray = null, onTechChange = () => {} }) {
   const speed = () => getSpeed();
   const scaled = ms => ms * speed();
   const wait = ms => new Promise(resolve => setTimeout(resolve, scaled(ms)));
@@ -87,7 +88,64 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     setTimeout(() => { if (banner.classList.contains('turn-banner--leaving')) banner.hidden = true; }, 250);
   }
 
+  // --- Tech Tokens: fly a token across the map into its holder's tray slot -----------
+  const TECH_NAMES = { axlotl: 'Axlotl Tanks', heighliner: 'Heighliners', spiceProd: 'Spice Production' };
+  const techUrl = t => new URL(`../assets/tokens/tech-${t}.png`, import.meta.url).href;
+  let pendingTech = [];
+  async function flyTech(token, fromScreen, ownerId, caption) {
+    const slot = techTray?.querySelector(`[data-token="${token}"]`);
+    if (!slot || !fromScreen || !speed()) { onTechChange(); return; }
+    const to = slot.getBoundingClientRect();
+    const img = document.createElement('div');
+    img.className = 'tech-flyer';
+    img.style.setProperty('--flyer-colour', factionColors[ownerId] ?? '#c9a24a');
+    img.innerHTML = `<img src="${techUrl(token)}" alt=""><span class="tech-flyer__caption">${caption}</span>`;
+    document.body.appendChild(img);
+    const size = 64, x0 = fromScreen.x - size / 2, y0 = fromScreen.y - size / 2;
+    const x1 = to.left + to.width / 2 - size / 2, y1 = to.top + to.height / 2 - size / 2;
+    img.style.left = `${x0}px`; img.style.top = `${y0}px`;
+    // Rise and glow on the battlefield, hold, then sweep into the tray.
+    await img.animate([{ transform: 'scale(0.2) rotate(-40deg)', opacity: 0 }, { transform: 'scale(1.25) rotate(0)', opacity: 1, offset: 0.6 }, { transform: 'scale(1)', opacity: 1 }],
+      { duration: scaled(700), easing: 'ease-out', fill: 'forwards' }).finished;
+    await wait(900);
+    img.querySelector('.tech-flyer__caption').remove();
+    await img.animate([{ transform: 'translate(0,0) scale(1)' }, { transform: `translate(${x1 - x0}px, ${y1 - y0}px) scale(0.55)` }],
+      { duration: scaled(850), easing: 'cubic-bezier(.5,0,.3,1)', fill: 'forwards' }).finished;
+    img.remove();
+    onTechChange();
+    slot.classList.remove('tech-slot--arrive'); void slot.offsetWidth; slot.classList.add('tech-slot--arrive');
+  }
+  async function playTechTransfers() {
+    const list = pendingTech; pendingTech = [];
+    for (const e of list) {
+      const at = board.screenPointOf?.(board.labelPoint(e.territoryId));
+      await flyTech(e.token, at, e.to, `${esc(TECH_NAMES[e.token])}<br><small>${esc(names.faction(e.from))} → ${esc(names.faction(e.to))}</small>`);
+    }
+  }
+
   const handlers = {
+    // A Tech Token changes hands: shown once the battle's reveal is over.
+    async techTokenTaken(e) {
+      if (!speed()) { onTechChange(); return; }
+      pendingTech.push(e);
+    },
+    // Start of the game: each token flies from the middle of the map to its holder.
+    async techTokensAssigned(e) {
+      if (!speed()) { onTechChange(); return; }
+      const r = document.getElementById('board')?.getBoundingClientRect();
+      const mid = r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+      for (const [t, f] of Object.entries(e.owners)) if (f) await flyTech(t, mid, f, `${esc(TECH_NAMES[t])}<br><small>${esc(names.faction(f))}</small>`);
+    },
+    // A token pays out: its slot flashes the amount.
+    async techIncome(e) {
+      const slot = techTray?.querySelector(`[data-token="${e.token}"]`);
+      if (!slot || !speed()) return;
+      const tag = document.createElement('span');
+      tag.className = 'tech-slot__gain'; tag.textContent = `+${e.amount}`;
+      slot.appendChild(tag);
+      setTimeout(() => tag.remove(), 1400);
+      await wait(500);
+    },
     // A faction's turn begins: announce it, and give the player a moment to see it.
     async turnStart(e) {
       if (!speed()) return;
@@ -365,6 +423,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
           <div class="event-card__detail">${outcome}</div>`, 4000);
         board.pulse(e.territoryId, 'battle', scaled(1000));
         await shown;
+        await playTechTransfers();
         return;
       }
 
@@ -460,6 +519,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       hurry = null;
       layer.hidden = true;
       layer.innerHTML = '';
+      await playTechTransfers();
     }
   };
 
