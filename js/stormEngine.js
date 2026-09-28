@@ -118,6 +118,8 @@ function applyStormDamage(state, from, sectors) {
     for (const [factionId, faction] of Object.entries(state.factions)) {
       const here = faction.forces.onBoard[territoryId] ?? 0;
       if (!here) continue;
+      // CHOAM's Jubba Cloak shelters its forces in one territory from this storm.
+      if (factionId === 'choam' && state.choamEffects?.jubbaCloak === territoryId) continue;
       const starredHere = faction.forces.starredOnBoard?.[territoryId] ?? 0;
       const lost = factionId === 'fremen' ? Math.ceil(here / 2) : here;
       // Ordinary forces are lost first, so elite forces survive where they can.
