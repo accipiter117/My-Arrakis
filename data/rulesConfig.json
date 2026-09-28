@@ -42,11 +42,11 @@
     "richeseBlackMarket": true,
     "leaderSkillCards": {
       "enabled": false,
-      "notes": "CHOAM & Richese variant, opt-in per rulebook rather than always-on, not a base advanced rule. Leaving disabled by default, revisit if wanted."
+      "notes": "A C&R variant (not an advanced rule). Project owner's decision: kept off for now, the game has enough complexity. Not built."
     },
     "advancedStrongholdCards": {
       "enabled": false,
-      "notes": "Same as Leader Skill Cards, an opt-in variant rather than a base advanced rule."
+      "notes": "The C&R rulebook says these are only used in advanced games, so they belong on once built (expansion plan M8). Not built yet; off until then."
     }
   },
   "optional": {
