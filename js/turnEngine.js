@@ -36,6 +36,7 @@ import * as hms from './hms.js';
 import * as techTokens from './techTokens.js';
 import * as choam from './choam.js';
 import * as richese from './richese.js';
+import * as noField from './noField.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -90,6 +91,7 @@ const passiveDecisionProvider = {
   chooseOnceAroundFinal() { return null; },
   chooseSilentBid() { return 0; },
   chooseFreeOrRemove() { return 'take'; },
+  chooseRevealNoField() { return false; },
   chooseChoamDiscards(state, f, { duplicates, worthless }) { return [...new Set([...duplicates, ...worthless])]; },
   chooseChoamEffect() { return null; },
   chooseInflation() { return null; },
@@ -218,6 +220,7 @@ async function runStormPhase(state, decisionProvider) {
   const damage = stormEngine.applyStormDamage(state, previousPosition, sectorsToMove);
   // The Fremen shuffle every Storm card back and secretly preview next turn's.
   if (state.factions.fremen) state.board.nextStormCard = stormEngine.drawStormCard(random);
+  for (const r of damage.noFieldRevealed ?? []) await observe(decisionProvider, { type: 'noFieldReveal', cause: 'storm', ...r }, state);
   await observe(decisionProvider, { type: 'storm', from: previousPosition, to: state.board.stormPosition, sectors: sectorsToMove, dials, stormCard, first: isFirstStorm, damage }, state);
   // Ixians: after the first storm, point the HMS at any non-stronghold territory.
   if (state.factions.ixians && !state.board.hms?.placed) {
@@ -273,6 +276,7 @@ async function runSpiceBlowPhase(state, decisionProvider) {
   spiceEngine.resolveSpiceBlowPhase(state);
   foreseeSpice(state); // Atreides see the next card as soon as this Spice Blow is over (house rule)
   for (const draw of state.nexus.draws ?? []) await observe(decisionProvider, { type: 'spiceCard', ...draw }, state);
+  for (const r of state.nexus.noFieldRevealed ?? []) await observe(decisionProvider, { type: 'noFieldReveal', cause: 'worm', ...r }, state);
   if (state.meta.alliancesCancelled) {
     await observe(decisionProvider, { type: 'alliancesCancelled', alliances: state.meta.alliancesCancelled }, state);
     delete state.meta.alliancesCancelled;
@@ -578,7 +582,29 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     if (factionId === 'choam' && Object.keys(state.factions.choam.forces.onBoard).length) await choamEffectWindow(state, decisionProvider, 'kulon', [true]);
     const resultsBefore = results.length;
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
-    if (decision.shipment) {
+    // Richese No-Field: pay for one force and place a face-down token instead.
+    const nfValue = decision.shipment?.noField;
+    if (factionId === 'richese' && decision.shipment && Number.isInteger(nfValue) && noField.usableNoFields(state).includes(nfValue)
+        && state.factions.richese.forces.reserve >= 1 && movementEngine.canShip(state, 'richese', decision.shipment.territoryId, 1).ok) {
+      const { territoryId } = decision.shipment;
+      if (state.factions.richese.noField.onPlanet) {  // only one on the planet: the old one is revealed first
+        const r = noField.revealNoField(state);
+        await observe(decisionProvider, { type: 'noFieldReveal', cause: 'newToken', ...r }, state);
+      }
+      if (movementEngine.canShip(state, 'richese', territoryId, 1).ok) {
+        movementEngine.executeShipment(state, 'richese', territoryId, 1, 0);
+        noField.placeNoField(state, territoryId, nfValue);
+        results.push({ factionId, type: 'shipment', territoryId, amount: 1, noField: true });
+        await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount: 1, noField: true }, state);
+        if (state.factions.gesserit?.forces.reserve > 0 && decisionProvider.chooseAdvisor && await decisionProvider.chooseAdvisor(state, 'gesserit', factionId)) {
+          state.factions.gesserit.forces.reserve -= 1;
+          state.factions.gesserit.forces.onBoard.polarSink = (state.factions.gesserit.forces.onBoard.polarSink ?? 0) + 1;
+          techTokens.recordTrigger(state, 'heighliner', 'gesserit');
+          results.push({ factionId: 'gesserit', type: 'advisor', territoryId: 'polarSink', amount: 1 });
+          await observe(decisionProvider, { type: 'shipment', factionId: 'gesserit', territoryId: 'polarSink', amount: 1, advisor: true }, state);
+        }
+      }
+    } else if (decision.shipment) {
       // starred: how many of the shipped forces are Sardaukar / Fedaykin (default: as many as possible).
       const { territoryId, amount, starred } = decision.shipment;
       if (movementEngine.canShip(state, factionId, territoryId, amount).ok) {
@@ -634,6 +660,13 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     }
     const acted = results.slice(resultsBefore).some(r => r.factionId === factionId);
     await observe(decisionProvider, { type: 'turnEnd', phase: 'shipment', factionId, acted }, state);
+  }
+
+  // Richese may reveal a No-Field token at any time before the Battle phase: offered once, now.
+  const nfUp = state.factions.richese?.noField?.onPlanet;
+  if (nfUp && decisionProvider.chooseRevealNoField && await decisionProvider.chooseRevealNoField(state, 'richese', { ...nfUp })) {
+    const r = noField.revealNoField(state);
+    await observe(decisionProvider, { type: 'noFieldReveal', cause: 'choice', ...r }, state);
   }
 
   // Enforce the alliance overlap penalty (see allianceEngine.js) now that
@@ -897,6 +930,11 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
 
     // Every plan is made to obey any Voice, then checked against the rules;
     // a plan that breaks them is replaced by a minimal legal one.
+    // A Richese No-Field token here is revealed with the Battle Plans: both sides
+    // plan first (Richese knowing its value), then the token turns over and the
+    // plans are checked against the forces actually present.
+    const nfHere = fighting.includes('richese') ? noField.noFieldAt(state, territoryId) : null;
+    if (nfHere) state.meta.currentBattle.noField = true;   // Atreides may not see Richese's dial
     const planFor = async (f, intel) => {
       let plan = await decisionProvider.chooseBattlePlan(state, f, territoryId, opponentOf(f), intel, voiceFor(f));
       plan = battleEngine.enforceVoice(state, f, { ...plan, territoryId }, voiceFor(f), cardLookup);
@@ -904,9 +942,11 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
         const st = Math.min(plan.supportedStarredCount ?? 0, plan.starredForcesCommitted ?? 0);
         plan = { ...plan, supportedStarredCount: st, supportedOrdinaryCount: 0, spiceCommitted: st };
       }
+      return nfHere ? plan : checkPlan(f, plan);
+    };
+    const checkPlan = (f, plan) => {
       const check = battleEngine.canDeclareBattlePlan(state, territoryId, f, plan, cardLookup);
-      if (!check.ok) plan = { ...battleEngine.fallbackPlan(state, territoryId, f, cardLookup), refused: check.reason };
-      return plan;
+      return check.ok ? plan : { ...battleEngine.fallbackPlan(state, territoryId, f, cardLookup), refused: check.reason };
     };
 
     // 2. Atreides Prescience: the opponent locks first (they must play what
@@ -917,13 +957,19 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     if (seer && await karamaCancels(opponentOf(seer), 'prescience')) seer = null;
     if (seer) {
       const opp = opponentOf(seer);
-      const element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opp);
+      let element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opp);
+      if (nfHere && opp === 'richese' && element === 'number') element = 'weapon'; // No-Field: the dial stays hidden
       plans[opp] = await planFor(opp);
       prescience = { ...revealPlanElement(plans[opp], element), opponentId: opp, forFaction: seer };
       plans[seer] = await planFor(seer, prescience);
     } else {
       plans[aggressorId] = await planFor(aggressorId);
       plans[defenderId] = await planFor(defenderId);
+    }
+    if (nfHere) {
+      const r = noField.revealNoField(state);
+      await observe(decisionProvider, { type: 'noFieldReveal', cause: 'battle', ...r }, state);
+      for (const f of fighting) plans[f] = checkPlan(f, plans[f]);
     }
 
     // Traitors: once plans are revealed, each side holding a traitor card for
