@@ -29,7 +29,7 @@ function starredUnitValueFor(factionId, opponentFactionId) {
 // Tleilaxu cards). Chemistry (a defence) may fill the weapon slot alongside
 // another defence; Weirding Way (a weapon) may fill the defence slot
 // alongside another weapon.
-const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon', 'poisonBlade', 'weirdingWay', 'poisonTooth', 'artilleryStrike'];
+const WEAPONS = ['poisonWeapon', 'projectileWeapon', 'specialWeapon', 'poisonBlade', 'weirdingWay', 'poisonTooth', 'artilleryStrike', 'mirrorWeapon', 'stoneBurner'];
 const DEFENSES = ['poisonDefense', 'projectileDefense', 'shieldSnooper', 'chemistry'];
 
 // What a plan's cards effectively ARE in their slots, as sets of tags:
@@ -40,11 +40,12 @@ function slotKinds(plan, cardLookup) {
   const d = plan.defenseCardId ? cardLookup[plan.defenseCardId] : null;
   const weapon = new Set({
     projectileWeapon: ['proj'], poisonWeapon: ['poison'], specialWeapon: ['lasgun'], poisonBlade: ['proj', 'poison'],
-    weirdingWay: ['proj'], poisonTooth: ['tooth'], artilleryStrike: ['artillery'],
+    weirdingWay: ['proj'], poisonTooth: ['tooth'], artilleryStrike: ['artillery'], stoneBurner: ['stoneBurner'],
     chemistry: d ? ['poison'] : []                       // Chemistry as a weapon, alongside a defence
   }[w?.category] ?? []);
   const defense = new Set({
     projectileDefense: ['proj', 'shield'], poisonDefense: ['poison'], shieldSnooper: ['proj', 'poison', 'shield'],
+    portableSnooper: ['poison'],                         // Richese: added after plans are revealed
     chemistry: ['poison'],
     weirdingWay: w ? ['proj'] : []                       // Weirding Way as a defence, alongside a weapon
   }[d?.category] ?? []);
@@ -228,6 +229,11 @@ function recordForceLossForKwisatzHaderach(state, factionId, forcesLost) {
 
 function resolveWeaponDefense(aggressorPlan, defenderPlan, cardLookup) {
   const A = slotKinds(aggressorPlan, cardLookup), D = slotKinds(defenderPlan, cardLookup);
+  // Mirror Weapon (Richese): becomes a copy of the opponent's weapon.
+  const mirrorA = cardLookup[aggressorPlan.weaponCardId]?.category === 'mirrorWeapon';
+  const mirrorD = cardLookup[defenderPlan.weaponCardId]?.category === 'mirrorWeapon';
+  if (mirrorA && !mirrorD) A.weapon = new Set(D.weapon);
+  if (mirrorD && !mirrorA) D.weapon = new Set(A.weapon);
 
   // Lasgun/shield explosion: EITHER side plays a Lasgun and EITHER side a Shield.
   if ((A.weapon.has('lasgun') || D.weapon.has('lasgun')) && (A.defense.has('shield') || D.defense.has('shield'))) {
@@ -241,6 +247,13 @@ function resolveWeaponDefense(aggressorPlan, defenderPlan, cardLookup) {
   // leaders; a Snooper does not stop it.
   if ((A.weapon.has('tooth') && !aggressorPlan.poisonToothWithheld) || (D.weapon.has('tooth') && !defenderPlan.poisonToothWithheld)) {
     aggressorLeaderKilled = true; defenderLeaderKilled = true;
+  }
+  // Stone Burner (Richese, treachery.online wording): its player chose after the
+  // reveal to kill both leaders or reduce both to 0; the side with more
+  // undialled forces then wins (resolved in resolveBattle).
+  if (A.weapon.has('stoneBurner') || D.weapon.has('stoneBurner')) {
+    const mode = (A.weapon.has('stoneBurner') ? aggressorPlan : defenderPlan).stoneBurnerMode === 'zero' ? 'zero' : 'kill';
+    return { explosion: false, aggressorLeaderKilled: mode === 'kill', defenderLeaderKilled: mode === 'kill', leadersCount: false, noSpiceForKills: false, stoneBurner: mode };
   }
   // Artillery Strike: kills both leaders unless shielded; surviving leaders
   // do not count, and no spice is paid for the kills.
@@ -328,7 +341,11 @@ function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId
   });
 
   // Rulebook, verbatim: "In the case of a tie, the aggressor has won."
-  const aggressorWins = aggressorStrength >= defenderStrength;
+  // Stone Burner: the side with more undialled forces wins instead.
+  const undialled = (f, plan) => (state.factions[f].forces.onBoard[territoryId] ?? 0) - (plan.forcesCommitted ?? 0);
+  const aggressorWins = weaponResult.stoneBurner
+    ? undialled(aggressorFactionId, aggressorPlan) >= undialled(defenderFactionId, defenderPlan)
+    : aggressorStrength >= defenderStrength;
   const winnerFactionId = aggressorWins ? aggressorFactionId : defenderFactionId;
   const loserFactionId = aggressorWins ? defenderFactionId : aggressorFactionId;
   const winnerPlan = aggressorWins ? aggressorPlan : defenderPlan;
