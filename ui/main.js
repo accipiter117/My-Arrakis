@@ -218,6 +218,24 @@ function logEvent(e) {
   if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
+  if (e.type === 'richeseCard') {
+    const who = nameOf(e.factionId);
+    const t = { nullentropyBox: `${who} used the Nullentropy Box to take a card from the discard pile`,
+      distrans: `${who} used Distrans to give ${nameOf(e.targetId)} a card`,
+      juiceOfSapho: e.use === 'aggressor' ? `${who} played Juice of Sapho to be the aggressor in ${territoryNameOf(e.territoryId)}` : `${who} played Juice of Sapho to go ${e.use}`,
+      ornithopter: `${who} played an Ornithopter card to move up to 3 territories`,
+      residualPoison: `${who} played Residual Poison: ${e.leaderId ? `${leaderNameOf(e.leaderId)} (${nameOf(e.opponentId)}) dies` : 'no leader was available'}`,
+      portableSnooper: `${who} added a Portable Snooper after the reveal`,
+      semutaDrug: `${who} used Semuta Drug to take ${cardNameOf(e.taken)} from the discard pile` }[e.cardId];
+    if (t) addLog(phaseEngine.currentPhase(gameState), turn, `${t}.`);
+  }
+  if (e.type === 'blackMarketStart') {
+    const seeIt = !humanFactionId || ['richese', 'atreides'].includes(humanFactionId);
+    addLog('bidding', turn, `Black Market: Richese sell a card they call ${cardNameOf(e.claimId)}${seeIt && e.cardId !== e.claimId ? ` (really ${cardNameOf(e.cardId)})` : ''} (${{ normal: 'normal bidding', onceAround: 'Once Around', silent: 'Silent' }[e.method]}).`);
+  }
+  if (e.type === 'blackMarketEnd') addLog('bidding', turn, e.sold ? `${nameOf(e.winnerId)} bought the Black Market card for ${e.amount}.` : 'Nobody bid for the Black Market card: Richese keep it.');
+  if (e.type === 'richeseGift') addLog(phaseEngine.currentPhase(gameState), turn, `Richese gave their ally ${nameOf(e.allyId)} a Richese card.`);
+  if (e.type === 'gholaBuyBack') addLog('revival', turn, `${nameOf(e.factionId)} bought ${leaderNameOf(e.leaderId)} back from the Tleilaxu for ${e.price} spice.`);
   if (e.type === 'noFieldReveal' && e.territoryId) {
     const why = { storm: ', caught by the storm', worm: ', swallowed by the worm', battle: ' for the battle', newToken: ' to place a new one', choice: '' }[e.cause] ?? '';
     addLog(phaseEngine.currentPhase(gameState), turn, `Richese revealed their No-Field token in ${territoryNameOf(e.territoryId)}${why}: ${e.value} (${e.placed} force${e.placed === 1 ? '' : 's'} placed).`);
@@ -512,6 +530,7 @@ function describe(entry) {
         if (r.type === 'movement') return `${nameOf(r.factionId)} ${r.card === 'hajr' ? 'played Hajr and moved' : 'moved'} ${r.amount} from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)}`;
         if (r.type === 'allyOverlapPenalty') return `${nameOf(r.penalizedFactionId)} lost ${r.forcesLost} forces sharing ${territoryNameOf(r.territoryId)} with an ally`;
         if (r.noField) return `Richese placed a No-Field token in ${territoryNameOf(r.territoryId)}`;
+        if (r.viaNoField) return `${nameOf(r.factionId)} shipped ${r.amount} to ${territoryNameOf(r.territoryId)} with Richese's No-Field token`;
         return `${nameOf(r.factionId)} shipped ${r.amount} to ${territoryNameOf(r.territoryId)}`;
       }).join('; ') + '.');
       return;
@@ -629,6 +648,18 @@ function cardHelp(id) {
   if (id === 'harvester') return { text: 'Harvester. Just after a Spice Blow lands, double its spice. You will be asked at that moment.' };
   if (id === 'thumper') return { text: 'Thumper. At the start of a Spice Blow, call Shai-Hulud instead of revealing the first card: the worm devours the last spice territory and a Nexus follows. You will be asked at that moment.' };
   if (id === 'amal') return { text: 'Amal. Every faction, including you, discards half its spice (rounded up) to the Spice Bank. Play it between phases.', amal: true };
+  const rich = {
+    distrans: 'Distrans. Give another player a card from your hand (their hand permitting). Offered at the start of Bidding.',
+    juiceOfSapho: 'Juice of Sapho. Be the aggressor in a battle you defend (the aggressor wins ties), or go first or last in Shipment and Movement. Offered at those moments.',
+    mirrorWeapon: 'Mirror Weapon. A weapon that becomes a copy of your opponent\'s weapon. Discarded after use.',
+    portableSnooper: 'Portable Snooper. A poison defence you add after plans are revealed, if you played no defence and the Voice allows. Discarded after use.',
+    ornithopter: 'Ornithopter. As your movement, move up to 3 territories: tick it in your Shipment and movement panel. Discarded after use.',
+    nullentropyBox: 'Nullentropy Box. Pay 2 spice to take any card from the discard pile. Offered at the start of Bidding.',
+    semutaDrug: 'Semuta Drug. Take a card another player has just discarded. Offered at the end of a phase when there is one.',
+    residualPoison: 'Residual Poison. In a battle, before plans, kill one of your opponent\'s available leaders at random (no spice for it).',
+    stoneBurner: 'Stone Burner. A weapon: after plans are revealed choose to kill both leaders or reduce both to 0; the side with more undialled forces wins. Discarded after use.'
+  }[id];
+  if (rich) return { text: rich };
   if (id === 'hajr') return { text: 'Hajr. One extra move in the Movement phase: it is offered in your Shipment and movement panel.' };
   if (id === 'ghola') return { text: 'Ghola. Revive a leader, or up to 5 troops, for free: it is offered in your Revival panel.' };
   return { text: 'A special card.' };
