@@ -101,4 +101,64 @@ for (let g = 0; g < 20; g++) {
 }
 assert(true, `20 games across 2 to 6 factions: troops, leaders and cards (cache included) all accounted for; ${sold} cache cards auctioned`);
 
+console.log('\nTest 8: No-Field tokens');
+const nf = await import('../js/noField.js');
+const { canShip, canMove, executeMove } = await import('../js/movementEngine.js');
+const { applyStormDamage } = await import('../js/stormEngine.js');
+const { strongholdIdsFrom, strongholdsOccupiedBy } = await import('../js/victoryEngine.js');
+const { resolveSpiceCollectionPhase } = await import('../js/spiceCollectionEngine.js');
+const shipNF = (st, territoryId, value, dp = P) => turnEngine.runShipmentMovementPhase(st, { ...dp,
+  chooseShipmentAndMovement: (x, f) => f === 'richese' ? { shipment: { territoryId, amount: 1, noField: value }, movement: null } : { shipment: null, movement: null } });
+s = game(); s.meta.turn = 2; s.factions.richese.spice = 20;
+const guildBefore = s.factions.guild.spice;
+await shipNF(s, 'habbanyaSietch', 5);
+const R = s.factions.richese;
+assert(R.forces.onBoard.habbanyaSietch === 1 && R.forces.reserve === 19 && R.noField.onPlanet.value === 5, 'a 5 token placed in Habbanya Sietch: one stand-in force, 19 left in reserve');
+assert(s.factions.guild.spice === guildBefore + 1 && R.spice === 19, 'paid for one force (1 spice to a stronghold, to the Guild)');
+assert(JSON.stringify(nf.usableNoFields(s)) === '[0,3]', 'the 5 is now face up: only 0 and 3 are usable');
+assert(strongholdsOccupiedBy(s, 'richese', strongholdIdsFrom(territories)).includes('habbanyaSietch'), 'the token holds the stronghold on its own');
+await shipNF(s, 'theGreatFlat', 3);
+assert(R.forces.onBoard.habbanyaSietch === 5 && R.noField.onPlanet.territoryId === 'theGreatFlat' && JSON.stringify(nf.usableNoFields(s)) === '[0,5]',
+  'a second token first reveals the old one (5 forces in Habbanya); the 3 is placed; 5 returns behind the shield');
+
+console.log('\nTest 9: a 0 token still collects spice as one force');
+s = game(); s.meta.turn = 2; s.factions.richese.spice = 20;
+await shipNF(s, 'theGreatFlat', 0);
+s.board.spiceBlowMarkers.push({ territoryId: 'theGreatFlat', amount: 8, pile: 'A', turn: 2 });
+let spiceBefore = s.factions.richese.spice;
+resolveSpiceCollectionPhase(s, s.meta.turnOrder);
+assert(s.factions.richese.spice === spiceBefore + 2, 'collected 2 spice with the 0 token');
+
+console.log('\nTest 10: storm reveals it, then destroys the forces');
+s = game(); s.meta.turn = 2; s.factions.richese.spice = 20;
+await shipNF(s, 'theGreatFlat', 5);
+const sec = territories.territories.theGreatFlat.stormSector;
+const dmg = applyStormDamage(s, (sec + 17) % 18, 1);
+assert(dmg.noFieldRevealed.length === 1 && s.factions.richese.revivalTanks === 5 && !s.factions.richese.forces.onBoard.theGreatFlat && s.factions.richese.forces.reserve === 15,
+  'revealed as 5, and all 5 went to the tanks');
+
+console.log('\nTest 11: the token moves with its whole stack');
+s = game(); s.meta.turn = 2; s.factions.richese.spice = 20;
+await shipNF(s, 'theGreatFlat', 3);
+executeMove(s, 'richese', 'theGreatFlat', 'funeralPlain', 1);
+assert(s.factions.richese.noField.onPlanet.territoryId === 'funeralPlain', 'moved to the Funeral Plain');
+
+console.log('\nTest 12: battle: plans are made before the reveal; Atreides cannot see the dial');
+s = game(); s.meta.turn = 2; s.factions.richese.spice = 20;
+for (const f of SIX) { delete s.factions[f].pendingTraitorHand; s.factions[f].traitorHand = []; }
+await shipNF(s, 'arrakeen', 5);
+let seenByAtreides = null, element = null;
+const bplan = (leaderId, v, forces) => ({ forcesCommitted: forces, starredForcesCommitted: 0, spiceCommitted: 0, supportedStarredCount: 0, supportedOrdinaryCount: 0, leaderId, leaderFightingValue: v, weaponCardId: null, defenseCardId: null, cheapHeroCardId: null });
+const [bt] = await turnEngine.runBattlePhase(s, { ...P,
+  choosePrescienceElement: () => 'number',
+  chooseBattlePlan: (st, f, t, o, intel) => { if (f === 'atreides') { seenByAtreides = st.factions.richese.forces.onBoard.arrakeen; element = intel?.element; } return f === 'richese' ? bplan('premierEinCalimar', 5, 5) : bplan('thufirHawat', 5, 3); } }, cards);
+assert(seenByAtreides === 1 && element === 'weapon', 'Atreides planned against one visible force, and asked for the dial were shown the weapon instead');
+assert(!bt.plans.richese.refused && bt.plans.richese.forces === 5 && bt.plans.richese.forcesPresent === 5, 'after the reveal Richese had 5 forces and their dial of 5 stood');
+
+console.log('\nTest 13: the AI ships with No-Field tokens');
+s = game(); s.meta.turn = 2; s.factions.richese.spice = 30;
+const ai = createBasicAI({ leadersData: leaders, cardLookup: cards });
+const d = ai.chooseShipmentAndMovement(s, 'richese');
+assert(!d.shipment || d.shipment.noField === 5, `the AI ships as a No-Field 5 when it ships (${JSON.stringify(d.shipment)})`);
+
 console.log('\nAll Richese tests passed.');
