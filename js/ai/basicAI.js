@@ -45,6 +45,12 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
 
   const randInt = (min, max) => min + Math.floor(rng() * (max - min + 1));
   const own = (state, factionId) => state.factions[factionId];
+  // Rough worth of a treachery card for the AI's own card choices.
+  const cardWorth = id => { const c = cardLookup[id]?.category;
+    if (!id) return 0; if (id.startsWith('karama')) return 8;
+    if (c === 'worthless' || cardEffects.UNBUILT_CARDS.includes(id)) return 0;
+    return { specialWeapon: 7, stoneBurner: 6, shieldSnooper: 6, mirrorWeapon: 5, poisonBlade: 5, artilleryStrike: 5, poisonTooth: 5,
+      projectileWeapon: 4, poisonWeapon: 4, projectileDefense: 4, poisonDefense: 4, chemistry: 4, weirdingWay: 4 }[c] ?? 2; };
 
   // --- Public board reading helpers -------------------------------------
 
@@ -240,17 +246,70 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
     chooseOnceAroundDirection() { return 'cw'; },
     chooseRevealNoField() { return false; }, // keep rivals guessing until a battle, storm or worm
+    // --- Richese cache cards and Black Market -----------------------------------
+    chooseNullentropy(state, factionId, { cards }) {
+      const best = cards.slice().sort((a, b) => cardWorth(b) - cardWorth(a))[0];
+      return best && cardWorth(best) >= 6 ? best : null;
+    },
+    // Distrans: pass a dud to the leading rival, clogging their hand.
+    chooseDistrans(state, factionId, { targets, cards }) {
+      const dud = cards.find(id => cardWorth(id) <= 1);
+      const held = f => Object.keys(own(state, f).forces.onBoard).filter(t => state.board.territories[t]?.type === 'stronghold').length;
+      const target = targets.filter(t => t !== allianceEngine.allyOf(state, factionId)).sort((a, b) => held(b) - held(a))[0];
+      return dud && target ? { targetId: target, cardId: dud } : null;
+    },
+    // Black Market: sell a weak card, sometimes claiming it is a strong one.
+    chooseBlackMarket(state, factionId, { hand }) {
+      const weak = hand.slice().sort((a, b) => cardWorth(a) - cardWorth(b))[0];
+      if (hand.length < 2 || cardWorth(weak) > 3) return null;
+      const bluff = random() < 0.4;
+      return { cardId: weak, claimId: bluff ? (Object.keys(cardLookup).find(id => cardLookup[id]?.category === 'specialWeapon') ?? weak) : weak, method: 'normal' };
+    },
+    chooseJuiceOfSapho(state, factionId, { use }) { return use === 'aggressor' ? 'aggressor' : null; },
+    chooseAllyNoField() { return true; },
+    chooseResidualPoison(state, factionId, { opponentId }) { return own(state, opponentId).leaders.available.length >= 2; },
+    choosePortableSnooper(state, factionId, { opponentPlan }) {
+      const c = cardLookup[opponentPlan.weaponCardId]?.category;
+      return c === 'poisonWeapon' || c === 'chemistry';
+    },
+    chooseStoneBurnerMode(state, factionId, { opponentPlan, ownPlan }) {
+      return (opponentPlan.leaderFightingValue ?? 0) >= (ownPlan.leaderFightingValue ?? 0) ? 'kill' : 'zero';
+    },
+    chooseSemuta(state, factionId, { cards }) {
+      const best = cards.slice().sort((a, b) => cardWorth(b) - cardWorth(a))[0];
+      return best && cardWorth(best) >= 4 ? best : null;
+    },
+    chooseGiveCacheCard() { return null; },
+    // Gholas: buy back a strong leader when rich; the Tleilaxu sell at its value or more.
+    chooseGholaBuyBack(state, factionId, { leaderId }) {
+      const v = leaderValue[leaderId] ?? 0;
+      return v >= 4 && own(state, factionId).spice >= v + 5 ? v + 1 : null;
+    },
+    chooseAcceptGholaBuyBack(state, factionId, { leaderId, price }) { return price >= (leaderValue[leaderId] ?? 0); },
+    // Face Dancer replacements: reserves first, then the largest stacks outside strongholds.
+    chooseFaceDancerSources(state, factionId, { count, reserve, board }) {
+      let need = count; const from = {};
+      const r = Math.min(need, reserve); need -= r;
+      for (const [t, n] of Object.entries(board).sort((a, b) => b[1] - a[1])) {
+        if (need <= 0) break;
+        if (state.board.territories[t]?.type === 'stronghold') continue;
+        const take = Math.min(n, need); from[t] = take; need -= take;
+      }
+      return { reserve: r, from };
+    },
     // Bid up to the card's worth, keeping 3 spice for shipping.
-    chooseOnceAroundBid(state, factionId, { cardId, highBid }) {
-      const cap = Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS), spendingPower(state, factionId) - 3);
+    chooseOnceAroundBid(state, factionId, { cardId, highBid, blackMarket, actualId }) {
+      const worth = blackMarket ? Math.min(cardWorth(actualId ?? cardId), actualId ? 8 : 3) : cacheCardValue(cardId, cardEffects.UNBUILT_CARDS);
+      const cap = Math.min(worth, spendingPower(state, factionId) - 3);
       return cap > highBid ? highBid + 1 : null;
     },
     chooseOnceAroundFinal(state, factionId, { cardId, highBid }) {
       const cap = Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS), spendingPower(state, factionId) - 3);
       return cap > highBid ? highBid + 1 : null; // only keep a card rivals value cheaply
     },
-    chooseSilentBid(state, factionId, { cardId }) {
-      return Math.max(0, Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS) - 1, spendingPower(state, factionId) - 3));
+    chooseSilentBid(state, factionId, { cardId, blackMarket, actualId }) {
+      const worth = blackMarket ? Math.min(cardWorth(actualId ?? cardId), actualId ? 8 : 3) : cacheCardValue(cardId, cardEffects.UNBUILT_CARDS);
+      return Math.max(0, Math.min(worth - 1, spendingPower(state, factionId) - 3));
     },
     chooseFreeOrRemove() { return 'take'; },
 
