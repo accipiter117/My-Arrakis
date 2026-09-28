@@ -13,6 +13,7 @@
 //   Calling any of the stubbed functions throws a clear NOT_IMPLEMENTED
 //   error rather than silently doing nothing or guessing, so a future
 //   caller can't accidentally ship on a stub without noticing.
+import { noFieldAt, revealNoField } from './noField.js';
 
 const TOTAL_SECTORS = 18;
 
@@ -114,7 +115,10 @@ function applyStormDamage(state, from, sectors) {
     .map(([id]) => id);
   const losses = [];
   let spiceLost = [];
+  const revealed = [];
   for (const territoryId of hit) {
+    // A No-Field token caught by the storm is revealed first; its forces are then lost.
+    if (noFieldAt(state, territoryId)) revealed.push(revealNoField(state));
     for (const [factionId, faction] of Object.entries(state.factions)) {
       const here = faction.forces.onBoard[territoryId] ?? 0;
       if (!here) continue;
@@ -140,7 +144,7 @@ function applyStormDamage(state, from, sectors) {
       state.board.spiceBlowMarkers = state.board.spiceBlowMarkers.filter(m => m.territoryId !== territoryId);
     }
   }
-  return { swept: [...swept], territories: hit, losses, spiceLost };
+  return { swept: [...swept], territories: hit, losses, spiceLost, noFieldRevealed: revealed };
 }
 
 export {
