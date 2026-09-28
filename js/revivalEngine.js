@@ -23,19 +23,23 @@ const FREE_FORCE_REVIVAL = {
   guild: 1,
   gesserit: 1,
   tleilaxu: 2,
-  ixians: 1
+  ixians: 1,
+  choam: 0,     // CHOAM & Richese: no free revival, but no limit and 1 spice each
+  richese: 2
 };
 
 // Revival terms (Tleilaxu advanced rules). With the Tleilaxu in the game:
 // other factions pay THEM for revival, and the Tleilaxu may raise a faction's
 // limit to 5 for the turn; the Tleilaxu revive with no limit at half price
 // (rounded up) paid to the Bank; the Tleilaxu's ally revives at half price.
+// CHOAM: no limit and 1 spice a force (paid to the Tleilaxu when they are seated).
 function revivalTerms(state, factionId) {
-  const terms = { cap: FORCE_REVIVAL_CAP_PER_TURN, halfPrice: false, payee: null };
+  const choam = factionId === 'choam';
+  const terms = { cap: choam ? Infinity : FORCE_REVIVAL_CAP_PER_TURN, halfPrice: false, payee: null, perForce: choam ? 1 : FORCE_REVIVAL_SPICE_COST };
   if (!state.factions.tleilaxu) return terms;
   if (factionId === 'tleilaxu') return { ...terms, cap: Infinity, halfPrice: true };
   const allyOfF = (state.alliances ?? []).find(a => a.factions.includes(factionId))?.factions.find(f => f !== factionId);
-  return { cap: Math.max(terms.cap, state.meta.revivalLimitOverride?.[factionId] ?? 0), halfPrice: allyOfF === 'tleilaxu', payee: 'tleilaxu' };
+  return { ...terms, cap: Math.max(terms.cap, state.meta.revivalLimitOverride?.[factionId] ?? 0), halfPrice: allyOfF === 'tleilaxu', payee: 'tleilaxu' };
 }
 
 const FORCE_REVIVAL_CAP_PER_TURN = 3;
@@ -47,6 +51,8 @@ const STARRED_REVIVAL_CAP_PER_TURN = 1; // "Only one Sardaukar/Fedaykin force ca
 // With state, includes the Fremen alliance advantage: the Fremen's ally
 // revives up to 3 forces free each turn.
 function freeRevivalAllowance(factionId, state) {
+  // CHOAM's La La La: this faction may not take free revival this turn.
+  if (state?.choamEffects?.laLaLa?.includes(factionId)) return 0;
   const allyOfF = state ? (state.alliances ?? []).find(a => a.factions.includes(factionId))?.factions.find(f => f !== factionId) : null;
   if (allyOfF === 'fremen') return Math.max(FREE_FORCE_REVIVAL[factionId] ?? 0, 3);
   return FREE_FORCE_REVIVAL[factionId] ?? 0;
@@ -82,7 +88,7 @@ function canReviveForces(state, factionId, amount, starredAmount = 0) {
   const alreadyUsedFree = Math.min(faction.forcesRevivedThisTurn ?? 0, freeAllowance);
   const remainingFree = Math.max(0, freeAllowance - alreadyUsedFree);
   const paidPortion = Math.max(0, amount - remainingFree);
-  let cost = paidPortion * FORCE_REVIVAL_SPICE_COST;
+  let cost = paidPortion * terms.perForce;
   if (factionId === 'ixians') cost += Math.min(starredAmount, paidPortion); // Cyborgs cost 3 each
   if (terms.halfPrice) cost = Math.ceil(cost / 2);
 
@@ -137,6 +143,8 @@ function reviveForces(state, factionId, amount, starredAmount = 0) {
 function isEligibleForLeaderRevival(state, factionId) {
   const faction = state.factions[factionId];
   if ((faction.leaders.killed ?? []).length === 0) return false;
+  // CHOAM's Auditor may be revived as if all CHOAM leaders were in the tanks.
+  if (factionId === 'choam' && faction.leaders.killed.includes('auditor')) return true;
   return (faction.leaders.available ?? []).length === 0 || Boolean(faction.leaderRevivalOpen);
 }
 
@@ -156,6 +164,9 @@ function canReviveLeader(state, factionId, leaderId, leaderFightingValue) {
   }
   if (!(faction.leaders.killed ?? []).includes(leaderId)) {
     return { ok: false, reason: 'That leader is not in this faction\'s Tleilaxu Tanks.' };
+  }
+  if (factionId === 'choam' && leaderId !== 'auditor' && faction.leaders.available.length > 0 && !faction.leaderRevivalOpen) {
+    return { ok: false, reason: 'Only the Auditor can be revived while CHOAM still has leaders available.' };
   }
   if (faction.leaderRevivedThisTurn) {
     return { ok: false, reason: 'Only 1 leader may be revived per turn.' };
