@@ -77,6 +77,12 @@ function checkInvariants(state, where) {
   const held = Object.values(state.factions).reduce((n, f) => n + f.treacheryHand.length, 0);
   const cards = state.decks.treacheryDeck.length + state.decks.treacheryDiscard.length + held;
   if (cards !== TOTAL_TREACHERY) problems.push(`treachery cards total ${cards}, expected ${TOTAL_TREACHERY}`);
+  // Tech Tokens: exactly three, each held by at most one seated faction.
+  if (state.techTokens) {
+    const keys = Object.keys(state.techTokens);
+    if (keys.length !== 3 || !['axlotl', 'heighliner', 'spiceProd'].every(k => keys.includes(k))) problems.push(`tech tokens: ${keys.join(',')}`);
+    for (const [k, t] of Object.entries(state.techTokens)) if (t.owner !== null && !state.factions[t.owner]) problems.push(`tech token ${k} held by ${t.owner}`);
+  }
   if (problems.length) throw new Error(`Invariant broken after ${where}: ${problems.join('; ')}`);
 }
 
@@ -88,7 +94,9 @@ for (let g = 0; g < GAMES; g++) {
   const rng = mulberry32(seed);
   try {
     const state = initializeGame({
-      activeFactionIds: ALL, playerCircleOrder: ALL, rulesConfig,
+      activeFactionIds: ALL, playerCircleOrder: ALL,
+      // Every third game plays with the Tech Tokens variant on (it is off by default without Ixians or Tleilaxu).
+      rulesConfig: g % 3 === 2 ? { ...rulesConfig, expansions: { ...rulesConfig.expansions, techTokens: 'on' } } : rulesConfig,
       spiceDeckData, territoriesData, treacheryDeckData, leadersData,
       rngShuffle: shuffleWith(rng)
     });
@@ -114,6 +122,7 @@ for (let g = 0; g < GAMES; g++) {
       }
     }
     if (!state.victory.achieved) throw new Error('game never ended');
+    if (state.techTokens) stats.techGames = (stats.techGames ?? 0) + 1;
 
     const key = state.victory.winningFactions.join('+');
     stats.wins[key] = (stats.wins[key] ?? 0) + 1;
@@ -132,6 +141,7 @@ console.log(`Average ending turn: ${avg(stats.endTurns)}`);
 console.log(`Per game: ${(stats.battles / GAMES).toFixed(1)} battles, ${(stats.cardsBought / GAMES).toFixed(1)} cards bought, ${(stats.shipments / GAMES).toFixed(1)} shipments, ${(stats.moves / GAMES).toFixed(1)} moves`);
 console.log('Winners:', stats.wins);
 console.log('Victory methods:', stats.methods);
+console.log(`Games with Tech Tokens: ${stats.techGames ?? 0}`);
 
 if (failures > 0) process.exit(1);
 console.log('\nAll simulated games completed with every invariant intact.');
