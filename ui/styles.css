@@ -816,3 +816,7 @@ body.console-muted .console-feed > * { opacity: 0 !important; }
 .tech-flyer__caption { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); white-space: nowrap; text-align: center;
   font: 700 13px var(--font-display, serif); color: var(--sand, #f1dfbf); background: rgba(14, 9, 6, 0.9); padding: 0.2rem 0.5rem; border: 1px solid var(--flyer-colour); }
 .tech-flyer__caption small { font-weight: 400; font-size: 11px; }
+
+/* While the camera has the stage, the console steps aside and the map fills the space. */
+body.has-console.console-muted .board-wrap { flex: 1; height: auto; min-height: var(--board-size); }
+body.has-console.console-muted .console-feed { display: none; }
