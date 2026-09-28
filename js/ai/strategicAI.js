@@ -10,6 +10,7 @@
 // Uses public information only: board positions, turn number, alliances.
 // Opponent spice and hands are never read.
 
+import { withNoField } from '../noField.js';
 import { ownsAllTechTokens, TECH_STRONGHOLD } from '../techTokens.js';
 import { createBasicAI } from './basicAI.js';
 import * as movementEngine from '../movementEngine.js';
@@ -191,7 +192,8 @@ export function createStrategicAI(options) {
 
     assessThreats,
 
-    chooseShipmentAndMovement(state, me) {
+    chooseShipmentAndMovement(state, me) { return withNoField(state, me, this.strategicShipmentAndMovement(state, me)); },
+    strategicShipmentAndMovement(state, me) {
       const plan = base.chooseShipmentAndMovement(state, me);
       const threats = assessThreats(state, me);
 
