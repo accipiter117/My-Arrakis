@@ -11,6 +11,7 @@
 // change at each of the two TODO markers below, not a redesign.
 
 import { recordTrigger } from './techTokens.js';
+import { balisetBlocks } from './choam.js';
 import { spendingPower, paySpice } from './allySupport.js';
 const ORNITHOPTER_STRONGHOLDS = ['arrakeen', 'carthag'];
 
@@ -26,7 +27,10 @@ function moveRangeFor(state, factionId, cyborgsMoving = 0) {
   const hasOrnithopters = hasOrnithopterAccess(state, factionId);
   const isFremen = factionId === 'fremen';
 
-  if (hasOrnithopters) return 3;
+  // CHOAM's Kulon: one extra territory this turn.
+  const kulon = factionId === 'choam' && state.choamEffects?.kulon ? 1 : 0;
+  if (hasOrnithopters) return 3 + kulon;
+  if (kulon) return 1 + kulon;
   // Ixians: Cyborgs move 2, and Suboids move 2 when accompanied by a Cyborg.
   if (factionId === 'ixians') return cyborgsMoving > 0 ? 2 : 1; // capped at 3 even for Fremen; desert knowledge doesn't make the 'thopter fly faster, confirmed ruling
   if (isFremen) return 2;
@@ -196,6 +200,9 @@ function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount, starr
   const reachable = reachableTerritories(state, factionId, fromTerritoryId, range);
   if (!reachable.includes(toTerritoryId)) {
     return { ok: false, reason: `${toTerritoryId} is not reachable within this faction's movement range.` };
+  }
+  if (balisetBlocks(state, factionId, toTerritoryId)) {
+    return { ok: false, reason: 'CHOAM played Baliset: you may not move into that territory this turn (you may still ship in).' };
   }
 
   // Allies may not enter any territory (except the Polar Sink) in which
