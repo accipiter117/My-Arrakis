@@ -19,6 +19,7 @@
 //   Alliance: one two-way card trade with the ally per turn, at the end of
 //   any phase; CHOAM may pay for some or all of the ally's forces in battle.
 
+import { noFieldAt, revealNoField } from './noField.js';
 import { random } from './random.js';
 
 export const WORTHLESS_EFFECT_CARDS = ['baliset', 'jubbaCloak', 'kullWahad', 'kulon', 'laLaLa', 'tripToGamont'];
@@ -124,6 +125,8 @@ export function playWorthlessEffect(state, cardId, args = {}) {
   if (cardId === 'kulon') fx.kulon = true;
   if (cardId === 'laLaLa') fx.laLaLa.push(args.factionId);
   if (cardId === 'tripToGamont') {
+    // A No-Field token there is revealed first (C&R Q&A); one of its forces then goes home.
+    if (args.factionId === 'richese' && noFieldAt(state, args.territoryId)) revealNoField(state);
     const f = state.factions[args.factionId];
     if ((f?.forces.onBoard[args.territoryId] ?? 0) > 0) {
       const starredHere = f.forces.starredOnBoard?.[args.territoryId] ?? 0;
