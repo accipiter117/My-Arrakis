@@ -9,11 +9,13 @@
 // changes; 'warning' = one step away; 'info' = a special condition to know.
 
 import { strongholdIdsFrom, strongholdsOccupiedBy, checkFremenSpecialVictory } from './victoryEngine.js';
+import { TECH_STRONGHOLD, TECH_TOKENS, tokensOwnedBy } from './techTokens.js';
 
 export function assessVictoryWatch(state, territoriesData) {
-  const ids = strongholdIdsFrom(territoriesData);
+  // The Hidden Mobile Stronghold only exists once the Ixians have placed it.
+  const ids = strongholdIdsFrom(territoriesData).filter(t => t !== 'hms' || state.board.hms?.placed);
   const v = state.rulesConfig.victoryVariants;
-  const name = id => territoriesData.territories[id]?.name ?? id;
+  const name = id => (id === TECH_STRONGHOLD ? 'all three Tech Tokens' : territoriesData.territories[id]?.name ?? id);
   const items = [];
 
   // Groups: each alliance, and each unallied faction.
@@ -28,12 +30,14 @@ export function assessVictoryWatch(state, territoriesData) {
     if (held.length >= needed) {
       items.push({ level: 'critical', factions: group, held, deciding: held,
         headline: `hold ${held.length} of the ${needed} strongholds they need: they win at the end of this turn`,
-        detail: `Take any one of these from them to stop it: ${held.map(name).join(', ')}.` });
+        detail: `Take any one of these from them to stop it: ${held.map(t => (t === TECH_STRONGHOLD ? 'a Tech Token (beat the holder in battle)' : name(t))).join(', ')}.` });
     } else if (held.length === needed - 1) {
       const open = ids.filter(t => !held.includes(t));
+      // Two Tech Tokens in one hand: the third also completes the set.
+      const nearSet = !held.includes(TECH_STRONGHOLD) && group.some(f => tokensOwnedBy(state, f).length === TECH_TOKENS.length - 1);
       items.push({ level: 'warning', factions: group, held, deciding: open,
         headline: `one stronghold from victory (${held.length} of ${needed})`,
-        detail: `They hold ${held.map(name).join(', ')}. Taking any of ${open.map(name).join(', ')} wins it for them.` });
+        detail: `They hold ${held.map(name).join(', ')}. Taking any of ${open.map(name).join(', ')}${nearSet ? ', or winning the last Tech Token,' : ''} wins it for them.` });
     }
   }
 
