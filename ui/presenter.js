@@ -108,6 +108,12 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       hideBanner();
     },
 
+    // A battle is about to be fought: go there before any plans are made.
+    async battleStart(e) {
+      if (!speed()) return;
+      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380 });
+    },
+
     async auctionStart(e) {
       if (!speed()) return;
       // Only Atreides may see the card before bidding (Prescience).
