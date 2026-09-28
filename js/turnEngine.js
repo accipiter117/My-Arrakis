@@ -37,6 +37,7 @@ import * as techTokens from './techTokens.js';
 import * as choam from './choam.js';
 import * as richese from './richese.js';
 import * as noField from './noField.js';
+import * as rcards from './richeseCards.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -92,6 +93,19 @@ const passiveDecisionProvider = {
   chooseSilentBid() { return 0; },
   chooseFreeOrRemove() { return 'take'; },
   chooseRevealNoField() { return false; },
+  chooseNullentropy() { return null; },
+  chooseDistrans() { return null; },
+  chooseBlackMarket() { return null; },
+  chooseJuiceOfSapho() { return null; },
+  chooseAllyNoField() { return false; },
+  chooseResidualPoison() { return false; },
+  choosePortableSnooper() { return false; },
+  chooseStoneBurnerMode() { return 'kill'; },
+  chooseSemuta() { return null; },
+  chooseGiveCacheCard() { return null; },
+  chooseGholaBuyBack() { return null; },
+  chooseAcceptGholaBuyBack() { return false; },
+  chooseFaceDancerSources(state, f, { count }) { return { reserve: count, from: {} }; },
   chooseChoamDiscards(state, f, { duplicates, worthless }) { return [...new Set([...duplicates, ...worthless])]; },
   chooseChoamEffect() { return null; },
   chooseInflation() { return null; },
@@ -382,7 +396,31 @@ async function runBiddingPhase(state, decisionProvider) {
       }
     }
   }
+  // Richese cache cards played between phases: Distrans and the Nullentropy Box (start of Bidding).
+  for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+    if (rcards.holds(state, f, 'nullentropyBox') && state.factions[f].spice >= 2 && decisionProvider.chooseNullentropy) {
+      const choices = rcards.nullentropyChoices(state);
+      const pick = choices.length ? await decisionProvider.chooseNullentropy(state, f, { cards: choices }) : null;
+      if (pick && rcards.playNullentropy(state, f, pick, random)) await observe(decisionProvider, { type: 'richeseCard', cardId: 'nullentropyBox', factionId: f }, state);
+    }
+    if (rcards.holds(state, f, 'distrans') && decisionProvider.chooseDistrans) {
+      const targets = Object.keys(state.factions).filter(t => t !== f && state.factions[t].treacheryHand.length < biddingEngine.handLimitFor(t));
+      const cards = state.factions[f].treacheryHand.filter(c => c !== 'distrans');
+      const pick = targets.length && cards.length ? await decisionProvider.chooseDistrans(state, f, { targets, cards }) : null;
+      if (pick && rcards.playDistrans(state, f, pick.targetId, pick.cardId)) await observe(decisionProvider, { type: 'richeseCard', cardId: 'distrans', factionId: f, targetId: pick.targetId, given: pick.cardId }, state);
+    }
+  }
+  // Richese Black Market: offer a card from hand before the round is declared.
+  delete state.meta.blackMarketSold;
+  if (state.factions.richese?.treacheryHand.length && decisionProvider.chooseBlackMarket) {
+    const offer = await decisionProvider.chooseBlackMarket(state, 'richese', { hand: state.factions.richese.treacheryHand.slice() });
+    if (offer) {
+      const bm = await richese.runBlackMarket(state, decisionProvider, offer, e => observe(decisionProvider, e, state));
+      if (bm.sold) state.meta.blackMarketSold = true;
+    }
+  }
   biddingEngine.startBiddingPhase(state);
+  delete state.meta.blackMarketSold;
   // Richese: announce this round's cache auction (card, first or last, method).
   let cacheChoice = null;
   const cacheResults = [];
@@ -519,6 +557,20 @@ async function runRevivalPhase(state, decisionProvider) {
         }
       }
     }
+    // Ghola buy-back: a faction may offer to buy its leader back from the Tleilaxu, who may refuse.
+    const gholaMap = state.factions.tleilaxu?.specialFactionState?.gholas ?? {};
+    for (const [leaderId, owner] of Object.entries(gholaMap)) {
+      if (owner !== factionId || !state.factions.tleilaxu.leaders.available.includes(leaderId) || !decisionProvider.chooseGholaBuyBack) continue;
+      const price = await decisionProvider.chooseGholaBuyBack(state, factionId, { leaderId });
+      if (!Number.isInteger(price) || price < 0 || price > faction.spice) continue;
+      if (!(await decisionProvider.chooseAcceptGholaBuyBack(state, 'tleilaxu', { leaderId, owner: factionId, price }))) continue;
+      faction.spice -= price; state.factions.tleilaxu.spice += price;
+      state.factions.tleilaxu.leaders.available = state.factions.tleilaxu.leaders.available.filter(id => id !== leaderId);
+      delete gholaMap[leaderId];
+      faction.leaders.available.push(leaderId);
+      results.push({ factionId, leaderId, gholaBuyBack: true, price });
+      await observe(decisionProvider, { type: 'gholaBuyBack', factionId, leaderId, price }, state);
+    }
     // Tleilaxu Gholas: with fewer than five active leaders, revive another faction's dead leader at half value.
     if (factionId === 'tleilaxu' && decisionProvider.chooseGholaRevival && faction.leaders.available.length < 5) {
       const options = Object.entries(state.factions).filter(([f]) => f !== 'tleilaxu')
@@ -570,6 +622,16 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     order = [...others.slice(0, at), 'guild', ...others.slice(at)];
   }
 
+  // Juice of Sapho: its holder may go first or last this phase.
+  for (const f of order.slice()) {
+    if (!rcards.holds(state, f, 'juiceOfSapho') || !decisionProvider.chooseJuiceOfSapho) continue;
+    const pick = await decisionProvider.chooseJuiceOfSapho(state, f, { use: 'order' });
+    if (pick === 'first' || pick === 'last') {
+      rcards.useCard(state, f, 'juiceOfSapho');
+      order = pick === 'first' ? [f, ...order.filter(x => x !== f)] : [...order.filter(x => x !== f), f];
+      await observe(decisionProvider, { type: 'richeseCard', cardId: 'juiceOfSapho', factionId: f, use: pick }, state);
+    }
+  }
   // CHOAM's Baliset: a faction may not move into a territory CHOAM occupies this turn.
   if (state.factions.choam) {
     const held = Object.keys(state.factions.choam.forces.onBoard);
@@ -582,6 +644,26 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     if (factionId === 'choam' && Object.keys(state.factions.choam.forces.onBoard).length) await choamEffectWindow(state, decisionProvider, 'kulon', [true]);
     const resultsBefore = results.length;
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
+    // Richese alliance: the ally ships with one of Richese's No-Field tokens, revealed at once.
+    const allyNf = decision.shipment?.noField;
+    if (factionId !== 'richese' && Number.isInteger(allyNf) && allianceEngine.allyOf(state, factionId) === 'richese'
+        && noField.usableNoFields(state).includes(allyNf) && state.factions[factionId].forces.reserve >= 1
+        && movementEngine.canShip(state, factionId, decision.shipment.territoryId, 1).ok && decisionProvider.chooseAllyNoField
+        && await decisionProvider.chooseAllyNoField(state, 'richese', { allyId: factionId, value: allyNf, territoryId: decision.shipment.territoryId })) {
+      const { territoryId } = decision.shipment;
+      if (state.factions.richese.noField.onPlanet) {
+        const r = noField.revealNoField(state);
+        await observe(decisionProvider, { type: 'noFieldReveal', cause: 'newToken', ...r }, state);
+      }
+      movementEngine.executeShipment(state, factionId, territoryId, 1, 0);   // pays for one force (Guild or Bank)
+      const fx = state.factions[factionId].forces;
+      const more = Math.max(0, Math.min(allyNf - 1, fx.reserve));
+      if (more) { fx.reserve -= more; fx.onBoard[territoryId] = (fx.onBoard[territoryId] ?? 0) + more; }
+      richese.useNoFieldForAlly(state, allyNf);
+      results.push({ factionId, type: 'shipment', territoryId, amount: more + 1, viaNoField: allyNf });
+      await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount: more + 1, viaNoField: allyNf }, state);
+      decision.shipment = null;
+    }
     // Richese No-Field: pay for one force and place a face-down token instead.
     const nfValue = decision.shipment?.noField;
     if (factionId === 'richese' && decision.shipment && Number.isInteger(nfValue) && noField.usableNoFields(state).includes(nfValue)
@@ -639,6 +721,14 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         results.push({ factionId, type: 'retreat', from, amount });
       }
     }
+    // Richese Ornithopter card: this move may go up to 3 territories.
+    if (decision.ornithopter === 'far' && decision.movement && rcards.holds(state, factionId, 'ornithopter')) {
+      state.meta.ornithopterFar = factionId;
+      if (movementEngine.canMove(state, factionId, decision.movement.from, decision.movement.to, decision.movement.amount, decision.movement.starred).ok) {
+        rcards.useCard(state, factionId, 'ornithopter');
+        await observe(decisionProvider, { type: 'richeseCard', cardId: 'ornithopter', factionId, use: 'far' }, state);
+      } else delete state.meta.ornithopterFar;
+    }
     if (decision.movement) {
       const { from, to, amount, starred } = decision.movement;
       if (movementEngine.canMove(state, factionId, from, to, amount, starred).ok) {
@@ -649,6 +739,19 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         results.push({ factionId, type: 'movement', from, to, amount, ornithopter });
         await observe(decisionProvider, { type: 'move', factionId, from, to, amount, ornithopter }, state);
       }
+    }
+    delete state.meta.ornithopterFar;
+    // Ornithopter card, second use: move a second group at normal range.
+    if (decision.ornithopter && typeof decision.ornithopter === 'object' && rcards.holds(state, factionId, 'ornithopter') && state.factions[factionId].hasMovedThisTurn) {
+      const m = decision.ornithopter;
+      state.factions[factionId].hasMovedThisTurn = false;
+      if (movementEngine.canMove(state, factionId, m.from, m.to, m.amount).ok) {
+        movementEngine.executeMove(state, factionId, m.from, m.to, m.amount);
+        rcards.useCard(state, factionId, 'ornithopter');
+        results.push({ factionId, type: 'movement', from: m.from, to: m.to, amount: m.amount, card: 'ornithopter' });
+        await observe(decisionProvider, { type: 'move', factionId, from: m.from, to: m.to, amount: m.amount, card: 'ornithopter' }, state);
+      }
+      state.factions[factionId].hasMovedThisTurn = true;
     }
     // Hajr: one extra move, played after the normal one.
     if (decision.hajrMove && cardEffects.canPlayHajr(state, factionId, decision.hajrMove).ok) {
@@ -870,7 +973,14 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
   let guard = 0;
   while (battleSites.length > 0 && guard++ < 60) {
     const [territoryId, factionsPresent] = battleSites[0];
-    const [aggressorId, defenderId] = factionsPresent; // aggressor order (First Player priority) awaits sector data
+    let [aggressorId, defenderId] = factionsPresent; // aggressor order (First Player priority) awaits sector data
+    // Juice of Sapho: the defender may make themselves the aggressor (who wins ties).
+    if (rcards.holds(state, defenderId, 'juiceOfSapho') && decisionProvider.chooseJuiceOfSapho
+        && (await decisionProvider.chooseJuiceOfSapho(state, defenderId, { use: 'aggressor', territoryId, opponentId: aggressorId })) === 'aggressor') {
+      rcards.useCard(state, defenderId, 'juiceOfSapho');
+      [aggressorId, defenderId] = [defenderId, aggressorId];
+      await observe(decisionProvider, { type: 'richeseCard', cardId: 'juiceOfSapho', factionId: aggressorId, use: 'aggressor', territoryId }, state);
+    }
     participants.add(aggressorId);
     participants.add(defenderId);
     const opponentOf = f => (f === aggressorId ? defenderId : aggressorId);
@@ -925,6 +1035,15 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       if (n) {
         state.meta.currentBattle.support = { [choamAlly]: n };
         await observe(decisionProvider, { type: 'choamSupport', allyId: choamAlly, amount: n, territoryId }, state);
+      }
+    }
+
+    // Residual Poison: before plans, kill one of the opponent's available leaders at random.
+    for (const f of fighting) {
+      if (!rcards.holds(state, f, 'residualPoison') || !decisionProvider.chooseResidualPoison) continue;
+      if (await decisionProvider.chooseResidualPoison(state, f, { territoryId, opponentId: opponentOf(f) })) {
+        const r = rcards.playResidualPoison(state, f, opponentOf(f), random);
+        await observe(decisionProvider, { type: 'richeseCard', cardId: 'residualPoison', factionId: f, opponentId: opponentOf(f), leaderId: r?.leaderId, territoryId }, state);
       }
     }
 
@@ -995,6 +1114,23 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       }
     }
 
+    // Portable Snooper: after the reveal, a side with no defence may add it (Voice permitting).
+    for (const f of fighting) {
+      if (plans[f].defenseCardId || !rcards.holds(state, f, 'portableSnooper') || !decisionProvider.choosePortableSnooper) continue;
+      const v = voiceFor(f);
+      if (v?.command === 'notPlay' && ['poisonDefense'].includes(v.category)) continue;
+      if (await decisionProvider.choosePortableSnooper(state, f, { territoryId, opponentPlan: plans[opponentOf(f)] })) {
+        plans[f] = { ...plans[f], defenseCardId: 'portableSnooper' };
+        await observe(decisionProvider, { type: 'richeseCard', cardId: 'portableSnooper', factionId: f, territoryId }, state);
+      }
+    }
+    // Stone Burner: its player now chooses to kill both leaders or reduce both to 0.
+    for (const f of fighting) {
+      if (cardLookup[plans[f].weaponCardId]?.category !== 'stoneBurner') continue;
+      const mode = decisionProvider.chooseStoneBurnerMode ? await decisionProvider.chooseStoneBurnerMode(state, f, { territoryId, opponentPlan: plans[opponentOf(f)], ownPlan: plans[f] }) : 'kill';
+      plans[f] = { ...plans[f], stoneBurnerMode: mode === 'zero' ? 'zero' : 'kill' };
+    }
+
     // Poison Tooth: once plans are revealed, its owner may withhold it.
     for (const f of fighting) {
       if (cardLookup[plans[f].weaponCardId]?.category !== 'poisonTooth' || traitorCalls[f] || traitorCalls[opponentOf(f)]) continue;
@@ -1018,7 +1154,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
         // Always discarded, even by the winner: Artillery Strike, and a Poison Tooth that was used.
         for (const id of played) {
           const c = cardLookup[id]?.category;
-          if ((c === 'artilleryStrike' || (c === 'poisonTooth' && !plans[winner].poisonToothWithheld)) && !discarded.includes(id)) discarded.push(id);
+          if ((['artilleryStrike', 'mirrorWeapon', 'stoneBurner', 'portableSnooper'].includes(c) || (c === 'poisonTooth' && !plans[winner].poisonToothWithheld)) && !discarded.includes(id)) discarded.push(id);
         }
         state.factions[winner].treacheryHand = hand.filter(id => !discarded.includes(id));
         state.decks.treacheryDiscard.push(...discarded);
@@ -1064,8 +1200,20 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
           delete wf.forces.onBoard[territoryId];
           if (wf.forces.starredOnBoard) delete wf.forces.starredOnBoard[territoryId];
         }
-        const placed = Math.min(here, tl.forces.reserve);
-        if (placed) { tl.forces.reserve -= placed; tl.forces.onBoard[territoryId] = (tl.forces.onBoard[territoryId] ?? 0) + placed; }
+        // Replaced up to that number by Tleilaxu forces from reserves and/or anywhere on the planet.
+        const board = Object.fromEntries(Object.entries(tl.forces.onBoard).filter(([t, n]) => t !== territoryId && n > 0));
+        const src = decisionProvider.chooseFaceDancerSources
+          ? await decisionProvider.chooseFaceDancerSources(state, 'tleilaxu', { territoryId, count: here, reserve: tl.forces.reserve, board }) : null;
+        let placed = 0;
+        const fromReserve = Math.max(0, Math.min(src?.reserve ?? here, tl.forces.reserve, here));
+        if (fromReserve) { tl.forces.reserve -= fromReserve; placed += fromReserve; }
+        for (const [t, n0] of Object.entries(src?.from ?? {})) {
+          const n = Math.max(0, Math.min(n0, board[t] ?? 0, here - placed));
+          if (!n) continue;
+          tl.forces.onBoard[t] -= n; if (!tl.forces.onBoard[t]) delete tl.forces.onBoard[t];
+          placed += n;
+        }
+        if (placed) tl.forces.onBoard[territoryId] = (tl.forces.onBoard[territoryId] ?? 0) + placed;
         faceDancer = { leaderId: match.leaderId, winnerId: fdWinner, returned: here, placed };
         if (tl.faceDancers.every(fd => fd.revealed)) recycleFaceDancers(state);
         await observe(decisionProvider, { type: 'faceDancer', territoryId, ...faceDancer }, state);
@@ -1269,6 +1417,31 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
     case 'victoryCheck': result = null; break; // victory already resolved inside mentatPause
     default:
       throw new Error(`turnEngine has no runner for phase "${phase}"`);
+  }
+
+  // Semuta Drug: take a card another player has just discarded.
+  if (!state.victory.achieved) {
+    const holder = Object.keys(state.factions).find(f => rcards.holds(state, f, 'semutaDrug'));
+    if (holder && state.factions[holder].treacheryHand.length <= biddingEngine.handLimitFor(holder) && decisionProvider.chooseSemuta) {
+      const cards = rcards.semutaChoices(state, holder);
+      const pick = cards.length ? await decisionProvider.chooseSemuta(state, holder, { cards }) : null;
+      if (pick && rcards.playSemuta(state, holder, pick)) await observe(decisionProvider, { type: 'richeseCard', cardId: 'semutaDrug', factionId: holder, taken: pick }, state);
+    }
+    rcards.markSemuta(state, holder ?? null);
+    // Richese alliance: give the ally a Richese cache card from hand (their hand permitting).
+    const rAlly = state.factions.richese ? allianceEngine.allyOf(state, 'richese') : null;
+    const gifts = rAlly ? state.factions.richese.treacheryHand.filter(c => cardLookup?.[c]?.cache) : [];
+    const sig = gifts.slice().sort().join(',') + '|' + rAlly;
+    if (gifts.length && state.factions[rAlly].treacheryHand.length < biddingEngine.handLimitFor(rAlly) && decisionProvider.chooseGiveCacheCard
+        && state.factions.richese.specialFactionState?.lastGiftOffer !== sig) {
+      (state.factions.richese.specialFactionState ??= {}).lastGiftOffer = sig;
+      const give = await decisionProvider.chooseGiveCacheCard(state, 'richese', { allyId: rAlly, cards: gifts });
+      if (give && gifts.includes(give)) {
+        state.factions.richese.treacheryHand = state.factions.richese.treacheryHand.filter(c => c !== give);
+        state.factions[rAlly].treacheryHand.push(give);
+        await observe(decisionProvider, { type: 'richeseGift', allyId: rAlly }, state);
+      }
+    }
   }
 
   // CHOAM: end-of-phase card window and ally trade, then effects that expire with the phase.
