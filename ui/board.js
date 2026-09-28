@@ -93,19 +93,25 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   let lastPinch = null;
 
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  // The view is as wide as view.w and as tall as the map area's shape needs, so
+  // a zoomed-in map fills a tall area (when the console steps aside) instead of
+  // being letterboxed into a square. Taller than the whole map: pinned to the top.
+  const aspect = () => { const r = svg.getBoundingClientRect(); return r.width > 0 && r.height > 0 ? r.height / r.width : 1; };
+  const viewH = () => view.w * aspect();
   function applyView() {
     view.w = clamp(view.w, MIN_W, FULL);
+    const h = viewH();
     view.x = clamp(view.x, 0, FULL - view.w);
-    view.y = clamp(view.y, 0, FULL - view.w);
-    svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${view.w}`);
+    view.y = h >= FULL ? 0 : clamp(view.y, 0, FULL - h);
+    svg.setAttribute('viewBox', `${view.x} ${view.y} ${view.w} ${h}`);
     onZoom?.(view.w < FULL - 1, manual);
   }
-  // Screen point to map coordinates (the SVG letterboxes to a square).
+  new ResizeObserver(() => applyView()).observe(svg);
+  // Screen point to map coordinates (the view's shape matches the SVG's, so one scale).
   function toMap(clientX, clientY) {
     const r = svg.getBoundingClientRect();
-    const size = Math.min(r.width, r.height);
-    const ox = r.left + (r.width - size) / 2, oy = r.top + (r.height - size) / 2;
-    return { x: view.x + ((clientX - ox) / size) * view.w, y: view.y + ((clientY - oy) / size) * view.w, size };
+    const size = r.width || 1;
+    return { x: view.x + ((clientX - r.left) / size) * view.w, y: view.y + ((clientY - r.top) / size) * view.w, size };
   }
   // --- Motion camera ------------------------------------------------------------
   // Glides the view to frame the action. Pauses once the player pinches, drags
@@ -116,15 +122,22 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   function glideTo(target, ms) {
     const token = ++camToken;
     const from = { ...view };
-    if (ms <= 0) { Object.assign(view, target); applyView(); return Promise.resolve(); }
+    // A target given by its centre is re-framed every frame, so it stays centred
+    // even when the map area changes shape mid-glide (the console stepping aside).
+    const resolveTarget = () => target.cx == null ? target : (() => {
+      const h = target.w * aspect();
+      return { x: clamp(target.cx - target.w / 2, 0, FULL - target.w), y: h >= FULL ? 0 : clamp(target.cy - h / 2, 0, FULL - h), w: target.w };
+    })();
+    if (ms <= 0) { Object.assign(view, resolveTarget()); applyView(); return Promise.resolve(); }
     return new Promise(resolve => {
       const t0 = performance.now();
       const frame = now => {
         if (token !== camToken) return resolve(); // superseded or taken over
         const t = Math.min(1, (now - t0) / ms), e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-        view.x = from.x + (target.x - from.x) * e;
-        view.y = from.y + (target.y - from.y) * e;
-        view.w = from.w + (target.w - from.w) * e;
+        const target_ = resolveTarget();
+        view.x = from.x + (target_.x - from.x) * e;
+        view.y = from.y + (target_.y - from.y) * e;
+        view.w = from.w + (target_.w - from.w) * e;
         applyView();
         if (t < 1) requestAnimationFrame(frame); else resolve();
       };
@@ -137,7 +150,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
     const w = clamp(Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + pad * 2, minW, FULL);
     const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
-    return glideTo({ x: clamp(cx - w / 2, 0, FULL - w), y: clamp(cy - w / 2, 0, FULL - w), w }, ms);
+    return glideTo({ cx, cy, w }, ms);
   }
   // Pull back to the whole map, and hand control back to the camera.
   function overview(ms = 700) {
