@@ -27,14 +27,12 @@ import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
-const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu', 'choam'];
+const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu', 'choam', 'richese'];
 
 // --- Faction line-up: which factions play (any 2 to 6) --------------------------
 // Expansion factions appear as "coming soon" until their milestone ships
 // (docs/EXPANSION_STATUS.md).
-const EXPANSION_FACTIONS = [
-  ['richese', 'Richese']
-];
+const EXPANSION_FACTIONS = [];
 const LINEUP_KEY = 'my-arrakis-lineup';
 let lineup = (() => {
   try { const saved = JSON.parse(localStorage.getItem(LINEUP_KEY)); if (Array.isArray(saved) && saved.length >= 2) return saved.filter(f => ALL_FACTIONS.includes(f)); } catch {}
@@ -67,7 +65,8 @@ const FACTION_DISPLAY = {
   gesserit: { name: 'Bene Gesserit', colorVar: '--faction-gesserit' },
   tleilaxu: { name: 'Tleilaxu', colorVar: '--faction-tleilaxu' },
   ixians: { name: 'Ixians', colorVar: '--faction-ixians' },
-  choam: { name: 'CHOAM', colorVar: '--faction-choam' }
+  choam: { name: 'CHOAM', colorVar: '--faction-choam' },
+  richese: { name: 'Richese', colorVar: '--faction-richese' }
 };
 const FACTION_NAMES = Object.fromEntries(Object.entries(FACTION_DISPLAY).map(([k, v]) => [k, v.name]));
 
@@ -219,6 +218,10 @@ function logEvent(e) {
   if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
+  if (e.type === 'cacheAuctionStart') addLog('bidding', turn, `Richese auction ${cardNameOf(e.cardId)} from their cache (${e.method === 'silent' ? 'Silent' : 'Once Around'}).`);
+  if (e.type === 'cacheAuctionEnd') addLog('bidding', turn, e.removed ? `Nobody bid: Richese removed ${cardNameOf(e.cardId)} from the game.`
+    : e.amount === 0 ? `Nobody bid: Richese kept ${cardNameOf(e.cardId)}.`
+    : `${nameOf(e.winnerId)} bought ${cardNameOf(e.cardId)} for ${e.amount}${e.method === 'silent' && e.bids ? ` (sealed bids: ${Object.entries(e.bids).map(([f, n]) => `${nameOf(f)} ${n}`).join(', ')})` : ''}${e.bonus ? '; Harkonnen draw a bonus card' : ''}.`);
   if (e.type === 'choamEffect') {
     const t = { baliset: `Baliset: ${nameOf(e.factionId)} may not move into ${territoryNameOf(e.territoryId)} this turn`,
       jubbaCloak: `Jubba Cloak: CHOAM forces in ${territoryNameOf(e.territoryId)} are sheltered from this storm`,
@@ -488,7 +491,7 @@ function describe(entry) {
       return;
     }
     case 'bidding': {
-      const parts = result.filter(r => r.winner).map(r => `${nameOf(r.winner)} bought a card for ${r.price}`);
+      const parts = result.filter(r => r.winner).map(r => `${nameOf(r.winner)} bought ${r.cache ? cardNameOf(r.cardId) : 'a card'} for ${r.price}`);
       const unsold = result.find(r => r.unsold);
       if (unsold) parts.push(`a card drew no bids, ending the auction (${unsold.cardsReturned} returned to the deck)`);
       return log((parts.join('; ') || 'No auction held') + '.');
@@ -541,7 +544,7 @@ function describe(entry) {
 
 const FACTION_COLORS = {
   atreides: '#3f7047', harkonnen: '#9c2a24', emperor: '#66707e',
-  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440', ixians: '#4f6fb8', choam: '#a8862e'
+  fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440', ixians: '#4f6fb8', choam: '#a8862e', richese: '#8f9aa6'
 };
 
 function ensureBoard(data) {
@@ -992,7 +995,7 @@ $('lineup-grid').addEventListener('click', e => {
 $('lineup-all').addEventListener('click', () => {
   // The six base factions, but always keeping your own (swapping out Bene Gesserit if you play an expansion faction).
   const human = $('select-faction').value;
-  lineup = ALL_FACTIONS.filter(f => !['tleilaxu', 'ixians', 'choam'].includes(f));
+  lineup = ALL_FACTIONS.filter(f => !['tleilaxu', 'ixians', 'choam', 'richese'].includes(f));
   if (human && !lineup.includes(human)) lineup = [...lineup.filter(f => f !== 'gesserit'), human]; localStorage.setItem(LINEUP_KEY, JSON.stringify(lineup)); renderLineup(); });
 $('lineup-random').addEventListener('click', () => {
   const human = $('select-faction').value;
