@@ -9,6 +9,7 @@
 // even a decision point in this phase for either to make, it's fully
 // deterministic once the deck order is set).
 
+import { noFieldAt, revealNoField } from './noField.js';
 import { random } from './random.js';
 function buildSpiceDeck(spiceDeckData, territoriesData, rngShuffle, { sandtrout = false } = {}) {
   const wormCards = Array.from(
@@ -154,6 +155,11 @@ function devourTopOfPile(state, pileKey) {
   state.nexus.wormTerritories = [...(state.nexus.wormTerritories ?? []), topCard.id];
   // Fremen are never eaten, and neither is the Fremen's ally (who can't ride).
   const fremenAlly = (state.alliances ?? []).find(a => a.factions.includes('fremen'))?.factions.find(f => f !== 'fremen');
+  // A No-Field token swallowed by the worm is revealed first; its forces are then lost.
+  if (noFieldAt(state, topCard.id) && fremenAlly !== 'richese') {
+    const r = revealNoField(state);
+    (state.nexus.noFieldRevealed ??= []).push(r);
+  }
   for (const factionId of Object.keys(state.factions)) {
     if (factionId === 'fremen' || factionId === fremenAlly) continue;
     const faction = state.factions[factionId];
@@ -170,6 +176,7 @@ function devourTopOfPile(state, pileKey) {
 function resolveSpiceBlowPhase(state) {
   state.nexus.wormTerritories = [];
   state.nexus.draws = []; // every card drawn this phase, in order, for presentation
+  state.nexus.noFieldRevealed = [];
   const resultA = resolvePile(state, 'A');
   const resultB = resolvePile(state, 'B');
 
