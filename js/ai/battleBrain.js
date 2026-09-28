@@ -10,6 +10,7 @@
 // known to be held (state.meta.knownCards); anything Prescience revealed or
 // our Voice commanded. Never the opponent's actual hand, spice or plan.
 
+import { battleSpice } from '../allySupport.js';
 import * as battleEngine from '../battleEngine.js';
 import { random } from '../random.js';
 
@@ -125,7 +126,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
       if (weaponCardId && weaponCardId === defenseCardId) continue;
       if (cat(weaponCardId) === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[defenseCardId])) continue; // own explosion
       // Fremen fight at full strength without spice (advanced): never back with spice.
-      for (const dial of dials) for (const backed of uniq([0, me === 'fremen' ? 0 : Math.min(dial, Math.max(0, faction.spice - 2))])) {
+      for (const dial of dials) for (const backed of uniq([0, me === 'fremen' ? 0 : Math.min(dial, Math.max(0, battleSpice(state, me) - 2))])) {
         const starred = Math.min(starredPresent, dial);
         const supportedStarredCount = Math.min(starred, backed);
         plans.push({
