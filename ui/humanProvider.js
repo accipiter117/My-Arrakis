@@ -12,6 +12,7 @@
 // Every form's default action is always legal (pass, no shipment, a
 // straightforward battle plan), so the player can never get stuck.
 
+import { TECH_TOKENS } from '../js/techTokens.js';
 import * as biddingEngine from '../js/biddingEngine.js';
 import * as revivalEngine from '../js/revivalEngine.js';
 import * as movementEngine from '../js/movementEngine.js';
@@ -470,6 +471,16 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           p.querySelector('[data-action="yes"]').onclick = () => done(true);
           p.querySelector('[data-default-action]').onclick = () => done(false);
         });
+    },
+
+    chooseTechTokenToTake(state, factionId, tokens, from) {
+      const what = { axlotl: 'Axlotl Tanks (pays in Revival)', heighliner: 'Heighliners (pays in Shipment and Movement)', spiceProd: 'Spice Production (pays in CHOAM Charity)' };
+      const mine = TECH_TOKENS.filter(t => state.techTokens?.[t]?.owner === factionId).length;
+      return ask('Take a Tech Token',
+        `<p>You beat ${esc(factionName(from))}, who hold ${tokens.length} Tech Tokens. Take one. You hold ${mine}; all three together count as a stronghold.</p>
+         <label class="field"><span>Take</span><select name="t">${options(tokens.map(t => [t, what[t]]), tokens[0])}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Take it</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 't').value));
     },
 
     chooseGuildTiming(state, others) {
