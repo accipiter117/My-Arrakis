@@ -53,6 +53,13 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseGuildTiming: (state, others) => pick('guild').chooseGuildTiming(state, others),
     chooseFremenPlacement: (state, f) => pick(f).chooseFremenPlacement(state, f),
     chooseTechTokenToTake: (state, f, options, from) => pick(f).chooseTechTokenToTake(state, f, options, from),
+    chooseChoamDiscards: (state, f, info) => pick(f).chooseChoamDiscards(state, f, info),
+    chooseChoamEffect: (state, f, info) => pick(f).chooseChoamEffect(state, f, info),
+    chooseInflation: (state, f) => pick(f).chooseInflation(state, f),
+    chooseCancelAudit: (state, f, info) => pick(f).chooseCancelAudit(state, f, info),
+    chooseChoamAllyTrade: (state, f, ally) => pick(f).chooseChoamAllyTrade(state, f, ally),
+    chooseChoamAllyTradeResponse: (state, f, info) => pick(f).chooseChoamAllyTradeResponse(state, f, info),
+    chooseChoamBattleSupport: (state, f, info) => pick(f).chooseChoamBattleSupport(state, f, info),
     // Diplomacy: each faction decides for itself, human or AI.
     chooseBreakAlliance: (state, factionId, ally) => pick(factionId).chooseBreakAlliance(state, factionId, ally),
     chooseAllianceProposal: (state, factionId) => pick(factionId).chooseAllianceProposal(state, factionId),
