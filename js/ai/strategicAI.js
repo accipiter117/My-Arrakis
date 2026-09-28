@@ -10,6 +10,7 @@
 // Uses public information only: board positions, turn number, alliances.
 // Opponent spice and hands are never read.
 
+import { ownsAllTechTokens, TECH_STRONGHOLD } from '../techTokens.js';
 import { createBasicAI } from './basicAI.js';
 import * as movementEngine from '../movementEngine.js';
 import { createDiplomacy } from './diplomacy.js';
@@ -37,7 +38,8 @@ export function createStrategicAI(options) {
   const forcesOf = (state, f, t) => state.factions[f]?.forces.onBoard[t] ?? 0;
   const occupants = (state, t) => Object.keys(state.factions).filter(f => forcesOf(state, f, t) > 0);
   const allyOf = (state, f) => (state.alliances ?? []).find(a => a.factions.includes(f))?.factions.find(x => x !== f) ?? null;
-  const held = (state, f) => strongholds(state).filter(t => forcesOf(state, f, t) > 0);
+  // All three Tech Tokens in one hand count as a stronghold.
+  const held = (state, f) => [...strongholds(state).filter(t => forcesOf(state, f, t) > 0), ...(ownsAllTechTokens(state, f) ? [TECH_STRONGHOLD] : [])];
 
   // --- Strategic assessment ---------------------------------------------
 
@@ -120,7 +122,7 @@ export function createStrategicAI(options) {
       return null;
     }
     // Break the threat's weakest stronghold.
-    const targets = threat.held
+    const targets = threat.held.filter(t => t !== TECH_STRONGHOLD) // a full token set is broken in battle, not by moving in
       .map(t => ({ t, need: forcesToContest(state, t, me) }))
       .sort((a, b) => a.need - b.need);
     for (const { t, need } of targets) {
