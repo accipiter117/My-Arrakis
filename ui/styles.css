@@ -790,3 +790,7 @@ body.has-console .scrim { background: rgba(6, 3, 1, 0.14); backdrop-filter: none
 .tech-tokens img { width: 22px; height: 22px; border-radius: 50%; }
 .tech-tokens--key { flex-wrap: wrap; gap: 4px 10px; }
 .tech-tokens--key span { display: inline-flex; align-items: center; gap: 4px; }
+
+/* The console's text steps aside while the camera or an event card has the stage. */
+.console-feed > * { transition: opacity 0.25s; }
+body.console-muted .console-feed > * { opacity: 0 !important; }
