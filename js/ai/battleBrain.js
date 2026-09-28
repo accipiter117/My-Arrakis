@@ -41,7 +41,12 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
 
   // A plausible plan for the opponent holding `hand`.
   function samplePlan(state, opp, territoryId, hand, intel, voice) {
-    const forces = state.factions[opp].forces.onBoard[territoryId] ?? 0;
+    let forces = state.factions[opp].forces.onBoard[territoryId] ?? 0;
+    // A face-down Richese No-Field token shows as one force but may be 0, 3 or 5:
+    // guess one (the AI never peeks at the real value).
+    if (opp === 'richese' && state.factions.richese?.noField?.onPlanet?.territoryId === territoryId) {
+      forces = forces - 1 + [0, 3, 5][Math.floor(rng() * 3)];
+    }
     const leaders = state.factions[opp].leaders.available
       .filter(id => battleEngine.isLeaderAvailable(state, opp, id, territoryId))
       .sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0));
