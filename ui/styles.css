@@ -820,3 +820,6 @@ body.console-muted .console-feed > * { opacity: 0 !important; }
 /* While the camera has the stage, the console steps aside and the map fills the space. */
 body.has-console.console-muted .board-wrap { flex: 1; height: auto; min-height: var(--board-size); }
 body.has-console.console-muted .console-feed { display: none; }
+
+/* iOS zooms into any form control under 16px: keep them at 16px. */
+.decision select, .decision input, .sheet select, .sheet input:not([type=range]) { font-size: 16px; }
