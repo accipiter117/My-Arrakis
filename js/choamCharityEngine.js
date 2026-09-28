@@ -4,6 +4,8 @@
 // small file rather than folded into another engine, matching the
 // one-phase-per-file convention used for bidding/movement/spice/battle.
 
+import { recordTrigger } from './techTokens.js';
+
 function isEligibleForCharity(state, factionId) {
   // Bene Gesserit's advanced ability: always eligible regardless of
   // current spice, everyone else needs 0 or 1 spice.
@@ -33,6 +35,7 @@ function claimCharity(state, factionId) {
   faction.spice += amount;
   faction.claimedCharityThisTurn = true;
   state.spiceBank.totalInCirculation -= amount;
+  recordTrigger(state, 'spiceProd', factionId); // Tech Tokens: Spice Production
 
   return { factionId, amountReceived: amount };
 }
