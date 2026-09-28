@@ -10,6 +10,7 @@
 // known to be held (state.meta.knownCards); anything Prescience revealed or
 // our Voice commanded. Never the opponent's actual hand, spice or plan.
 
+import { forcesAfterReveal } from '../noField.js';
 import { battleSpice } from '../allySupport.js';
 import * as battleEngine from '../battleEngine.js';
 import { random } from '../random.js';
@@ -104,7 +105,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
   // Candidate plans worth considering for me.
   function candidates(state, me, territoryId, opp) {
     const faction = state.factions[me];
-    const present = faction.forces.onBoard[territoryId] ?? 0;
+    const present = forcesAfterReveal(state, me, territoryId);
     const starredPresent = faction.forces.starredOnBoard?.[territoryId] ?? 0;
     const hand = faction.treacheryHand;
     const leaders = faction.leaders.available
