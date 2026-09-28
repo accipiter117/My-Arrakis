@@ -18,6 +18,7 @@
 // canX() validators a human action would use, so an illegal proposal is
 // simply refused rather than bending the rules.
 
+import { defaultTokenChoice } from '../techTokens.js';
 import { random } from '../random.js';
 import * as movementEngine from '../movementEngine.js';
 import * as revivalEngine from '../revivalEngine.js';
@@ -210,6 +211,8 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
         return id.startsWith('karama') ? 0 : c === 'specialWeapon' ? 1 : c === 'shieldSnooper' ? 2 : DEFENSE_CATEGORIES.includes(c) ? 3 : WEAPON_CATEGORIES.includes(c) ? 4 : 9; };
       return ids.slice().sort((a, b) => rank(a) - rank(b))[0];
     },
+    // Tech Tokens: complete our own set, else the token that pays soonest.
+    chooseTechTokenToTake(state, factionId, options) { return defaultTokenChoice(state, factionId, options); },
     // Place the HMS next to the most spice, else in the Polar Sink (it reaches everywhere).
     chooseHmsPlacement(state, factionId, sites) {
       const spiceNear = t => [t, ...(state.board.territories[t]?.adjacentDraft ?? [])]
