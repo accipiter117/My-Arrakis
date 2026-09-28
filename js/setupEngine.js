@@ -70,6 +70,9 @@ const STARTING_CONDITIONS = {
     onBoard: { hms: 6 },
     starredOnBoard: { hms: 3 }
   },
+  // CHOAM & Richese expansion: 20 forces in reserve, nothing on Arrakis.
+  choam: { spice: 2, reserve: 20, starredReserve: 0, onBoard: {} },
+  richese: { spice: 5, reserve: 20, starredReserve: 0, onBoard: {} },
   // Ixians & Tleilaxu expansion: 20 forces in reserve, no presence on Arrakis.
   tleilaxu: {
     spice: 5,
@@ -118,8 +121,15 @@ function setupSpiceDeck(state, spiceDeckData, territoriesData, rngShuffle) {
 }
 
 // Which treachery cards are in play under these rules (house rules and expansions).
-function treacheryCardsInPlay(rulesConfig, treacheryDeckData) {
-  const leaveOutWorthless = rulesConfig.houseRules?.removeWorthlessCards;
+// Decision D1: the worthless cards come back whenever something needs them
+// (CHOAM seated, Leader Skills or Stronghold Cards on); otherwise the house
+// rule leaving them out stands.
+function worthlessCardsNeeded(rulesConfig, factionIds = []) {
+  return factionIds.includes('choam') || Boolean(rulesConfig.expansionAdvanced?.leaderSkillCards?.enabled)
+    || Boolean(rulesConfig.expansionAdvanced?.advancedStrongholdCards?.enabled);
+}
+function treacheryCardsInPlay(rulesConfig, treacheryDeckData, factionIds = []) {
+  const leaveOutWorthless = rulesConfig.houseRules?.removeWorthlessCards && !worthlessCardsNeeded(rulesConfig, factionIds);
   return treacheryDeckData.cards.filter(c =>
     !(leaveOutWorthless && c.category === 'worthless')
     && !(c.expansion === 'ixTl' && !rulesConfig.expansions?.ixTlCards));
@@ -128,7 +138,7 @@ function treacheryCardsInPlay(rulesConfig, treacheryDeckData) {
 function setupTreacheryDeck(state, treacheryDeckData, rngShuffle) {
   // House rule (data/rulesConfig.json houseRules.removeWorthlessCards): the
   // five worthless cards can be left out of the deck.
-  state.decks.treacheryDeck = rngShuffle(treacheryCardsInPlay(state.rulesConfig, treacheryDeckData).map(c => c.id));
+  state.decks.treacheryDeck = rngShuffle(treacheryCardsInPlay(state.rulesConfig, treacheryDeckData, Object.keys(state.factions)).map(c => c.id));
   state.decks.treacheryDiscard = [];
   return state;
 }
@@ -262,6 +272,7 @@ function applyStartingStarredOnBoard(state) {
 export {
   applyStartingStarredOnBoard,
   treacheryCardsInPlay,
+  worthlessCardsNeeded,
   STARTING_CONDITIONS,
   STARTING_TREACHERY_COUNT,
   initializeFactionResources,
