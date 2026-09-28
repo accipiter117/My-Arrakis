@@ -547,13 +547,23 @@ const FACTION_COLORS = {
   fremen: '#2b6f86', guild: '#c4661f', gesserit: '#5e3a72', tleilaxu: '#8d9440', ixians: '#4f6fb8', choam: '#a8862e', richese: '#8f9aa6'
 };
 
+// The console beneath the map steps aside (its text hides) while the camera
+// is zoomed in on the action, or a banner or event card fills that space.
+let cameraFocused = false;
+function updateConsoleMute() {
+  const busy = cameraFocused || !$('turn-banner').hidden || !$('event-layer').hidden;
+  document.body.classList.toggle('console-muted', busy);
+}
+new MutationObserver(updateConsoleMute).observe($('turn-banner'), { attributes: true, attributeFilter: ['hidden'] });
+new MutationObserver(updateConsoleMute).observe($('event-layer'), { attributes: true, attributeFilter: ['hidden'] });
+
 function ensureBoard(data) {
   if (board) return;
   territoriesData = territoriesData ?? data.territories;
   board = createBoard({
     container: $('board'), geometry: data.geometry, territoriesData: data.territories,
     factionColors: FACTION_COLORS, onTap: tapTerritory,
-    onZoom: zoomed => { $('zoom-reset').hidden = !zoomed; }
+    onZoom: (zoomed, manual) => { $('zoom-reset').hidden = !zoomed; cameraFocused = zoomed && !manual; updateConsoleMute(); }
   });
   board.setCamera(localStorage.getItem('my-arrakis-camera') !== 'off');
   presenter = createPresenter({
