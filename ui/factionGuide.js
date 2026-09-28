@@ -232,13 +232,16 @@ FACTION_GUIDE.richese = {
     'Cache auction: every Bidding Round while your cache lasts, one fewer normal card is dealt and you auction one of your cards, first or last, Once Around or Silent. Others pay you; if you keep it, you pay the Emperor or the Bank.',
     'Once Around: one bid each round the table, then you may outbid the winner. Silent: everyone names a price at once. If nobody bids, take it free or remove it.',
     'Cannot occupy Tuek’s Sietch without blocking the Fremen special victory.',
-    'Not yet in this version: No-Field tokens, the Black Market, your alliance powers, most cache card effects (only the Richese Karama works so far) and your Karama power.'
+    'No-Field tokens (0, 3, 5): ship one as if it were one force; it counts as one force until revealed, then its number arrive from reserves. Others see only "?". Revealed in battle, by storm or worm, or when you choose.',
+    'Black Market: at the start of Bidding, sell a card from your hand, announcing it as anything you like; if it sells, one fewer normal card is auctioned.',
+    'Cache cards: Distrans, Juice of Sapho, Mirror Weapon, Portable Snooper, Ornithopter, Nullentropy Box, Semuta Drug, Residual Poison, Stone Burner and a Karama.',
+    'Not yet in this version: your Karama power.'
   ],
   push: [
     'Sell your best cards when rivals are rich; Silent auctions drive the price up when two or more can afford it.',
     'Spice from sales is your only steady income: save it for a big shipment.'
   ],
-  ally: ['Coming with the rest of Richese: shipping the ally with a No-Field token, and passing on cache cards.'],
+  ally: ['Richese may ship your forces with one of their No-Field tokens (paying for one force; revealed at once).', 'Richese may give you Richese cards from their hand.'],
   counter: [
     'Every cache card you buy funds Richese: buy only what you will use.',
     'They start with nothing on the board: take the strongholds before they can ship.'
