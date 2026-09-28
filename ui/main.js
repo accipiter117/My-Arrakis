@@ -218,6 +218,10 @@ function logEvent(e) {
   if (e.type === 'harvester') addLog('spiceBlow', turn, `${nameOf(e.factionId)} played a Harvester: the spice in ${territoryNameOf(e.territoryId)} doubles to ${e.amount}.`);
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
+  if (e.type === 'noFieldReveal' && e.territoryId) {
+    const why = { storm: ', caught by the storm', worm: ', swallowed by the worm', battle: ' for the battle', newToken: ' to place a new one', choice: '' }[e.cause] ?? '';
+    addLog(phaseEngine.currentPhase(gameState), turn, `Richese revealed their No-Field token in ${territoryNameOf(e.territoryId)}${why}: ${e.value} (${e.placed} force${e.placed === 1 ? '' : 's'} placed).`);
+  }
   if (e.type === 'cacheAuctionStart') addLog('bidding', turn, `Richese auction ${cardNameOf(e.cardId)} from their cache (${e.method === 'silent' ? 'Silent' : 'Once Around'}).`);
   if (e.type === 'cacheAuctionEnd') addLog('bidding', turn, e.removed ? `Nobody bid: Richese removed ${cardNameOf(e.cardId)} from the game.`
     : e.amount === 0 ? `Nobody bid: Richese kept ${cardNameOf(e.cardId)}.`
@@ -507,6 +511,7 @@ function describe(entry) {
       if (result.length) log(result.map(r => {
         if (r.type === 'movement') return `${nameOf(r.factionId)} ${r.card === 'hajr' ? 'played Hajr and moved' : 'moved'} ${r.amount} from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)}`;
         if (r.type === 'allyOverlapPenalty') return `${nameOf(r.penalizedFactionId)} lost ${r.forcesLost} forces sharing ${territoryNameOf(r.territoryId)} with an ally`;
+        if (r.noField) return `Richese placed a No-Field token in ${territoryNameOf(r.territoryId)}`;
         return `${nameOf(r.factionId)} shipped ${r.amount} to ${territoryNameOf(r.territoryId)}`;
       }).join('; ') + '.');
       return;
@@ -569,7 +574,7 @@ function ensureBoard(data) {
   presenter = createPresenter({
     board, layer: $('event-layer'), banner: $('turn-banner'), factionColors: FACTION_COLORS, getSpeed: () => speed,
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
-    renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds }),
+    renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds, viewer: humanFactionId ?? null }),
     renderReal: renderBoard,
     getViewer: () => humanFactionId,
     sfx,
@@ -673,7 +678,7 @@ function askTruthtrance() {
 }
 
 function renderBoard() {
-  board?.render(gameState, { selected: selectedTerritory, highlight: highlightIds, foreseen: foreseenSpice() });
+  board?.render(gameState, { selected: selectedTerritory, highlight: highlightIds, foreseen: foreseenSpice(), viewer: humanFactionId ?? null });
 }
 
 function renderTerritoryInfo() {
