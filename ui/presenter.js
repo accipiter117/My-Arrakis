@@ -90,7 +90,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
   // --- Tech Tokens: fly a token across the map into its holder's tray slot -----------
   const TECH_NAMES = { axlotl: 'Axlotl Tanks', heighliner: 'Heighliners', spiceProd: 'Spice Production' };
-  const techUrl = t => new URL(`../assets/tokens/tech-${t}.png`, import.meta.url).href;
+  const techUrl = t => new URL(`../assets/tokens/tech-${t}.png?v=2`, import.meta.url).href;
   let pendingTech = [];
   async function flyTech(token, fromScreen, ownerId, caption) {
     const slot = techTray?.querySelector(`[data-token="${token}"]`);
