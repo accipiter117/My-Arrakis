@@ -6,15 +6,20 @@
 // so they're gated on state.meta.turn === maxTurns rather than checked
 // unconditionally every phase.
 
+import { ownsAllTechTokens, TECH_STRONGHOLD } from './techTokens.js';
+
 function strongholdIdsFrom(territoriesData) {
   return Object.keys(territoriesData.territories).filter(
     id => territoriesData.territories[id].type === 'stronghold'
   );
 }
 
+// Includes the Tech Tokens pseudo-stronghold when one faction holds all three.
 function strongholdsOccupiedBy(state, factionId, strongholdIds) {
   const forces = state.factions[factionId].forces.onBoard;
-  return strongholdIds.filter(id => (forces[id] ?? 0) > 0);
+  const held = strongholdIds.filter(id => (forces[id] ?? 0) > 0);
+  if (ownsAllTechTokens(state, factionId)) held.push(TECH_STRONGHOLD);
+  return held;
 }
 
 function getAllianceFor(state, factionId) {
