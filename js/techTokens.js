@@ -25,10 +25,10 @@ export const DEFAULT_OWNER = { axlotl: 'tleilaxu', heighliner: 'ixians', spicePr
 // The pseudo-stronghold id used in victory counting for a full set.
 export const TECH_STRONGHOLD = 'techTokens';
 
-// rulesConfig.expansions.techTokens: 'auto' (on when the Ixians or Tleilaxu
-// are seated, the plan default), 'on', or 'off'.
+// rulesConfig.expansions.techTokens: 'on' (the project owner's default: every
+// game), 'auto' (only when the Ixians or Tleilaxu are seated), or 'off'.
 export function techTokensWanted(rulesConfig, factionIds) {
-  const mode = rulesConfig?.expansions?.techTokens ?? 'auto';
+  const mode = rulesConfig?.expansions?.techTokens ?? 'on';
   if (mode === true || mode === 'on') return true;
   if (mode === false || mode === 'off') return false;
   return factionIds.includes('ixians') || factionIds.includes('tleilaxu');
@@ -48,9 +48,10 @@ export function initTechTokens(state) {
 }
 
 // After the first storm: unowned tokens, shuffled, go one each to factions
-// without a token, in turn order from the First Player. Tokens left over
-// when every faction already holds one stay out of play (rulebook: "to
-// factions without a Tech Token").
+// without a token, in turn order from the First Player. If tokens remain
+// once every faction holds one (two-player games), dealing carries on round
+// the table in the same order (project owner's decision), so every token
+// always has an owner.
 export function assignRemainingTechTokens(state, order, rng = Math.random) {
   if (!state.techTokens || state.meta.techTokensAssigned) return [];
   const unassigned = TECH_TOKENS.filter(t => !state.techTokens[t].owner);
@@ -60,12 +61,18 @@ export function assignRemainingTechTokens(state, order, rng = Math.random) {
   }
   const holders = new Set(TECH_TOKENS.map(t => state.techTokens[t].owner).filter(Boolean));
   const dealt = [];
-  for (const f of order) {
+  const seated = order.filter(f => state.factions[f]);
+  for (const f of seated) {
     if (!unassigned.length) break;
-    if (holders.has(f) || !state.factions[f]) continue;
+    if (holders.has(f)) continue;
     const t = unassigned.shift();
     state.techTokens[t].owner = f;
     holders.add(f);
+    dealt.push({ token: t, factionId: f });
+  }
+  for (let i = 0; unassigned.length && seated.length; i++) {
+    const f = seated[i % seated.length], t = unassigned.shift();
+    state.techTokens[t].owner = f;
     dealt.push({ token: t, factionId: f });
   }
   state.meta.techTokensAssigned = true;
