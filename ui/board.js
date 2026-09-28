@@ -219,7 +219,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   }
   for (const [id, geo] of Object.entries(geometry.territories)) label(id, geo);
 
-  function render(state, { selected = null, highlight = [], foreseen = null } = {}) {
+  function render(state, { selected = null, highlight = [], foreseen = null, viewer = undefined } = {}) {
     for (const [id, path] of Object.entries(paths)) {
       path.classList.toggle('territory--selected', id === selected);
       path.classList.toggle('territory--highlight', highlight.includes(id));
@@ -279,7 +279,16 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       let x = lx - ((items.length - 1) * step) / 2;
       for (const item of items) {
         const g = el('g', { class: `token token--${item.kind}`, transform: `translate(${x},${ly + 14})` }, tokenLayer);
-        if (item.kind === 'force') {
+        if (item.kind === 'force' && item.f === 'richese' && state.factions.richese?.noField?.onPlanet?.territoryId === id) {
+          // The No-Field token stands in for one force: others see '?', Richese (and spectators) its number.
+          const nf = state.factions.richese.noField.onPlanet;
+          const seeIt = viewer === 'richese' || viewer === null;
+          if (item.n > 1) { drawCounter(g, 'richese', item.n - 1); x += step; }
+          const t = item.n > 1 ? el('g', { class: 'token token--nofield', transform: `translate(${x},${ly + 14})` }, tokenLayer) : g;
+          el('image', { href: new URL('../assets/tokens/nofield.png', import.meta.url).href, x: -24, y: -24, width: 48, height: 48 }, t);
+          const label = el('text', { class: 'token__count token__count--counter', y: 6 }, t);
+          label.textContent = seeIt ? nf.value : '?';
+        } else if (item.kind === 'force') {
           drawCounter(g, item.f, item.n);
           if (item.s) el('circle', { r: 6, cx: 17, cy: -17, class: 'token__star' }, g);
         } else {
