@@ -34,6 +34,7 @@ import { random } from './random.js';
 import * as allySupport from './allySupport.js';
 import * as hms from './hms.js';
 import * as techTokens from './techTokens.js';
+import * as choam from './choam.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -82,6 +83,13 @@ const passiveDecisionProvider = {
   chooseGuildTiming() { return null; }, // null: act last
   chooseFremenPlacement() { return null; }, // null: all 10 in Sietch Tabr
   chooseTechTokenToTake(state, f, options) { return techTokens.defaultTokenChoice(state, f, options); },
+  chooseChoamDiscards(state, f, { duplicates, worthless }) { return [...new Set([...duplicates, ...worthless])]; },
+  chooseChoamEffect() { return null; },
+  chooseInflation() { return null; },
+  chooseCancelAudit() { return false; },
+  chooseChoamAllyTrade() { return null; },
+  chooseChoamAllyTradeResponse() { return null; },
+  chooseChoamBattleSupport() { return 0; },
   chooseKaramaCancel() { return false; },
   chooseAllyPledge() { return 0; },
   chooseEmperorAllyRevival() { return 0; },
@@ -157,6 +165,11 @@ const passiveDecisionProvider = {
 
 async function runStormPhase(state, decisionProvider) {
   const isFirstStorm = state.meta.turn === 1;
+  // CHOAM's Jubba Cloak: before the storm moves, shelter CHOAM forces in one sand territory.
+  if (state.factions.choam) {
+    const exposed = Object.keys(state.factions.choam.forces.onBoard).filter(t => state.board.territories[t]?.type === 'sand');
+    await choamEffectWindow(state, decisionProvider, 'jubbaCloak', exposed);
+  }
   // Ixians: before the storm, the HMS may move up to 3 territories if they occupy it.
   if (!isFirstStorm && state.factions.ixians && state.board.hms?.placed && (state.factions.ixians.forces.onBoard.hms ?? 0) > 0 && decisionProvider.chooseHmsMove) {
     const reachable = hms.hmsReachable(state);
@@ -303,14 +316,23 @@ function runCharityPhase(state) {
   // version never reset this, so each faction could claim only once per
   // game; Bene Gesserit starved for want of their 2 spice a turn.)
   choamCharityEngine.resetCharityFlags(state);
+  // CHOAM's Inflation: Cancel means no charity at all this turn (even for the
+  // Bene Gesserit); Double doubles every amount, CHOAM's own collection included.
+  const inflation = choam.inflationStatus(state);
+  if (inflation === 'cancel') return [{ inflation: 'cancel' }];
+  const multiplier = inflation === 'double' ? 2 : 1;
+  const results = [];
+  // CHOAM collects 2 per faction first (this does not trigger Spice Production).
+  const own = choam.collectChoamCharity(state);
+  if (own) results.push({ factionId: 'choam', choamAdvantage: true, amountReceived: own });
   // No real decision here, claiming charity has no downside, so this runs
   // for real rather than going through the decision provider at all.
-  const results = [];
   for (const factionId of Object.keys(state.factions)) {
     if (choamCharityEngine.canClaimCharity(state, factionId).ok) {
-      results.push(choamCharityEngine.claimCharity(state, factionId));
+      results.push(choamCharityEngine.claimCharity(state, factionId, { multiplier }));
     }
   }
+  if (multiplier > 1) results.push({ inflation: 'double' });
   return results;
 }
 
@@ -423,6 +445,12 @@ async function runBiddingPhase(state, decisionProvider) {
 
 async function runRevivalPhase(state, decisionProvider) {
   const results = [];
+  // CHOAM's La La La: one faction may not take free revival this turn.
+  if (state.factions.choam) {
+    const targets = Object.keys(state.factions).filter(f => f !== 'choam' && (state.factions[f].revivalTanks ?? 0) > 0
+      && revivalEngine.freeRevivalAllowance(f, state) > 0);
+    await choamEffectWindow(state, decisionProvider, 'laLaLa', targets);
+  }
   for (const factionId of Object.keys(state.factions)) {
     const faction = state.factions[factionId];
     // Only factions with something they could revive take a visible turn.
@@ -472,7 +500,7 @@ async function runRevivalPhase(state, decisionProvider) {
     // Tleilaxu Gholas: with fewer than five active leaders, revive another faction's dead leader at half value.
     if (factionId === 'tleilaxu' && decisionProvider.chooseGholaRevival && faction.leaders.available.length < 5) {
       const options = Object.entries(state.factions).filter(([f]) => f !== 'tleilaxu')
-        .flatMap(([f, x]) => x.leaders.killed.map(id => ({ leaderId: id, owner: f, cost: Math.ceil((leaderValueOf(state, id)) / 2) })))
+        .flatMap(([f, x]) => x.leaders.killed.filter(id => id !== 'auditor').map(id => ({ leaderId: id, owner: f, cost: Math.ceil((leaderValueOf(state, id)) / 2) })))
         .filter(o => o.cost <= faction.spice);
       const pick = options.length ? await decisionProvider.chooseGholaRevival(state, 'tleilaxu', options) : null;
       const o = options.find(x => x.leaderId === pick);
@@ -520,8 +548,16 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     order = [...others.slice(0, at), 'guild', ...others.slice(at)];
   }
 
+  // CHOAM's Baliset: a faction may not move into a territory CHOAM occupies this turn.
+  if (state.factions.choam) {
+    const held = Object.keys(state.factions.choam.forces.onBoard);
+    const others = order.filter(f => f !== 'choam' && f !== allianceEngine.allyOf(state, 'choam'));
+    await choamEffectWindow(state, decisionProvider, 'baliset', others.flatMap(f => held.map(t => ({ factionId: f, territoryId: t }))));
+  }
   for (const factionId of order) {
     await observe(decisionProvider, { type: 'turnStart', phase: 'shipment', factionId }, state);
+    // CHOAM's Kulon: on its own turn, its forces move one extra territory.
+    if (factionId === 'choam' && Object.keys(state.factions.choam.forces.onBoard).length) await choamEffectWindow(state, decisionProvider, 'kulon', [true]);
     const resultsBefore = results.length;
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
     if (decision.shipment) {
@@ -695,6 +731,55 @@ async function faceDancerSwap(state, decisionProvider) {
 
 // Lets the UI present each event as it happens (cards, sweeps, marches).
 // Awaited so play only continues once the presentation has finished.
+// --- CHOAM windows ---------------------------------------------------------
+// Offer CHOAM a worthless card's effect at its moment. options: the legal
+// choices (targets); the answer must be one of them (or true for Kulon).
+async function choamEffectWindow(state, decisionProvider, cardId, options, context = {}) {
+  if (!state.factions.choam?.treacheryHand.includes(cardId) || !decisionProvider.chooseChoamEffect || !options.length) return null;
+  const pick = await decisionProvider.chooseChoamEffect(state, 'choam', { cardId, options, context });
+  if (pick == null || pick === false) return null;
+  const same = o => JSON.stringify(o) === JSON.stringify(pick);
+  const chosen = options.find(same);
+  if (chosen === undefined) return null;
+  const args = typeof chosen === 'string' ? (cardId === 'jubbaCloak' ? { territoryId: chosen } : { factionId: chosen }) : (chosen === true ? {} : chosen);
+  const played = choam.playWorthlessEffect(state, cardId, args);
+  if (played) await observe(decisionProvider, { type: 'choamEffect', ...played }, state);
+  return played;
+}
+
+// End of a phase: CHOAM may cash duplicates (3 each) and worthless cards (2 each);
+// then, once a turn, trade a card with its ally. CHOAM is asked only when its
+// hand has changed since it was last asked.
+async function choamEndOfPhase(state, decisionProvider, cardLookup) {
+  const ch = state.factions.choam;
+  if (!ch) return;
+  const sfs = ch.specialFactionState ??= {};
+  const dup = choam.duplicateSurplus(state, cardLookup), worthless = choam.worthlessInHand(state, cardLookup);
+  const sig = ch.treacheryHand.slice().sort().join(',');
+  if ((dup.length || worthless.length) && sig !== sfs.lastDiscardOffer && decisionProvider.chooseChoamDiscards) {
+    sfs.lastDiscardOffer = sig;
+    const picks = (await decisionProvider.chooseChoamDiscards(state, 'choam', { duplicates: dup, worthless })) ?? [];
+    const done = [];
+    for (const id of picks) { const got = choam.discardForSpice(state, id, cardLookup); if (got) done.push({ cardId: id, spice: got }); }
+    if (done.length) {
+      sfs.lastDiscardOffer = ch.treacheryHand.slice().sort().join(',');
+      await observe(decisionProvider, { type: 'choamDiscards', discards: done, revealed: done.filter(d => d.spice === 3).map(d => d.cardId) }, state);
+    }
+  }
+  const ally = allianceEngine.allyOf(state, 'choam');
+  if (ally && sfs.allyTradeTurn !== state.meta.turn && ch.treacheryHand.length && state.factions[ally].treacheryHand.length
+      && decisionProvider.chooseChoamAllyTrade) {
+    const give = await decisionProvider.chooseChoamAllyTrade(state, 'choam', ally);
+    if (give && ch.treacheryHand.includes(give)) {
+      const back = await decisionProvider.chooseChoamAllyTradeResponse(state, ally, { offered: give });
+      if (back && choam.swapCards(state, 'choam', give, ally, back)) {
+        sfs.allyTradeTurn = state.meta.turn;
+        await observe(decisionProvider, { type: 'choamTrade', ally }, state);
+      }
+    }
+  }
+}
+
 async function observe(decisionProvider, event, state) {
   if (decisionProvider.observe) await decisionProvider.observe(event, state);
 }
@@ -752,7 +837,10 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     // Karama: the target of a faction advantage may cancel it as it is used.
     const karamaCancels = async (f, purpose, extra = {}) => {
       if (!cardEffects.holdsKarama(state, f) || !decisionProvider.chooseKaramaCancel) return false;
+      if (state.choamEffects?.kullWahad?.includes(f)) return false; // blocked by Kull Wahad this phase
       if (!(await decisionProvider.chooseKaramaCancel(state, f, purpose, { territoryId, ...extra }))) return false;
+      // CHOAM's Kull Wahad: stop the Karama as it is played (the card stays in hand).
+      if (f !== 'choam' && await choamEffectWindow(state, decisionProvider, 'kullWahad', [f], { purpose })) return false;
       cardEffects.playKarama(state, f, purpose);
       await observe(decisionProvider, { type: 'karama', factionId: f, purpose, territoryId }, state);
       return true;
@@ -775,6 +863,17 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const voiceFor = f => (voice?.target === f ? voice : null);
     // Public facts about this battle (Voice is spoken aloud at the table).
     state.meta.currentBattle = { territoryId, aggressorId, defenderId, voice };
+
+    // CHOAM alliance: CHOAM may pay for some or all of its ally's forces in this battle.
+    const choamAlly = state.factions.choam ? allianceEngine.allyOf(state, 'choam') : null;
+    if (choamAlly && fighting.includes(choamAlly) && !fighting.includes('choam') && state.factions.choam.spice > 0 && decisionProvider.chooseChoamBattleSupport) {
+      const max = Math.min(state.factions.choam.spice, state.factions[choamAlly].forces.onBoard[territoryId] ?? 0);
+      const n = Math.max(0, Math.min(max, Math.floor((await decisionProvider.chooseChoamBattleSupport(state, 'choam', { allyId: choamAlly, territoryId, max })) ?? 0)));
+      if (n) {
+        state.meta.currentBattle.support = { [choamAlly]: n };
+        await observe(decisionProvider, { type: 'choamSupport', allyId: choamAlly, amount: n, territoryId }, state);
+      }
+    }
 
     // Every plan is made to obey any Voice, then checked against the rules;
     // a plan that breaks them is replaced by a minimal legal one.
@@ -941,6 +1040,22 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     }
     battleEngine.returnAllCapturedIfNeeded(state);
 
+    // CHOAM's Auditor: after a battle it led, CHOAM sees 2 random cards of the
+    // opponent (1 if the Auditor died), unless the opponent pays 1 spice per card.
+    let audit = null;
+    if (fighting.includes('choam') && plans.choam.leaderId === 'auditor' && !outcome.explosion) {
+      const opp = opponentOf('choam');
+      const survived = state.factions.choam.leaders.available.includes('auditor');
+      const size = choam.auditSize(state, opp, survived);
+      if (size > 0) {
+        const pay = state.factions[opp].spice >= size && decisionProvider.chooseCancelAudit
+          ? await decisionProvider.chooseCancelAudit(state, opp, { cost: size }) : false;
+        if (pay && choam.payToCancelAudit(state, opp, size)) audit = { factionId: opp, cancelled: true, cost: size };
+        else audit = { factionId: opp, count: size, cards: choam.performAudit(state, opp, size, random) };
+        await observe(decisionProvider, { type: 'audit', territoryId, ...audit }, state);
+      }
+    }
+
     // Plans are revealed after a battle in the physical game.
     const reveal = plan => ({
       forces: plan.forcesCommitted, spice: plan.spiceCommitted, leaderId: plan.leaderId,
@@ -951,7 +1066,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       supportedOrdinary: plan.supportedOrdinaryCount ?? 0, leaderValue: plan.leaderFightingValue ?? 0,
       kwisatzHaderach: Boolean(plan.useKwisatzHaderach), forcesPresent: forcesBefore[plan === plans[aggressorId] ? aggressorId : defenderId]
     });
-    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor, faceDancer, techToken,
+    results.push({ territoryId, aggressorId, defenderId, prescience, voice, discarded, capture, traitorCard: traitor, faceDancer, techToken, audit,
       plans: { [aggressorId]: reveal(plans[aggressorId]), [defenderId]: reveal(plans[defenderId]) }, ...outcome });
     await observe(decisionProvider, { type: 'battle', ...results[results.length - 1] }, state);
 
@@ -1065,14 +1180,36 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
       break;
     case 'battle': result = await runBattlePhase(state, decisionProvider, cardLookup); break;
     case 'spiceCollection': result = runSpiceCollectionPhase(state); break;
-    case 'mentatPause':
+    case 'mentatPause': {
       await faceDancerSwap(state, decisionProvider);
+      // CHOAM's Trip to Gamont: one force of another faction goes home, before the victory check.
+      if (state.factions.choam) {
+        const opts = Object.entries(state.factions).filter(([f]) => f !== 'choam')
+          .flatMap(([f, x]) => Object.keys(x.forces.onBoard).map(t => ({ factionId: f, territoryId: t })));
+        await choamEffectWindow(state, decisionProvider, 'tripToGamont', opts);
+      }
       result = runMentatPausePhase(state, territoriesData);
+      // CHOAM's Inflation: flip or retire a placed token; otherwise CHOAM may place it.
+      if (state.factions.choam && !state.victory.achieved) {
+        const moved = choam.advanceInflation(state);
+        if (moved) await observe(decisionProvider, { type: 'inflation', status: moved }, state);
+        else if (choam.inflationStatus(state) === 'unused' && decisionProvider.chooseInflation) {
+          const side = await decisionProvider.chooseInflation(state, 'choam');
+          if (choam.placeInflation(state, side)) await observe(decisionProvider, { type: 'inflation', status: side, placed: true }, state);
+        }
+      }
       break;
+    }
     case 'victoryCheck': result = null; break; // victory already resolved inside mentatPause
     default:
       throw new Error(`turnEngine has no runner for phase "${phase}"`);
   }
+
+  // CHOAM: end-of-phase card window and ally trade, then effects that expire with the phase.
+  if (state.factions.choam && !state.victory.achieved && !['nexus', 'movement', 'victoryCheck'].includes(phase)) {
+    await choamEndOfPhase(state, decisionProvider, cardLookup ?? {});
+  }
+  choam.clearPhaseEffects(state, phase);
 
   // Tech Tokens pay out at the end of their phase (Shipment and Movement
   // share one runner, so Heighliners pay once, at the end of 'shipment').
