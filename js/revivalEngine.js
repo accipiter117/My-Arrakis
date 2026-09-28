@@ -11,6 +11,8 @@
 // killed leader as equally revivable. Restructuring that shape is a
 // defined follow-up, not a silent omission, see DEAD_AGAIN_TODO.
 
+import { recordTrigger } from './techTokens.js';
+
 const DEAD_AGAIN_TODO = 'leaders.killed does not yet distinguish face-up (revivable) from face-down (must wait for rotation) status';
 
 const FREE_FORCE_REVIVAL = {
@@ -108,6 +110,9 @@ function reviveForces(state, factionId, amount, starredAmount = 0) {
     state.factions.tleilaxu.spice += 1;
     state.spiceBank.totalInCirculation -= 1;
   }
+
+  // Tech Tokens: any free force revival triggers Axlotl Tanks.
+  if (check.freeUsed > 0) recordTrigger(state, 'axlotl', factionId);
 
   if (starredAmount > 0) {
     faction.starredRevivalTanks -= starredAmount;
