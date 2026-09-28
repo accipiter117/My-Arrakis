@@ -341,5 +341,98 @@
       "isSpecial": false,
       "traitorPoolEligible": true
     }
+  ],
+  "choam": [
+    {
+      "id": "viscountTull",
+      "name": "Viscount Tull",
+      "faction": "choam",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "dukeVerdun",
+      "name": "Duke Verdun",
+      "faction": "choam",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "rajivLondine",
+      "name": "Rajiv Londine",
+      "faction": "choam",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "ladyJalma",
+      "name": "Lady Jalma",
+      "faction": "choam",
+      "fightingValue": 4,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "frankosAru",
+      "name": "Frankos Aru",
+      "faction": "choam",
+      "fightingValue": 4,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "auditor",
+      "name": "Auditor",
+      "faction": "choam",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true,
+      "auditor": true
+    }
+  ],
+  "richese": [
+    {
+      "id": "talisBalt",
+      "name": "Talis Balt",
+      "faction": "richese",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "haloaRund",
+      "name": "Haloa Rund",
+      "faction": "richese",
+      "fightingValue": 2,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "flintoKinnis",
+      "name": "Flinto Kinnis",
+      "faction": "richese",
+      "fightingValue": 3,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "ladyHelena",
+      "name": "Lady Helena",
+      "faction": "richese",
+      "fightingValue": 4,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    },
+    {
+      "id": "premierEinCalimar",
+      "name": "Premier Ein Calimar",
+      "faction": "richese",
+      "fightingValue": 5,
+      "isSpecial": false,
+      "traitorPoolEligible": true
+    }
   ]
 }
