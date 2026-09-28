@@ -77,6 +77,11 @@ export function forcesAfterReveal(state, factionId, territoryId) {
 // AI: when Richese ship two or more forces, send the largest usable token
 // instead (it costs one force's shipping and brings its full number on reveal).
 export function withNoField(state, factionId, decision) {
+  const allyOfRichese = (state.alliances ?? []).some(a => a.factions.includes('richese') && a.factions.includes(factionId)) && factionId !== 'richese';
+  if (allyOfRichese && decision?.shipment && decision.shipment.noField == null && decision.shipment.amount >= 3) {
+    const v = usableNoFields(state).filter(x => x >= 3).pop();
+    if (v) return { ...decision, shipment: { ...decision.shipment, noField: v } }; // Richese ships them; falls back to normal if refused
+  }
   if (factionId !== 'richese' || !decision?.shipment || decision.shipment.noField != null) return decision;
   const { territoryId, amount } = decision.shipment;
   const best = usableNoFields(state).filter(v => v >= 3).pop();
