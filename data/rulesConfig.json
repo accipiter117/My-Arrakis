@@ -63,7 +63,7 @@
       "enabled": false
     },
     "ixTlCards": true,
-    "techTokens": "auto"
+    "techTokens": "on"
   },
   "implementationDecisions": {
     "description": "Rules that exist only because a physical-table interaction needs a digital equivalent. Every entry here must have a one-line justification so it's auditable later.",
@@ -174,7 +174,7 @@
       },
       {
         "id": "techTokens",
-        "justification": "Tech Tokens variant (expansion plan M4, I&T rulebook p.4-5). expansions.techTokens: 'auto' (on when the Ixians or Tleilaxu are seated, plan default D3, to confirm), 'on' or 'off'; chosen per game in the menu. Default owners (Tleilaxu Axlotl Tanks, Ixians Heighliners, Fremen Spice Production) take theirs at setup; the rest are dealt at random after the first storm, one each to factions without a token, in turn order from the First Player. Tokens left over when every faction holds one stay out of play (rulebook wording, to confirm). Income is paid from the Bank at the end of the phase: 1 spice per token held, once per phase per token, not when the excluded faction is the only trigger. Triggers: any free force revival (the Fremen ally's 3 free count; a Ghola card does not); any shipment from reserves to the planet, including a Bene Gesserit advisor, but not a Fremen shipment (their reserves are the deep desert, the same reading as Spiritual Advisors) nor Guild cross-planet or back-to-reserve shipping; any CHOAM Charity claim. The battle winner takes one of the loser's tokens (their choice) before any Face Dancer reveal; no transfer when neither side wins. One faction holding all three counts as one stronghold (TECH_STRONGHOLD in victory counting); allies cannot combine them."
+        "justification": "Tech Tokens variant (expansion plan M4, I&T rulebook p.4-5). expansions.techTokens: 'on' in every game (project owner's decision on D3), 'auto' (only with the Ixians or Tleilaxu seated) or 'off'; chosen per game in the menu. Default owners (Tleilaxu Axlotl Tanks, Ixians Heighliners, Fremen Spice Production) take theirs at setup; the rest are dealt at random after the first storm, one each to factions without a token, in turn order from the First Player. If tokens remain once every faction holds one (two-player games), dealing carries on round the table in the same order, so every token has an owner (project owner's decision). Income is paid from the Bank at the end of the phase: 1 spice per token held, once per phase per token, not when the excluded faction is the only trigger. Triggers: any free force revival (the Fremen ally's 3 free count; a Ghola card does not); any shipment from reserves to the planet, including a Bene Gesserit advisor, but not a Fremen shipment (their reserves are the deep desert, the same reading as Spiritual Advisors) nor Guild cross-planet or back-to-reserve shipping; any CHOAM Charity claim. The battle winner takes one of the loser's tokens (their choice) before any Face Dancer reveal; no transfer when neither side wins. One faction holding all three counts as one stronghold (TECH_STRONGHOLD in victory counting); allies cannot combine them."
       }
     ]
   },
