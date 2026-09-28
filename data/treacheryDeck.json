@@ -255,6 +255,76 @@
       "name": "Kull Wahad",
       "category": "worthless",
       "expansion": "ixTl"
+    },
+    {
+      "id": "distrans",
+      "name": "Distrans",
+      "category": "special",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "juiceOfSapho",
+      "name": "Juice of Sapho",
+      "category": "special",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "mirrorWeapon",
+      "name": "Mirror Weapon",
+      "category": "mirrorWeapon",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "portableSnooper",
+      "name": "Portable Snooper",
+      "category": "portableSnooper",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "ornithopter",
+      "name": "Ornithopter",
+      "category": "special",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "nullentropyBox",
+      "name": "Nullentropy Box",
+      "category": "special",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "semutaDrug",
+      "name": "Semuta Drug",
+      "category": "special",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "residualPoison",
+      "name": "Residual Poison",
+      "category": "special",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "stoneBurner",
+      "name": "Stone Burner",
+      "category": "stoneBurner",
+      "expansion": "richese",
+      "cache": true
+    },
+    {
+      "id": "karamaRichese",
+      "name": "Karama",
+      "category": "special",
+      "expansion": "richese",
+      "cache": true
     }
   ]
 }
