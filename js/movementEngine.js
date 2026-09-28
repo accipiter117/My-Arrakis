@@ -10,6 +10,7 @@
 // a real isSectorInStorm(territoryId, sector) implementation is a one-line
 // change at each of the two TODO markers below, not a redesign.
 
+import { noteRicheseMove } from './noField.js';
 import { recordTrigger } from './techTokens.js';
 import { balisetBlocks } from './choam.js';
 import { spendingPower, paySpice } from './allySupport.js';
@@ -227,6 +228,7 @@ function executeMove(state, factionId, fromTerritoryId, toTerritoryId, amount, s
   // Starred forces travel with the group (starred first by default), and
   // never more starred can stay behind than the forces that remain.
   const forces = state.factions[factionId].forces;
+  if (factionId === 'richese') noteRicheseMove(state, fromTerritoryId, toTerritoryId, amount, forces.onBoard[fromTerritoryId]);
   const starredHere = forces.starredOnBoard?.[fromTerritoryId] ?? 0;
   const remaining = forces.onBoard[fromTerritoryId] - amount;
   const starred = Math.max(starredHere - remaining, Math.min(amount, starredHere, starredRequested ?? amount));
