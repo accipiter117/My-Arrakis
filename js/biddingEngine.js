@@ -38,7 +38,9 @@ function startBiddingPhase(state) {
   // This reduces the normal auction by one card. Not yet wired here; the
   // hook point is noted so it isn't silently forgotten when Richese is added.
   let normalCardCount = biddingFactionIds.length;
-  if (state.factions.richese && !isAtHandLimit(state, 'richese')) {
+  // Richese auction a cache card every round while any remain: one fewer normal card.
+  if ((state.factions.richese?.cache ?? []).length) normalCardCount -= 1;
+  if (false) {
     // TODO: prompt Richese for Once Around vs Silent Auction and
     // first-or-last placement once the Richese cache exists in state.
     // normalCardCount -= 1;
@@ -258,6 +260,8 @@ function returnRemainingCardsToDeck(state) {
 }
 
 export {
+  payForCard,
+  drawTreacheryCard,
   handLimitFor,
   isAtHandLimit,
   startBiddingPhase,
