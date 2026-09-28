@@ -19,6 +19,7 @@
 //     exposed as separate functions rather than automated inside
 //     initializeGame() itself.
 
+import { initNoField } from './noField.js';
 import { techTokensWanted, initTechTokens } from './techTokens.js';
 import { shuffle, setSeed, newSeed } from './random.js';
 import { createInitialGameState } from './gameState.js';
@@ -257,7 +258,7 @@ function initializeGame(config) {
 
   applyStartingStarredOnBoard(state);
   // Richese: a separate cache of 10 cards, not part of the hand.
-  if (state.factions.richese) state.factions.richese.cache = treacheryDeckData.cards.filter(c => c.cache).map(c => c.id);
+  if (state.factions.richese) { state.factions.richese.cache = treacheryDeckData.cards.filter(c => c.cache).map(c => c.id); initNoField(state); }
   // Tech Tokens variant: default owners take theirs now, the rest after the first storm.
   if (techTokensWanted(rulesConfig, activeFactionIds)) initTechTokens(state);
   // Every leader's printed value (used for Ghola prices and leader deals).
