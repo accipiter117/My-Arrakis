@@ -13,7 +13,7 @@
 // straightforward battle plan), so the player can never get stuck.
 
 import { TECH_TOKENS } from '../js/techTokens.js';
-import { battleSpice, battleSupportFor } from '../js/allySupport.js';
+import { battleSpice, battleSupportFor, spendingPower } from '../js/allySupport.js';
 import * as biddingEngine from '../js/biddingEngine.js';
 import * as revivalEngine from '../js/revivalEngine.js';
 import * as movementEngine from '../js/movementEngine.js';
@@ -472,6 +472,54 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           p.querySelector('[data-action="yes"]').onclick = () => done(true);
           p.querySelector('[data-default-action]').onclick = () => done(false);
         });
+    },
+
+    // --- Richese cache auctions ------------------------------------------------
+    chooseCacheAuction(state, factionId, { cache }) {
+      return ask('Your cache auction',
+        `<p>This round you must auction one card from your cache (one fewer normal card is dealt). Choose the card, when it is sold, and how.</p>
+         <label class="field"><span>Card</span><select name="c">${options(cache.map(id => [id, cardName(id)]), cache[0])}</select></label>
+         <label class="field"><span>When</span><select name="w">${options([['first', 'First, before the normal cards'], ['last', 'Last, after them']], 'first')}</select></label>
+         <label class="field"><span>How</span><select name="m">${options([['onceAround', 'Once Around: one bid each, then you may outbid'], ['silent', 'Silent: everyone names a price at once']], 'onceAround')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Announce</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done({ cardId: field(p, 'c').value, position: field(p, 'w').value, method: field(p, 'm').value }));
+    },
+    chooseOnceAroundDirection(state, factionId) {
+      return ask('Which way round?',
+        `<p>Once Around: each faction bids once, starting beside you.</p>
+         <label class="field"><span>Direction</span><select name="d">${options([['cw', 'In seating order'], ['ccw', 'Against seating order']], 'cw')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'd').value));
+    },
+    chooseOnceAroundBid(state, factionId, { cardId, highBid }) {
+      const max = spendingPower(state, factionId);
+      return ask(`Richese auction: ${cardName(cardId)}`,
+        `<p>Once Around: this is your only chance to bid. High bid so far: ${highBid || 'none'}. Richese may outbid the final high bid.</p>
+         <label class="field"><span>Your bid</span><select name="b">${options([['', 'Pass'], ...range(highBid + 1, Math.max(highBid, max)).map(n => [n, `${n} spice`])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'b').value; done(v === '' ? null : Number(v)); });
+    },
+    chooseOnceAroundFinal(state, factionId, { cardId, highBid }) {
+      const max = spendingPower(state, factionId);
+      return ask(`Keep ${cardName(cardId)}?`,
+        `<p>The high bid is ${highBid}. Outbid it to keep the card yourself (you pay the Emperor or the Bank), or let it sell and collect ${highBid}.</p>
+         <label class="field"><span>Outbid</span><select name="b">${options([['', `Sell for ${highBid}`], ...range(highBid + 1, Math.max(highBid, max)).map(n => [n, `${n} spice`])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'b').value; done(v === '' ? null : Number(v)); });
+    },
+    chooseSilentBid(state, factionId, { cardId }) {
+      const max = spendingPower(state, factionId);
+      return ask(`Silent auction: ${cardName(cardId)}`,
+        `<p>Everyone names a price in secret; the highest wins (ties go to the earlier faction in storm order). 0 is allowed.</p>
+         <label class="field"><span>Your price</span><select name="b">${options(range(0, max).map(n => [n, `${n} spice`]), 0)}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Seal it</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(num(p, 'b')));
+    },
+    chooseFreeOrRemove(state, factionId, { cardId }) {
+      return ask('Nobody bid',
+        `<p>Nobody bid for ${esc(cardName(cardId))}. Take it free, or remove it from the game?</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Remove it</button><button class="btn btn--primary" data-default-action>Take it</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done('remove'); p.querySelector('[data-default-action]').onclick = () => done('take'); });
     },
 
     // --- CHOAM -------------------------------------------------------------
