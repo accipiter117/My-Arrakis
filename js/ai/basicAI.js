@@ -18,6 +18,7 @@
 // canX() validators a human action would use, so an illegal proposal is
 // simply refused rather than bending the rules.
 
+import { battleSpice } from '../allySupport.js';
 import { defaultTokenChoice } from '../techTokens.js';
 import { random } from '../random.js';
 import * as movementEngine from '../movementEngine.js';
@@ -120,7 +121,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const forcesCommitted = Math.min(present, Math.max(plan.forcesCommitted, intel.value + 1));
       const starredForcesCommitted = Math.min(starredPresent, forcesCommitted);
       // Fremen fight at full strength without spice (advanced), so they never pay it.
-      const spiceCommitted = factionId === 'fremen' ? 0 : Math.max(0, Math.min(forcesCommitted, me.spice - 2));
+      const spiceCommitted = factionId === 'fremen' ? 0 : Math.max(0, Math.min(forcesCommitted, battleSpice(state, factionId) - 2));
       const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
       return { ...plan, forcesCommitted, starredForcesCommitted, spiceCommitted,
                supportedStarredCount, supportedOrdinaryCount: spiceCommitted - supportedStarredCount };
@@ -226,6 +227,76 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const best = Object.entries(reachable).sort((a, b) => gain(b[1]) - gain(a[1]))[0];
       return best && gain(best[1]) > 0 ? best[0] : null;
     },
+    // --- CHOAM ---------------------------------------------------------------
+    // End of a phase: cash every duplicate; cash worthless cards too, keeping at
+    // most one effect card (Kull Wahad first, then La La La) while spice is healthy.
+    chooseChoamDiscards(state, factionId, { duplicates, worthless }) {
+      const me = own(state, factionId);
+      const keepOrder = ['kullWahad', 'laLaLa', 'tripToGamont', 'jubbaCloak', 'baliset', 'kulon'];
+      const keep = me.spice >= 6 && me.treacheryHand.length < 5 ? keepOrder.find(id => worthless.includes(id)) : null;
+      return [...duplicates, ...worthless.filter(id => id !== keep && !duplicates.includes(id))];
+    },
+    // Worthless effects, used only where they clearly help.
+    chooseChoamEffect(state, factionId, { cardId, options, context = {} }) {
+      const ally = allianceEngine.allyOf(state, factionId);
+      const forces = (f, t) => state.factions[f]?.forces.onBoard[t] ?? 0;
+      // Kull Wahad: stop a Karama aimed at the ally's own power (Voice, Prescience, capture).
+      if (cardId === 'kullWahad') {
+        const owner = { voice: 'gesserit', prescience: 'atreides', capture: 'harkonnen' }[context.purpose];
+        return owner && owner === ally ? options[0] : null;
+      }
+      if (cardId === 'laLaLa') {
+        const best = options.filter(f => f !== ally).sort((a, b) => (state.factions[b].revivalTanks ?? 0) - (state.factions[a].revivalTanks ?? 0))[0];
+        return best && (state.factions[best].revivalTanks ?? 0) >= 3 ? best : null;
+      }
+      if (cardId === 'jubbaCloak') {
+        const best = options.slice().sort((a, b) => forces(factionId, b) - forces(factionId, a))[0];
+        return best && forces(factionId, best) >= 3 ? best : null;
+      }
+      if (cardId === 'kulon') return Object.values(own(state, factionId).forces.onBoard).some(n => n >= 3) ? true : null;
+      if (cardId === 'baliset') {
+        // Keep the strongest neighbour out of a CHOAM-held stronghold.
+        const near = o => (state.board.territories[o.territoryId]?.type === 'stronghold' ? 1 : 0)
+          * (state.board.territories[o.territoryId]?.adjacentDraft ?? []).reduce((n, t) => n + forces(o.factionId, t), 0);
+        const best = options.slice().sort((a, b) => near(b) - near(a))[0];
+        return best && near(best) >= 3 ? best : null;
+      }
+      if (cardId === 'tripToGamont') {
+        // Break a lone-force hold on a stronghold, preferring the faction with the most strongholds.
+        const held = f => Object.keys(own(state, f).forces.onBoard).filter(t => state.board.territories[t]?.type === 'stronghold').length;
+        const lone = options.filter(o => o.factionId !== ally && forces(o.factionId, o.territoryId) === 1 && state.board.territories[o.territoryId]?.type === 'stronghold');
+        const best = lone.sort((a, b) => held(b.factionId) - held(a.factionId))[0];
+        return best && held(best.factionId) >= 2 ? best : null;
+      }
+      return null;
+    },
+    // Inflation: Double while CHOAM is short of spice (its own collection dwarfs what it pays out).
+    chooseInflation(state, factionId) {
+      return state.meta.turn >= 2 && own(state, factionId).spice < 8 ? 'double' : null;
+    },
+    // Pay off the Auditor when the hand holds something worth hiding and it stays affordable.
+    chooseCancelAudit(state, factionId, { cost }) {
+      const me = own(state, factionId);
+      const precious = me.treacheryHand.some(id => id.startsWith('karama') || cardLookup[id]?.category === 'specialWeapon');
+      return precious && me.spice - cost >= 2;
+    },
+    // Ally trade: CHOAM passes on its least useful card; the ally answers with its own least useful.
+    chooseChoamAllyTrade(state, factionId, allyId) {
+      const hand = own(state, factionId).treacheryHand;
+      const dud = hand.find(id => cardLookup[id]?.category === 'worthless') ?? null;
+      return dud && own(state, allyId).treacheryHand.length ? dud : null;
+    },
+    chooseChoamAllyTradeResponse(state, factionId, { offered }) {
+      const worth = id => { const c = cardLookup[id]?.category;
+        return c === 'worthless' ? 0 : ['weatherControl', 'familyAtomics'].includes(id) ? 1 : c === 'special' ? 2 : 5; };
+      const mine = own(state, factionId).treacheryHand.slice().sort((a, b) => worth(a) - worth(b))[0];
+      return mine && worth(mine) <= worth(offered) ? mine : null;
+    },
+    // Pay for the ally's forces, keeping a reserve for CHOAM's own needs.
+    chooseChoamBattleSupport(state, factionId, { max }) {
+      return Math.max(0, Math.min(max, own(state, factionId).spice - 4));
+    },
+
     // Auction: bury the least useful card at the bottom of the deck.
     chooseIxianBury(state, factionId, ids) {
       const worth = id => { const c = cardLookup[id]?.category;
@@ -524,7 +595,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const forcesCommitted = Math.min(present, Math.ceil(present * (isStronghold ? 0.75 : 0.5)));
       const starredForcesCommitted = Math.min(starredPresent, forcesCommitted);
       // Fremen fight at full strength without spice (advanced), so they never pay it.
-      const spiceCommitted = factionId === 'fremen' ? 0 : Math.max(0, Math.min(forcesCommitted, me.spice - 2));
+      const spiceCommitted = factionId === 'fremen' ? 0 : Math.max(0, Math.min(forcesCommitted, battleSpice(state, factionId) - 2));
       const supportedStarredCount = Math.min(starredForcesCommitted, spiceCommitted);
       const supportedOrdinaryCount = spiceCommitted - supportedStarredCount;
 
