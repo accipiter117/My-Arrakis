@@ -46,3 +46,16 @@ export function setPledge(state, giverId, amount) {
 export function clearPledges(state) {
   state.meta.allyPledges = {};
 }
+
+// CHOAM alliance: CHOAM may pay for some or all of its ally's forces in a
+// battle. The amount CHOAM offers for the current battle is recorded on
+// state.meta.currentBattle.support; it is spent before the ally's own spice.
+export function battleSupportFor(state, factionId) {
+  const offered = state.meta?.currentBattle?.support?.[factionId] ?? 0;
+  if (!offered || allyOf(state, factionId) !== 'choam') return 0;
+  return Math.max(0, Math.min(offered, state.factions.choam.spice));
+}
+
+export function battleSpice(state, factionId) {
+  return state.factions[factionId].spice + battleSupportFor(state, factionId);
+}
