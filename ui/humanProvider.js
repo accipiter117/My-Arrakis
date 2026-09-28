@@ -79,6 +79,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
 
   const field = (p, name) => p.querySelector(`[name="${name}"]`);
   const num = (p, name) => Number(field(p, name)?.value ?? 0);
+  // Number pickers are drop-downs of the legal values: no keyboard, no zooming.
+  const nums = (lo, hi, sel) => options(range(lo, Math.max(lo, hi)).map(n => [n, n]), Math.min(Math.max(sel, lo), Math.max(lo, hi)));
   const setError = (p, message) => {
     const el = p.querySelector('.decision__error');
     el.textContent = message ?? '';
@@ -138,7 +140,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         `${seen}
          <dl class="facts"><dt>Current bid</dt><dd>${esc(leading)}</dd><dt>Your spice</dt><dd>${me.spice}</dd>
          <dt>Your hand</dt><dd>${me.treacheryHand.length} / ${biddingEngine.handLimitFor(factionId)}</dd></dl>
-         <label class="field"><span>Your bid</span><input type="number" name="bid" min="${currentBid + 1}" max="${me.spice}" value="${currentBid + 1}"></label>
+         <label class="field"><span>Your bid</span><select name="bid">${nums(currentBid + 1, spendingPower(state, factionId), currentBid + 1)}</select></label>
          <p class="decision__error" hidden></p>
          <div class="decision__actions">
            <button class="btn btn--primary" data-action="bid">Bid</button>
@@ -224,31 +226,31 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         `<dl class="facts"><dt>Reserves</dt><dd>${me.forces.reserve}</dd><dt>Your spice</dt><dd>${me.spice}</dd><dt>Move range</dt><dd>${range_} territor${range_ === 1 ? 'y' : 'ies'}</dd></dl>
          <fieldset><legend>Ship from reserves</legend>
            <label class="field"><span>Destination</span><select name="shipTo">${options(shipOptions, '')}</select></label>
-           <label class="field"><span>Forces</span><input type="number" name="shipAmount" min="1" max="${me.forces.reserve}" value="${Math.min(3, me.forces.reserve)}"></label>
+           <label class="field"><span>Forces</span><select name="shipAmount">${nums(1, me.forces.reserve, Math.min(3, me.forces.reserve))}</select></label>
            ${(factionId === 'richese' || state.alliances?.some(a => a.factions.includes('richese') && a.factions.includes(factionId))) && usableNoFields(state).length ? `<label class="field"><span>No-Field</span><select name="shipNF">${options([['', 'Ship forces normally'], ...usableNoFields(state).map(v => [v, `Token ${v}: pay for 1 force, ${v} arrive when revealed`])], '')}</select></label>
            ${state.factions.richese.noField.onPlanet ? `<p class="decision__note">Your No-Field token (${state.factions.richese.noField.onPlanet.value}) in ${esc(territoryName(state.factions.richese.noField.onPlanet.territoryId))} is revealed first if you place another.</p>` : ''}` : ''}
-           ${eliteName && (me.forces.starredReserve ?? 0) > 0 ? `<label class="field"><span>of which ${eliteName}</span><input type="number" name="shipStarred" min="0" max="${me.forces.starredReserve}" value="${Math.min(me.forces.starredReserve, 3, me.forces.reserve)}"></label>` : ''}
+           ${eliteName && (me.forces.starredReserve ?? 0) > 0 ? `<label class="field"><span>of which ${eliteName}</span><select name="shipStarred">${nums(0, me.forces.starredReserve, Math.min(me.forces.starredReserve, 3, me.forces.reserve))}</select></label>` : ''}
            <p class="decision__cost" data-for="ship"></p>
          </fieldset>
          <fieldset><legend>Move one group</legend>
            <label class="field"><span>From</span><select name="moveFrom">${options(fromOptions, '')}</select></label>
            <label class="field"><span>To</span><select name="moveTo"><option value="">Choose a starting territory</option></select></label>
-           <label class="field"><span>Forces</span><input type="number" name="moveAmount" min="1" value="1"></label>
-           ${eliteName ? `<label class="field" data-elite-move hidden><span>of which ${eliteName}</span><input type="number" name="moveStarred" min="0" value="0"></label>` : ''}
+           <label class="field"><span>Forces</span><select name="moveAmount">${nums(1, 1, 1)}</select></label>
+           ${eliteName ? `<label class="field" data-elite-move hidden><span>of which ${eliteName}</span><select name="moveStarred">${nums(0, 0, 0)}</select></label>` : ''}
            ${me.treacheryHand.includes('ornithopter') ? '<label class="choice"><input type="checkbox" name="thopter"> <span>Play the Ornithopter card: this move may go up to 3 territories</span></label>' : ''}
            <p class="decision__note">Your shipment happens first, then your move. Tip: tap ▾ to see the map, where legal choices are outlined; tapping a territory fills this in.</p>
          </fieldset>
          ${me.treacheryHand.includes('hajr') ? `<fieldset><legend>Hajr: an extra move (uses the card)</legend>
            <label class="field"><span>From</span><select name="hajrFrom">${options(fromOptions.map(([v, l]) => [v, v ? l : 'Keep the card']), '')}</select></label>
            <label class="field"><span>To</span><select name="hajrTo"><option value="">Choose a starting territory</option></select></label>
-           <label class="field"><span>Forces</span><input type="number" name="hajrAmount" min="1" value="1"></label>
+           <label class="field"><span>Forces</span><select name="hajrAmount">${nums(1, 1, 1)}</select></label>
            <p class="decision__note">Made after your normal move. Checked again when it happens.</p>
          </fieldset>` : ''}
          ${factionId === 'guild' ? `<fieldset><legend>Guild: or ship on the planet instead</legend>
            <label class="field"><span>Type</span><select name="gType">${options([['', 'Ship from reserves (above)'], ['cross', 'Across the planet'], ['retreat', 'Back to reserves (1 spice per 2)']], '')}</select></label>
            <label class="field"><span>From</span><select name="gFrom">${options(Object.entries(me.forces.onBoard).map(([id, n]) => [id, `${territoryName(id)} (${n})`]), Object.keys(me.forces.onBoard)[0])}</select></label>
            <label class="field"><span>To</span><select name="gTo">${options(territoryIds.map(id => [id, territoryName(id)]), territoryIds[0])}</select></label>
-           <label class="field"><span>Forces</span><input type="number" name="gAmount" min="1" value="1"></label>
+           <label class="field"><span>Forces</span><select name="gAmount">${nums(1, me.forces.onBoard[Object.keys(me.forces.onBoard)[0]] ?? 1, 1)}</select></label>
          </fieldset>` : ''}
          <p class="decision__error" hidden></p>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
@@ -260,7 +262,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             field(p, 'moveTo').innerHTML = from
               ? options(reachable.map(id => [id, territoryName(id)]), reachable[0])
               : '<option value="">Choose a starting territory</option>';
-            if (from) field(p, 'moveAmount').value = me.forces.onBoard[from];
+            field(p, 'moveAmount').innerHTML = from ? nums(1, me.forces.onBoard[from], me.forces.onBoard[from]) : nums(1, 1, 1);
           };
           // Outline legal choices on the map: where this group can move
           // once one is chosen, otherwise where the shipment can land.
@@ -326,8 +328,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const elite = me.forces.starredOnBoard?.[field(p, 'moveFrom').value] ?? 0;
             box.hidden = !elite;
             const input = field(p, 'moveStarred');
-            input.max = elite;
-            if (num(p, 'moveStarred') > elite) input.value = elite;
+            input.innerHTML = nums(0, elite, Math.min(num(p, 'moveStarred'), elite));
           };
           field(p, 'moveFrom').onchange = () => { refreshDestinations(); refreshElite(); check(); };
           refreshElite();
@@ -351,9 +352,14 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const from = field(p, 'hajrFrom').value;
             const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, field(p, 'thopter')?.checked ? Math.max(3, range_) : range_) : [];
             field(p, 'hajrTo').innerHTML = from ? options(reachable.map(id => [id, territoryName(id)]), reachable[0]) : '<option value="">Choose a starting territory</option>';
-            if (from) field(p, 'hajrAmount').value = me.forces.onBoard[from];
+            field(p, 'hajrAmount').innerHTML = from ? nums(1, me.forces.onBoard[from], me.forces.onBoard[from]) : nums(1, 1, 1);
           };
           p.querySelectorAll('select, input').forEach(el => { if (!['moveFrom', 'hajrFrom'].includes(el.name)) el.oninput = el.onchange = check; });
+          if (field(p, 'gFrom')) field(p, 'gFrom').onchange = field(p, 'gFrom').oninput = () => {
+            const n = me.forces.onBoard[field(p, 'gFrom').value] ?? 1;
+            field(p, 'gAmount').innerHTML = nums(1, n, Math.min(num(p, 'gAmount') || 1, n));
+            check();
+          };
           check();
           btn.onclick = () => {
             const shipTo = field(p, 'shipTo').value;
