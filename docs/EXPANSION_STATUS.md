@@ -19,7 +19,7 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
   (tests/leaderResolution.sim.js, tests/spiceCards.sim.js). Switch: expansions.ixTlCards.
 - M2 Tleilaxu: CORE DONE. Faction, Face Dancers (reveal, cycling, Mentat Pause swap), revival economy, limit increase,
   ally half price, Zoal, AI and player decisions, guide entry, tests (tests/tleilaxu.sim.js). Gholas and early leader
-  revival DONE. REMAINING: Ghola buy-back, Face Dancer replacements from the board, Karama powers, audio.
+  revival DONE. Ghola buy-back and Face Dancer replacements from the board DONE. REMAINING: Karama powers, audio.
 - M3 Ixians: CORE DONE. Faction, Cyborgs/Suboids, HMS (placement, movement, spice, victory, entry rules), starting draft,
   auction bury, ally card swap, AI and player decisions, guide, tests (tests/ixians.sim.js). Technology and the Suboid exchange
   DONE. REMAINING: Karama powers, audio.
@@ -39,6 +39,7 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
 - M6 Richese: PART 1 DONE. Faction, leaders, the 10-card cache, cache auction every round (first or last, Once Around or Silent,
   free-or-remove), payments, Harkonnen bonus; AI and player decisions, guide, log; tests (tests/richese.sim.js, incl. 20 AI games).
   No-Field tokens DONE (js/noField.js: shipping, one force for every effect, storm/worm/battle/choice reveals, hidden value, AI use).
-  REMAINING: Black Market, alliance (No-Field ally shipping, giving cache cards), cache card effects (Distrans,
+  Black Market, alliance powers and all nine cache card effects DONE (js/richeseCards.js, tests/richeseCards.sim.js).
+  REMAINING (for reference, now built): Black Market, alliance (No-Field ally shipping, giving cache cards), cache card effects (Distrans,
   Juice of Sapho, Mirror Weapon, Portable Snooper, Ornithopter, Nullentropy Box, Semuta Drug, Residual Poison, Stone Burner).
 - Not started (was: M7 Leader Skills, M8 Stronghold Cards, M9 cross-cutting, M10 AI, M11 UI: not started.
