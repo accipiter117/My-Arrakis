@@ -823,3 +823,29 @@ body.has-console.console-muted .console-feed { display: none; }
 
 /* iOS zooms into any form control under 16px: keep them at 16px. */
 .decision select, .decision input, .sheet select, .sheet input:not([type=range]) { font-size: 16px; }
+
+/* --- The bottom bar stays in reach: panels and sheets open above it --------------------- */
+.dock { position: relative; z-index: 36; }
+.sheet, .decision-panel { bottom: var(--dock-h, 0px); padding-bottom: 0.6rem; }
+.decision-panel { padding-bottom: 0.8rem; }
+body.has-console .decision-panel,
+body.has-console #sheet-hand,
+body.has-console #sheet-factions,
+body.has-console #sheet-log,
+body.has-console #sheet-truth { max-height: max(calc(var(--below-board) - var(--dock-h, 0px)), 42dvh); }
+
+/* --- Battle plan: compact --------------------------------------------------------------- */
+.battle-summary { display: flex; justify-content: space-between; gap: 0.5rem; margin: 0 0 0.55rem; padding: 0.4rem 0.6rem;
+  font-family: var(--font-data); font-size: 12px; color: var(--sand-dim); background: rgba(0, 0, 0, 0.25); border: 1px solid #3a2b1c; }
+.battle-summary strong { color: var(--sand); font-size: 15px; margin-left: 0.25rem; }
+.field-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0 0.55rem; }
+.field--stack { display: flex; flex-direction: column; align-items: stretch; gap: 0.2rem; }
+.field--stack > span { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--sand-dim); }
+.decision__help { font-size: 12px; color: var(--sand-dim); margin: 0.2rem 0 0.4rem; }
+.decision__help summary { cursor: pointer; color: var(--sand-soft); }
+
+/* --- Battle reveal: room to read it, with the battlefield still in view above ---------- */
+body.has-console .event-layer.event-layer--battle { top: 30%; padding-top: 0; align-items: flex-start; overflow: hidden; }
+body.has-console .event-layer--battle .battle-reveal { max-height: 100%; width: min(96%, 400px); }
+.battle-reveal .br-rows { overflow-y: auto; }
+.field--stack select { width: 100%; }
