@@ -82,7 +82,9 @@ export function createBiddingBrain({ cardLookup, rng = random }) {
       const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
       const keep = Math.min(faction.spice, 3 + (faction.forces.reserve > 4 ? 4 : 0) + Math.min(4, Math.floor(onBoard / 4)));
       // Card value in spice terms, tempered: spice has many other uses.
-      const maxBid = Math.floor(value * 0.8 * spiceWorth + rng() * 1.2);
+      // A faction sitting on a fortune (the Guild's shipping fees) should spend it on cards.
+      const flush = faction.spice >= 40 ? 1.6 : faction.spice >= 25 ? 1.25 : 1;
+      const maxBid = Math.floor(value * 0.8 * spiceWorth * flush + rng() * 1.2);
       const next = currentBid + 1;
       if (next > maxBid || next > faction.spice - keep) return null;
       return next;
