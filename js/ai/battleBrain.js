@@ -58,11 +58,13 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     const weapons = hand.filter(id => WEAPONS.includes(cat(id)));
     const defenses = hand.filter(id => DEFENSES.includes(cat(id)));
     const worthless = hand.filter(id => cat(id) === 'worthless');
-    let weaponCardId = weapons.length && rng() < 0.75 ? pick(weapons) : (worthless.length && rng() < 0.4 ? worthless[0] : null);
-    let defenseCardId = defenses.length && rng() < 0.7 ? pick(defenses) : null;
+    let weaponCardId = weapons.length && rng() < 0.85 ? pick(weapons) : (worthless.length && rng() < 0.4 ? worthless[0] : null);
+    let defenseCardId = defenses.length && rng() < 0.8 ? pick(defenses) : null;
     if (cat(weaponCardId) === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[defenseCardId])) defenseCardId = null;
-    const dial = Math.round(forces * (0.3 + rng() * 0.7));
-    const spice = Math.round(dial * rng());
+    // Rivals plan to win too: assume they dial and back more than half the time.
+    const dial = Math.round(forces * (0.45 + rng() * 0.55));
+    const oppSpice = opp === 'fremen' ? 0 : Math.max(0, (state.factions[opp].spice ?? 0) - 1);
+    const spice = Math.min(dial, oppSpice, Math.round(dial * (0.4 + rng() * 0.6)));
     const plan = {
       forcesCommitted: dial, starredForcesCommitted: 0, spiceCommitted: spice,
       supportedStarredCount: 0, supportedOrdinaryCount: spice,
@@ -197,26 +199,42 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     // Best plan by expected utility across sampled opponent hands and plans.
     choosePlan(state, me, territoryId, opp, intel, voiceWeIssued) {
       const pool = unknownPool(state, me);
+      const isAggressor = (state.meta.currentBattle?.aggressorId ?? me) === me;
+      // Each future is a hand and two plans they might make with it: rivals plan to
+      // win too, so they get the best of three against ours (a random rival was
+      // a soft target and made the AI about 15 points overconfident).
       const futures = [];
       for (let i = 0; i < samples; i++) {
         const hand = sampleHand(state, opp, pool);
-        futures.push(samplePlan(state, opp, territoryId, hand, intel, voiceWeIssued));
+        futures.push([0, 1, 2].map(() => samplePlan(state, opp, territoryId, hand, intel, voiceWeIssued)));
       }
-      const isAggressor = (state.meta.currentBattle?.aggressorId ?? me) === me;
+      const against = (plan, theirPlans) => {
+        let worst = Infinity, win = false;
+        for (const t of theirPlans) { const u = utility(state, me, opp, territoryId, plan, t, isAggressor); if (u < worst) { worst = u; win = lastWin; } }
+        lastWin = win;
+        return worst;
+      };
       let best = null;
       for (const plan of candidates(state, me, territoryId, opp)) {
         const risk = traitorRisk(state, me, opp, plan.leaderId);
         const myForces = state.factions[me].forces.onBoard[territoryId] ?? 0;
         const betrayed = -tokenStakes(state, me, opp).loss - myForces - (plan.leaderId ? (leaderValue[plan.leaderId] ?? 0) + 1.5 : 0);
         let total = 0, wins = 0;
-        for (const theirs of futures) { total += utility(state, me, opp, territoryId, plan, theirs, isAggressor); if (lastWin) wins++; }
+        for (const theirs of futures) { total += against(plan, theirs); if (lastWin) wins++; }
         const expected = (1 - risk) * (total / futures.length) + risk * betrayed;
         if (!best || expected > best.expected) best = { plan, expected, wins, risk };
       }
       if (!best) return null;
       const { starredUnitValue, ...plan } = best.plan;
       // What the AI believed when it chose (read by the match export; the engine ignores it).
-      plan._ai = { winChance: Math.round((1 - best.risk) * (best.wins / futures.length) * 100) / 100, traitorRisk: Math.round(best.risk * 100) / 100,
+      // Judged on fresh samples: the plan was picked as the best against the first
+      // set, so scoring it on that same set flatters it (the optimiser's curse).
+      let freshWins = 0;
+      for (let i = 0; i < samples; i++) {
+        const hand = sampleHand(state, opp, pool);
+        against(best.plan, [0, 1, 2].map(() => samplePlan(state, opp, territoryId, hand, intel, voiceWeIssued))); if (lastWin) freshWins++;
+      }
+      plan._ai = { winChance: Math.round((1 - best.risk) * (freshWins / samples) * 100) / 100, traitorRisk: Math.round(best.risk * 100) / 100,
         expectedValue: Math.round(best.expected * 10) / 10, samples: futures.length };
       return plan;
     }
