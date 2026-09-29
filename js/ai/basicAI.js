@@ -273,7 +273,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     // Black Market: sell a weak card, sometimes claiming it is a strong one.
     chooseBlackMarket(state, factionId, { hand }) {
       const weak = hand.slice().sort((a, b) => cardWorth(a) - cardWorth(b))[0];
-      if (hand.length < 2 || cardWorth(weak) > 3) return null;
+      if (hand.length < 2 || cardWorth(weak) > (hand.length >= 3 ? 4 : 3)) return null;
       const bluff = random() < 0.4;
       return { cardId: weak, claimId: bluff ? (Object.keys(cardLookup).find(id => cardLookup[id]?.category === 'specialWeapon') ?? weak) : weak, method: 'normal' };
     },
@@ -316,10 +316,12 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return cap > highBid ? highBid + 1 : null;
     },
     chooseOnceAroundFinal(state, factionId, { cardId, highBid }) {
-      const cap = Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS), spendingPower(state, factionId) - 3);
-      return cap > highBid ? highBid + 1 : null; // only keep a card rivals value cheaply
+      // Keep only a card worth far more than its price (the sale is Richese's income).
+      const cap = Math.min(cacheCardValue(cardId, cardEffects.UNBUILT_CARDS) - 3, spendingPower(state, factionId) - 6);
+      return cap > highBid ? highBid + 1 : null;
     },
     chooseSilentBid(state, factionId, { cardId, blackMarket, actualId }) {
+      if (factionId === 'richese' && !blackMarket) return 0; // never pay to keep our own cache card
       const worth = blackMarket ? Math.min(cardWorth(actualId ?? cardId), actualId ? 8 : 3) : cacheCardValue(cardId, cardEffects.UNBUILT_CARDS);
       return Math.max(0, Math.min(worth - 1, spendingPower(state, factionId) - 3));
     },
@@ -538,7 +540,8 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const free = revivalEngine.freeRevivalAllowance(factionId, state);
       // How many may be revived this turn (3 normally; no limit for the
       // Tleilaxu; 5 if the Tleilaxu raised it) and what each costs.
-      const cap = Math.min(revivalEngine.revivalTerms(state, factionId).cap, 20);
+      // CHOAM revives cheaply but without limit: bring back only what it can ship soon.
+      const cap = Math.min(revivalEngine.revivalTerms(state, factionId).cap, factionId === 'choam' ? 6 : 20);
       let forces = Math.min(free, tanked);
       if (me.spice >= 12 || factionId === 'tleilaxu') {
         forces = Math.min(cap, tanked);
