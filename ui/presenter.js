@@ -169,7 +169,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     // A battle is about to be fought: go there before any plans are made.
     async battleStart(e) {
       if (!speed()) return;
-      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380 });
+      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.22 });
     },
 
     async auctionStart(e) {
@@ -371,7 +371,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     async battle(e) {
       if (!speed()) return;
       const agg = e.aggressorId, def = e.defenderId, sides = [agg, def];
-      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380 });
+      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.22 });
       const P = e.plans;
       const opp = f => (f === agg ? def : agg);
       const cat = id => cardLookup?.[id]?.category;
@@ -429,6 +429,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
       // Build the stage.
       layer.classList.remove('event-layer--top');
+      layer.classList.add('event-layer--battle');
       layer.innerHTML = `<div class="battle-reveal" role="status">
         <div class="br-eyebrow">Battle</div>
         <div class="br-title">${esc(names.territory(e.territoryId))}</div>
@@ -519,6 +520,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       hurry = null;
       layer.hidden = true;
       layer.innerHTML = '';
+      layer.classList.remove('event-layer--battle');
       await playTechTransfers();
     }
   };
