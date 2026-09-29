@@ -50,6 +50,31 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     return display;
   }
 
+  // The spice-blow phase is fully resolved before its cards are shown: hide the
+  // markers of cards not yet shown, so each appears as its own card does.
+  function displayUpToDraw(state, e) {
+    const draws = state.nexus?.draws ?? [];
+    const i = draws.findIndex(d => d.kind === e.kind && d.territoryId === e.territoryId && d.amount === e.amount && d.pile === e.pile);
+    const later = i < 0 ? [] : draws.slice(i + 1).filter(d => d.kind === 'territory');
+    if (!later.length) return state;
+    const display = structuredClone(state);
+    for (const d of later) {
+      const k = display.board.spiceBlowMarkers.findIndex(m => m.territoryId === d.territoryId && m.amount >= d.amount);
+      if (k >= 0) display.board.spiceBlowMarkers.splice(k, 1);
+    }
+    return display;
+  }
+  // Units just after a battle, before a Face Dancer swap: the winner's troops still
+  // stand there and the Tleilaxu have not yet arrived.
+  function displayBeforeSwap(state, fd) {
+    const display = structuredClone(state);
+    const tl = display.factions.tleilaxu?.forces, win = display.factions[fd.winnerId]?.forces;
+    if (tl) { tl.onBoard[fd.territoryId] = Math.max(0, (tl.onBoard[fd.territoryId] ?? 0) - (fd.placed ?? 0)); if (!tl.onBoard[fd.territoryId]) delete tl.onBoard[fd.territoryId]; }
+    if (win && fd.returned) win.onBoard[fd.territoryId] = (win.onBoard[fd.territoryId] ?? 0) + fd.returned;
+    return display;
+  }
+  const hold = ms => new Promise(r => setTimeout(r, ms));
+
   const card = (eyebrow, title, detail = '') =>
     `<div class="event-card__eyebrow">${esc(eyebrow)}</div><div class="event-card__title">${esc(title)}</div>${detail ? `<div class="event-card__detail">${detail}</div>` : ''}`;
 
@@ -121,6 +146,30 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       const at = board.screenPointOf?.(board.labelPoint(e.territoryId));
       await flyTech(e.token, at, e.to, `${esc(TECH_NAMES[e.token])}<br><small>${esc(names.faction(e.from))} → ${esc(names.faction(e.to))}</small>`);
     }
+  }
+
+  // After a battle's reveal: show the survivors on the board with the camera still
+  // there; then any Face Dancer swap, visibly; then any Tech Token changing hands.
+  let pendingFaceDancer = null, battleState = null;
+  async function afterBattle(e) {
+    const fd = pendingFaceDancer && pendingFaceDancer.territoryId === e.territoryId ? pendingFaceDancer : null;
+    pendingFaceDancer = null;
+    if (fd && battleState) {
+      renderDisplay(displayBeforeSwap(battleState, fd));
+      board.pulse(e.territoryId, 'battle', scaled(800));
+      await hold(scaled(1000));
+      await showCard('traitor', `<div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(fd.leaderId))}</div>
+        <div class="event-card__detail">was a Tleilaxu Face Dancer. ${esc(names.faction(fd.winnerId))} keep the win, but lose the leader, and ${fd.returned} troops go home; ${fd.placed} Tleilaxu take ${esc(names.territory(fd.territoryId))}.</div>`, 3200);
+      renderReal();
+      board.pulse(e.territoryId, 'battle', scaled(800));
+      await hold(scaled(1100));
+    } else {
+      renderReal();
+      board.pulse(e.territoryId, 'battle', scaled(700));
+      await hold(scaled(900));
+    }
+    battleState = null;
+    await playTechTransfers();
   }
 
   const handlers = {
@@ -230,12 +279,15 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       }
     },
 
-    async spiceCard(e) {
+    async spiceCard(e, state) {
       if (e.kind === 'territory') {
         if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 480 });
+        // The spice lands on the board as its card is shown, and the camera stays until both are seen.
+        if (speed() && state) renderDisplay(displayUpToDraw(state, e));
         const shown = showCard('spice', card('Spice blow', names.territory(e.territoryId), `<strong>+${e.amount}</strong> spice`), 2300);
         if (speed()) await board.pulse(e.territoryId, 'spice', scaled(900));
         await shown;
+        if (speed()) await hold(scaled(350));
       } else if (e.kind === 'sandtrout') {
         await showCard('worm', card('Sandtrout', 'All alliances end', 'The next worm brings no Nexus, and the spice after it is doubled.'), 2600);
       } else if (e.kind === 'worm') {
@@ -246,8 +298,10 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
           const [x, y] = board.labelPoint(e.devoured);
           await board.focusOn([[x, y]], { ms: scaled(500), minW: 480 });
           await board.wormDelivers({ at: [x, y + 14], ms: scaled(1800) });
+          if (state) renderDisplay(displayUpToDraw(state, e)); // the devoured troops and spice are gone
         }
         await shown;
+        if (speed() && e.devoured) await hold(scaled(500));
       } else {
         await showCard('worm', card('Shai-Hulud', 'Set aside', 'Worms drawn on the first turn return to the deck.'), 2200);
       }
@@ -323,10 +377,10 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       if (speed()) await board.focusOn(e.path.map(board.labelPoint), { ms: scaled(500) });
       await showCard('nexus', card('Hidden Mobile Stronghold', `to ${names.territory(e.to)}`, e.collected ? `collecting <strong>${e.collected}</strong> spice on the way` : 'The Ixians move their HMS.'), 2200);
     },
+    // A Face Dancer is revealed once the battle it decides has been shown (see afterBattle).
     async faceDancer(e) {
-      if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 420 });
-      await showCard('traitor', `<div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(e.leaderId))}</div>
-        <div class="event-card__detail">was a Tleilaxu Face Dancer. ${esc(names.faction(e.winnerId))} keep the win, but lose the leader, and ${e.returned} troops go home; ${e.placed} Tleilaxu take ${esc(names.territory(e.territoryId))}.</div>`, 3200);
+      if (!speed()) return;
+      pendingFaceDancer = e;
     },
     async thumper(e) {
       await showCard('worm', card('Thumper', names.faction(e.factionId), 'calls Shai-Hulud to the last spice territory.'), 2200);
@@ -368,8 +422,9 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     // clash of weapons, the strength sums and the verdict, recomputed with
     // the engine's own rules functions so the player can follow exactly how
     // the result was reached. Tap to move on faster.
-    async battle(e) {
-      if (!speed()) return;
+    async battle(e, state) {
+      if (!speed()) { pendingFaceDancer = null; return; }
+      battleState = state;
       const agg = e.aggressorId, def = e.defenderId, sides = [agg, def];
       await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.22 });
       const P = e.plans;
@@ -423,7 +478,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
           <div class="event-card__detail">${outcome}</div>`, 4000);
         board.pulse(e.territoryId, 'battle', scaled(1000));
         await shown;
-        await playTechTransfers();
+        await afterBattle(e);
         return;
       }
 
@@ -521,7 +576,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       layer.hidden = true;
       layer.innerHTML = '';
       layer.classList.remove('event-layer--battle');
-      await playTechTransfers();
+      await afterBattle(e);
     }
   };
 
