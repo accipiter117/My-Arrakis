@@ -68,6 +68,8 @@ export function createStrategicAI(options) {
         if (f === me || f === myAlly) continue;
         const n = tokensOwnedBy(state, f).length;
         if (n < 2) continue;
+        // Holding the token they lack, I stay clear: losing to them would complete their set.
+        if (n === 2 && tokensOwnedBy(state, me).length) continue;
         const ally = allyOf(state, f);
         const group = ally ? [f, ally] : [f];
         const needed = ally ? state.rulesConfig.victoryVariants.allianceStrongholdCount : state.rulesConfig.victoryVariants.soloStrongholdCount;
