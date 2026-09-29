@@ -144,7 +144,8 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
       if (weaponCardId && weaponCardId === defenseCardId) continue;
       if (cat(weaponCardId) === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[defenseCardId])) continue; // own explosion
       // Fremen fight at full strength without spice (advanced): never back with spice.
-      for (const dial of dials) for (const backed of uniq([0, me === 'fremen' ? 0 : Math.min(dial, Math.max(0, battleSpice(state, me) - 2))])) {
+      const spare = me === 'fremen' ? 0 : Math.max(0, battleSpice(state, me) - 2);
+      for (const dial of dials) for (const backed of uniq([0, Math.min(Math.ceil(dial / 2), spare), Math.min(dial, spare)])) {
         const starred = Math.min(starredPresent, dial);
         const supportedStarredCount = Math.min(starred, backed);
         plans.push({
@@ -182,7 +183,9 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     const iWin = isAggressor ? myS >= theirS : myS > theirS;
     // Played cards the loser discards; a small nudge to shed worthless cards.
     const shed = cat(mine.weaponCardId) === 'worthless' ? 0.3 : 0;
-    const spiceCost = mine.spiceCommitted * 0.5;
+    // Spice matters less to a rich faction (CHOAM especially): it should back its forces.
+    const wealth = battleSpice(state, me);
+    const spiceCost = mine.spiceCommitted * (wealth >= 20 ? 0.2 : wealth >= 10 ? 0.35 : 0.5);
     const leaderPay = wd.noSpiceForKills ? 0 : (theirKilled ? theirs.leaderFightingValue ?? 0 : 0) + (myKilled ? mine.leaderFightingValue ?? 0 : 0);
     lastWin = iWin;
     const stakes = tokenStakes(state, me, opp);
