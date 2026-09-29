@@ -163,7 +163,7 @@ export function createStrategicAI(options) {
         .map(([t]) => ({ t, need: forcesToContest(state, t, me) })).sort((a, b) => a.need - b.need);
       for (const { t, need } of stacks) {
         const action = enterTarget(state, me, t, need);
-        if (action && (action.amount ?? action.movement?.amount ?? 0) >= Math.min(need, 3)) return { action, reason: `fight ${threat.holder} for their Tech Tokens` };
+        if (action && (action.amount ?? action.movement?.amount ?? 0) >= Math.max(3, need - 2)) return { action, reason: `fight ${threat.holder} for their Tech Tokens` };
       }
       return null;
     }
@@ -173,7 +173,8 @@ export function createStrategicAI(options) {
       .sort((a, b) => a.need - b.need);
     for (const { t, need } of targets) {
       const action = enterTarget(state, me, t, need);
-      if (action && (action.amount ?? action.movement?.amount ?? 0) >= Math.min(need, 3)) {
+      // Only block with a fair chance: feeding in a handful of forces just loses them.
+      if (action && (action.amount ?? action.movement?.amount ?? 0) >= Math.max(3, need - 2)) {
         return { action, reason: `stop ${threat.group.join(' and ')} reaching victory` };
       }
     }
@@ -243,8 +244,25 @@ export function createStrategicAI(options) {
         return { action: { territoryId: t, amount: 1, noField: token }, reason: `No-Field ${token} into ${t}` };
       }
     }
-    // Nothing worth it: save the spice, unless almost nothing is on the board.
-    return onBoard >= 2 ? { action: { save: true }, reason: 'save up for a stronghold landing' } : null;
+    // Nothing worth it: save (the muster plan decides when to land).
+    return { action: { save: true }, reason: 'save up for a stronghold landing' };
+  }
+
+  // Guild (rich, few forces) and poor Richese: muster in reserve and land once,
+  // in strength, rather than feeding revived forces into fights a few at a time.
+  function musterPlan(state, me) {
+    const x = state.factions[me];
+    const onBoard = Object.values(x.forces.onBoard).reduce((a, b) => a + b, 0);
+    for (const { t, need } of softestStronghold(state, me)) {
+      if (t === 'hms') continue;
+      const want = Math.min(x.forces.reserve, Math.max(need + 3, 5));
+      if (want < Math.max(need + 3, 5) && x.forces.reserve < 10) continue; // not enough yet for this one
+      if (shipCost(state, me, t, want) <= x.spice - (me === 'guild' ? 5 : 1) && movementEngine.canShip(state, me, t, want).ok) {
+        return { action: { territoryId: t, amount: want }, reason: `land in strength at ${t}` };
+      }
+    }
+    // Not enough yet: keep what is on the board, and save.
+    return onBoard >= 1 || x.forces.reserve < 5 ? { action: { save: true }, reason: 'muster reserves before landing' } : null;
   }
 
   // Denial is a public good: the blocker pays, everyone else benefits. So
@@ -310,6 +328,7 @@ export function createStrategicAI(options) {
       if (!goal) goal = closeOutAction(state, me);
       if (!goal && me === 'choam') goal = choamPlan(state, me);
       if (!goal && me === 'richese') goal = richesePlan(state, me);
+      if ((!goal || goal.action.save) && ['guild', 'richese'].includes(me)) goal = musterPlan(state, me) ?? goal;
       if (!goal) return plan;
       if (goal.action.save) return { ...plan, shipment: null, reason: goal.reason };
 
