@@ -849,3 +849,13 @@ body.has-console .event-layer.event-layer--battle { top: 30%; padding-top: 0; al
 body.has-console .event-layer--battle .battle-reveal { max-height: 100%; width: min(96%, 400px); }
 .battle-reveal .br-rows { overflow-y: auto; }
 .field--stack select { width: 100%; }
+
+/* Panels never clip their buttons: room for at least half the screen above the bar,
+   and the action buttons stick to the bottom of a long panel. */
+body.has-console .decision-panel,
+body.has-console #sheet-hand,
+body.has-console #sheet-factions,
+body.has-console #sheet-log,
+body.has-console #sheet-truth { max-height: max(calc(var(--below-board) - var(--dock-h, 0px)), calc(52dvh - var(--dock-h, 0px))); }
+.decision-panel .decision__actions { position: sticky; bottom: -0.8rem; margin-bottom: -0.8rem; padding: 0.5rem 0 0.8rem; z-index: 2;
+  background: linear-gradient(180deg, transparent, var(--slab) 35%); }
