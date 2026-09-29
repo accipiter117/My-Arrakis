@@ -10,7 +10,7 @@
 // Uses public information only: board positions, turn number, alliances.
 // Opponent spice and hands are never read.
 
-import { withNoField } from '../noField.js';
+import { withNoField, usableNoFields } from '../noField.js';
 import { ownsAllTechTokens, TECH_STRONGHOLD, tokensOwnedBy } from '../techTokens.js';
 import { createBasicAI } from './basicAI.js';
 import * as movementEngine from '../movementEngine.js';
@@ -197,6 +197,56 @@ export function createStrategicAI(options) {
     return null;
   }
 
+  // --- Faction strategies: CHOAM and Richese -------------------------------
+  // The weakest stronghold I could take: fewest defenders, then most spice.
+  function softestStronghold(state, me) {
+    const ally = allyOf(state, me);
+    return strongholds(state)
+      .filter(t => forcesOf(state, me, t) === 0 && !(ally && forcesOf(state, ally, t) > 0))
+      .map(t => ({ t, need: forcesToContest(state, t, me) - 3, spice: state.board.spiceBlowMarkers.filter(m => m.territoryId === t).reduce((a, m) => a + m.amount, 0) }))
+      .sort((a, b) => a.need - b.need || b.spice - a.spice);
+  }
+  const shipCost = (state, me, t, n) => movementEngine.shipmentCostPerForce(state, me, t) * n;
+
+  // CHOAM: rich but thin on the board. Turn the wealth into force: one heavy
+  // landing in the softest stronghold, keeping about 1 spice a force to back
+  // them in battle.
+  function choamPlan(state, me) {
+    const x = state.factions[me];
+    if (x.spice < 8 || x.forces.reserve < 4) return null;
+    for (const { t, need } of softestStronghold(state, me)) {
+      if (t === 'hms') continue;
+      const want = Math.min(x.forces.reserve, 12, Math.max(need + 4, 6));
+      let n = want;
+      while (n >= Math.max(need + 2, 4) && shipCost(state, me, t, n) + n > x.spice) n--;
+      if (n >= Math.max(need + 2, 4) && movementEngine.canShip(state, me, t, n).ok) {
+        return { action: { territoryId: t, amount: n }, reason: `land in force at ${t}, backed by CHOAM spice` };
+      }
+    }
+    return null;
+  }
+
+  // Richese: poor, with a hidden No-Field token. Save up rather than trickle
+  // in; land real forces in a weakly held stronghold when affordable, or send
+  // a No-Field token there as a bluff that turns into real strength.
+  function richesePlan(state, me) {
+    const x = state.factions[me];
+    const onBoard = Object.values(x.forces.onBoard).reduce((a, b) => a + b, 0);
+    const token = usableNoFields(state).filter(v => v >= 3).pop() ?? null;
+    for (const { t, need } of softestStronghold(state, me)) {
+      if (t === 'hms') continue;
+      const want = Math.min(x.forces.reserve, Math.max(need + 2, 4));
+      if (want >= 2 && shipCost(state, me, t, want) <= x.spice - 1 && movementEngine.canShip(state, me, t, want).ok) {
+        return { action: { territoryId: t, amount: want }, reason: `land a real force at ${t}` };
+      }
+      if (token && token >= need + 1 && !state.factions.richese.noField.onPlanet && shipCost(state, me, t, 1) <= x.spice && movementEngine.canShip(state, me, t, 1).ok) {
+        return { action: { territoryId: t, amount: 1, noField: token }, reason: `No-Field ${token} into ${t}` };
+      }
+    }
+    // Nothing worth it: save the spice, unless almost nothing is on the board.
+    return onBoard >= 2 ? { action: { save: true }, reason: 'save up for a stronghold landing' } : null;
+  }
+
   // Denial is a public good: the blocker pays, everyone else benefits. So
   // only block when it's the last chance, or when I'm one of the two
   // non-threat factions best placed to do it (most forces in reserve, which
@@ -204,9 +254,17 @@ export function createStrategicAI(options) {
   function shouldIDeny(state, me, threat) {
     if (threat.urgency >= 3) return true;
     const threatGroup = threat.group ?? ['fremen', allyOf(state, 'fremen')];
+    // Best placed = most force it can actually bring: forces on the board plus
+    // the reserves it can afford to ship (reserves alone made penniless
+    // factions like Richese, and CHOAM, the permanent blockers).
+    const power = f => {
+      const x = state.factions[f];
+      const board = Object.values(x.forces.onBoard).reduce((n, v) => n + v, 0);
+      return board + Math.min(x.forces.reserve ?? 0, Math.floor((x.spice ?? 0) / 2));
+    };
     const candidates = Object.keys(state.factions)
       .filter(f => !threatGroup.includes(f))
-      .sort((a, b) => (state.factions[b].forces.reserve ?? 0) - (state.factions[a].forces.reserve ?? 0));
+      .sort((a, b) => power(b) - power(a));
     return candidates.slice(0, 2).includes(me);
   }
 
@@ -250,7 +308,10 @@ export function createStrategicAI(options) {
         if (goal) break;
       }
       if (!goal) goal = closeOutAction(state, me);
+      if (!goal && me === 'choam') goal = choamPlan(state, me);
+      if (!goal && me === 'richese') goal = richesePlan(state, me);
       if (!goal) return plan;
+      if (goal.action.save) return { ...plan, shipment: null, reason: goal.reason };
 
       const { action, reason } = goal;
       if (action.shipment && action.movement) return { ...plan, shipment: action.shipment, movement: action.movement, hajrMove: null, reason };
