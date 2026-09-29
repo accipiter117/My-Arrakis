@@ -126,7 +126,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     // even when the map area changes shape mid-glide (the console stepping aside).
     const resolveTarget = () => target.cx == null ? target : (() => {
       const h = target.w * aspect();
-      return { x: clamp(target.cx - target.w / 2, 0, FULL - target.w), y: h >= FULL ? 0 : clamp(target.cy - h / 2, 0, FULL - h), w: target.w };
+      return { x: clamp(target.cx - target.w / 2, 0, FULL - target.w), y: h >= FULL ? 0 : clamp(target.cy - h * (target.anchor ?? 0.5), 0, FULL - h), w: target.w };
     })();
     if (ms <= 0) { Object.assign(view, resolveTarget()); applyView(); return Promise.resolve(); }
     return new Promise(resolve => {
@@ -145,12 +145,14 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     });
   }
   // Frame a set of map points (a journey's ends, a battle, a territory).
-  function focusOn(points, { ms = 650, pad = 150, minW = 400, force = false } = {}) {
+  // anchor: where on the screen the point should sit (0.5 = middle; lower = nearer the top,
+  // clear of a panel or card covering the bottom).
+  function focusOn(points, { ms = 650, pad = 150, minW = 400, force = false, anchor = 0.5 } = {}) {
     if (!cameraOn || (manual && !force) || !points.length) return Promise.resolve();
     const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
     const w = clamp(Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + pad * 2, minW, FULL);
     const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
-    return glideTo({ cx, cy, w }, ms);
+    return glideTo({ cx, cy, w, anchor }, ms);
   }
   // Pull back to the whole map, and hand control back to the camera.
   function overview(ms = 700) {
