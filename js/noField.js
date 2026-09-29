@@ -86,5 +86,7 @@ export function withNoField(state, factionId, decision) {
   const { territoryId, amount } = decision.shipment;
   const best = usableNoFields(state).filter(v => v >= 3).pop();
   if (!best || amount < 2 || state.factions.richese.forces.reserve < 1) return decision;
+  // A token only pays when it brings at least as many forces as a normal shipment would.
+  if (amount > best) return decision;
   return { ...decision, shipment: { territoryId, amount: 1, noField: best } };
 }
