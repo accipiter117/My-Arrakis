@@ -11,6 +11,7 @@
 // our Voice commanded. Never the opponent's actual hand, spice or plan.
 
 import { forcesAfterReveal } from '../noField.js';
+import { tokensOwnedBy, TECH_TOKENS } from '../techTokens.js';
 import { battleSpice } from '../allySupport.js';
 import * as battleEngine from '../battleEngine.js';
 import { random } from '../random.js';
@@ -107,6 +108,17 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     return (t?.type === 'stronghold' ? 9 : 2) + spice * 0.4;
   }
 
+  // Tech Tokens at stake: the winner takes one of the loser's. Worth more when it
+  // completes a set (a stronghold) or stops a rival completing one.
+  function tokenStakes(state, me, opp) {
+    if (!state.techTokens) return { gain: 0, loss: 0 };
+    const mine = tokensOwnedBy(state, me).length, theirs = tokensOwnedBy(state, opp).length;
+    const full = TECH_TOKENS.length;
+    const gain = !theirs ? 0 : 2.5 + (mine === full - 1 ? 7 : 0) + (theirs === full ? 6 : theirs === full - 1 ? 3 : 0);
+    const loss = !mine ? 0 : 2.5 + (theirs === full - 1 ? 8 : 0) + (mine === full ? 7 : 0);
+    return { gain, loss };
+  }
+
   // Candidate plans worth considering for me.
   function candidates(state, me, territoryId, opp) {
     const faction = state.factions[me];
@@ -158,7 +170,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     const myLeaderValue = (mine.leaderId ? (leaderValue[mine.leaderId] ?? 0) : 0) + 1.5;
     if ((state.factions[me].traitorHand ?? []).includes(theirs.leaderId)) {
       lastWin = true;
-      return worth + (theirs.leaderFightingValue ?? 0); // we'd spring our traitor: free win
+      return tokenStakes(state, me, opp).gain + worth + (theirs.leaderFightingValue ?? 0); // we'd spring our traitor: free win
     }
     const agg = isAggressor ? mine : theirs, def = isAggressor ? theirs : mine;
     const wd = battleEngine.resolveWeaponDefense(agg, def, cardLookup);
@@ -173,8 +185,9 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
     const spiceCost = mine.spiceCommitted * 0.5;
     const leaderPay = wd.noSpiceForKills ? 0 : (theirKilled ? theirs.leaderFightingValue ?? 0 : 0) + (myKilled ? mine.leaderFightingValue ?? 0 : 0);
     lastWin = iWin;
-    if (iWin) return worth - mine.forcesCommitted - spiceCost + leaderPay * 0.6 - (myKilled ? myLeaderValue : 0) + shed;
-    return -myForces - spiceCost - (myKilled ? myLeaderValue : 0) - 1 + shed;
+    const stakes = tokenStakes(state, me, opp);
+    if (iWin) return stakes.gain + worth - mine.forcesCommitted - spiceCost + leaderPay * 0.6 - (myKilled ? myLeaderValue : 0) + shed;
+    return -stakes.loss - myForces - spiceCost - (myKilled ? myLeaderValue : 0) - 1 + shed;
   }
 
   return {
@@ -191,7 +204,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
       for (const plan of candidates(state, me, territoryId, opp)) {
         const risk = traitorRisk(state, me, opp, plan.leaderId);
         const myForces = state.factions[me].forces.onBoard[territoryId] ?? 0;
-        const betrayed = -myForces - (plan.leaderId ? (leaderValue[plan.leaderId] ?? 0) + 1.5 : 0);
+        const betrayed = -tokenStakes(state, me, opp).loss - myForces - (plan.leaderId ? (leaderValue[plan.leaderId] ?? 0) + 1.5 : 0);
         let total = 0, wins = 0;
         for (const theirs of futures) { total += utility(state, me, opp, territoryId, plan, theirs, isAggressor); if (lastWin) wins++; }
         const expected = (1 - risk) * (total / futures.length) + risk * betrayed;
