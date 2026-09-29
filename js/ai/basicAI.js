@@ -23,7 +23,7 @@ import * as cardEffects from '../cardEffects.js';
 import { spendingPower } from '../allySupport.js';
 import { cacheCardValue } from '../richese.js';
 import { battleSpice } from '../allySupport.js';
-import { defaultTokenChoice } from '../techTokens.js';
+import { defaultTokenChoice, tokensOwnedBy } from '../techTokens.js';
 import { random } from '../random.js';
 import * as movementEngine from '../movementEngine.js';
 import * as revivalEngine from '../revivalEngine.js';
@@ -92,6 +92,18 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     if (territory.type === 'stronghold' && mine === 0) value += 12;
     value += spiceAt(state, territoryId) * 0.8;
     value -= enemyForcesIn(state, factionId, territoryId) * 1.2;
+    // Tech Tokens: go after a rival's tokens (most of all one short of the set),
+    // but keep my token away from the rival it would complete.
+    if (state.techTokens && mine === 0) {
+      const myTokens = tokensOwnedBy(state, factionId).length;
+      for (const [f, x] of Object.entries(state.factions)) {
+        if (f === factionId || f === allianceEngine.allyOf(state, factionId) || !(x.forces.onBoard[territoryId] > 0)) continue;
+        const theirs = tokensOwnedBy(state, f).length;
+        if (theirs === 2 && myTokens) value -= 8;
+        else if (theirs === 2) value += 4;
+        else if (theirs) value += 1.5;
+      }
+    }
     return value;
   }
 
