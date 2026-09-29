@@ -1038,6 +1038,9 @@ function layoutConsole() {
   });
 }
 window.addEventListener('resize', layoutConsole);
+// Panels and sheets sit above the bottom bar, so Hand, Factions and Log stay reachable.
+new ResizeObserver(([e]) => document.documentElement.style.setProperty('--dock-h', `${Math.ceil(e.target.getBoundingClientRect().height)}px`))
+  .observe(document.querySelector('.dock'));
 // Also re-measure when the stage itself changes (e.g. the victory watch strip appearing).
 if (window.ResizeObserver) new ResizeObserver(() => layoutConsole()).observe(document.querySelector('.stage'));
 window.addEventListener('orientationchange', () => setTimeout(layoutConsole, 200));
