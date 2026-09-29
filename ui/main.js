@@ -1080,6 +1080,8 @@ $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
 $('select-ixtl').value = localStorage.getItem('my-arrakis-ixtl') ?? 'on';
 $('select-ixtl').addEventListener('change', e => localStorage.setItem('my-arrakis-ixtl', e.target.value));
+// Tech Tokens became "Always" by default after some players had saved "Off": reset that once.
+if (!localStorage.getItem('my-arrakis-tech-reset-1')) { localStorage.setItem('my-arrakis-tech', 'on'); localStorage.setItem('my-arrakis-tech-reset-1', '1'); }
 $('select-tech').value = localStorage.getItem('my-arrakis-tech') ?? 'on';
 $('select-tech').addEventListener('change', e => localStorage.setItem('my-arrakis-tech', e.target.value));
 $('lineup-grid').addEventListener('click', e => {
