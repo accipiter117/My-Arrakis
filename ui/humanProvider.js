@@ -1038,21 +1038,26 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       })();
       const knownTheirs = Object.entries(state.meta.knownCards ?? {}).filter(([, f]) => f === opponentId).map(([id]) => `${cardName(id)} (${(CATEGORY_NAMES[cardLookup[id]?.category] ?? 'a special card').replace(/^an? /, '').replace(/ \(.*\)$/, '')})`);
       const knownNote = knownTheirs.length
-        ? `<p class="decision__known">Known in ${esc(factionName(opponentId))}'s hand (revealed in battle and kept): <strong>${esc(knownTheirs.join(', '))}</strong></p>` : '';
-      const myTraitors = (me.traitorHand ?? []).map(id => `${leaderLabel(id)}, ${factionName(leader[id]?.faction)}`);
-      const traitorNote = myTraitors.length
-        ? `<p class="decision__note">Your traitor${myTraitors.length > 1 ? 's' : ''}: ${esc(myTraitors.join('; '))}. If ${esc(factionName(opponentId))} plays ${myTraitors.length > 1 ? 'one of them' : 'them'}, you'll be offered the reveal.</p>` : '';
+        ? `<p class="decision__known">Known in their hand: <strong>${esc(knownTheirs.join(', '))}</strong></p>` : '';
+      // Only the traitors that matter here: leaders of this opponent (and a Cheap Hero traitor).
+      const relevant = (me.traitorHand ?? []).filter(id => id === 'cheapHeroTraitor' || leader[id]?.faction === opponentId);
+      const traitorNote = relevant.length
+        ? `<p class="decision__note">Traitor ready: <strong>${esc(relevant.map(id => id === 'cheapHeroTraitor' ? 'any Cheap Hero' : leaderLabel(id)).join(', '))}</strong> (you'll be offered the reveal)</p>` : '';
       return ask(`Battle in ${territoryName(territoryId)}`,
-        `${voiceNote}${revealed}${knownNote}${traitorNote}<dl class="facts"><dt>Opponent</dt><dd>${esc(factionName(opponentId))}, ${theirs} forces</dd>
-         <dt>Your forces here</dt><dd>${present}${starredPresent ? ` (${starredPresent} starred)` : ''}</dd><dt>Your spice</dt><dd>${me.spice}${battleSupportFor(state, factionId) ? ` + ${battleSupportFor(state, factionId)} from CHOAM` : ''}</dd></dl>
-         <p>The side with the higher total wins; ties go to the aggressor. Forces you dial are lost even if you win. If you lose, you lose every force here. Each dialed force counts fully only if backed by 1 spice.</p>
-         <label class="field"><span>Forces to dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
-         ${starredPresent ? `<label class="field"><span>Of which starred</span><select name="starred">${options(range(0, starredPresent).map(n => [n, n]), 0)}</select></label>` : ''}
-         ${factionId === 'fremen' ? '<p class="decision__note">Fremen fight at full strength without spice: no need to commit any.</p><input type="hidden" name="spice" value="0">'
-           : `<label class="field"><span>Spice to back them</span><select name="spice">${options(range(0, Math.min(present, battleSpice(state, factionId))).map(n => [n, n]), 0)}</select></label>`}
-         <label class="field"><span>Leader</span><select name="leader">${options(leaderOptions, leaderOptions[0][0])}</select></label>
-         <label class="field"><span>Weapon</span><select name="weapon">${options(weaponOptions, '')}</select></label>
-         <label class="field"><span>Defence</span><select name="defense">${options(defenseOptions, '')}</select></label>
+        `${voiceNote}${revealed}${knownNote}${traitorNote}
+         <p class="battle-summary"><span>You <strong>${present}</strong>${starredPresent ? ` (${starredPresent}★)` : ''}</span><span>${esc(factionName(opponentId))} <strong>${theirs}</strong></span><span>Spice <strong>${me.spice}${battleSupportFor(state, factionId) ? `+${battleSupportFor(state, factionId)}` : ''}</strong></span></p>
+         <div class="field-pair">
+           <label class="field field--stack"><span>Dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
+           ${factionId === 'fremen' ? '<input type="hidden" name="spice" value="0">'
+             : `<label class="field field--stack"><span>Spice backing</span><select name="spice">${options(range(0, Math.min(present, battleSpice(state, factionId))).map(n => [n, n]), 0)}</select></label>`}
+           ${starredPresent ? `<label class="field field--stack"><span>Of which ★</span><select name="starred">${options(range(0, starredPresent).map(n => [n, n]), 0)}</select></label>` : ''}
+         </div>
+         <label class="field field--stack"><span>Leader</span><select name="leader">${options(leaderOptions, leaderOptions[0][0])}</select></label>
+         <div class="field-pair">
+           <label class="field field--stack"><span>Weapon</span><select name="weapon">${options(weaponOptions, '')}</select></label>
+           <label class="field field--stack"><span>Defence</span><select name="defense">${options(defenseOptions, '')}</select></label>
+         </div>
+         <details class="decision__help"><summary>How battles work</summary>Higher total wins; ties go to the aggressor. Dialled forces are lost even if you win; the loser loses everything here. ${factionId === 'fremen' ? 'Fremen count fully without spice.' : 'A dialled force counts fully only if backed by 1 spice, otherwise half.'}</details>
          ${kh ? '<label class="choice"><input type="checkbox" name="kh"> <span>Add the Kwisatz Haderach (+2)</span></label>' : ''}
          <p class="decision__note" data-for="strength"></p>
          <p class="decision__error" hidden></p>
