@@ -143,7 +143,8 @@ function resolveMentatPause(state, territoriesData) {
 }
 
 function resolveMentatPauseBeforePrediction(state, territoriesData) {
-  const strongholdIds = strongholdIdsFrom(territoriesData);
+  // The HMS counts only when the Ixians have placed it.
+  const strongholdIds = strongholdIdsFrom(territoriesData).filter(id => id !== 'hms' || state.board?.hms?.placed);
   const requiredCount = state.rulesConfig.victoryVariants.soloStrongholdCount;
   const allianceRequiredCount = state.rulesConfig.victoryVariants.allianceStrongholdCount;
   const maxTurns = state.rulesConfig.victoryVariants.maxTurns;
