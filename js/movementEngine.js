@@ -260,6 +260,8 @@ function canRideWorm(state, fromTerritoryId, toTerritoryId) {
   const fremen = state.factions.fremen;
   if (!fremen || !(fremen.forces.onBoard[fromTerritoryId] > 0)) return { ok: false, reason: 'No Fremen forces there to ride.' };
   if (!state.board.territories[toTerritoryId]) return { ok: false, reason: 'Unknown territory.' };
+  // The Hidden Mobile Stronghold only exists once the Ixians have placed it.
+  if (toTerritoryId === 'hms' && !state.board.hms?.placed) return { ok: false, reason: 'There is no Hidden Mobile Stronghold in this game.' };
   if (toTerritoryId === fromTerritoryId) return { ok: false, reason: 'Already there.' };
   if (isStrongholdBlocked(state, toTerritoryId, 'fremen')) return { ok: false, reason: 'That stronghold already holds two other factions.' };
   if (allyOccupies(state, 'fremen', toTerritoryId)) return { ok: false, reason: 'Your ally already has forces there.' };
