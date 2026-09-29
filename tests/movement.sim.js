@@ -104,3 +104,23 @@ const guildShip = canShip(state, 'guild', 'arrakeen', 3); // stronghold rate 1, 
 assert(guildShip.ok && guildShip.totalCost === 2, `3 forces to a stronghold should cost the Guild 2 (1.5 rounded up), got ${guildShip.totalCost}`);
 
 console.log('\nAll movement engine sanity checks passed.');
+
+// No Hidden Mobile Stronghold without the Ixians: worms cannot carry the Fremen there, and it never counts.
+{
+  const { canRideWorm } = await import('../js/movementEngine.js');
+  const { resolveMentatPause } = await import('../js/victoryEngine.js');
+  const fs2 = (await import('fs')).default;
+  const L2 = p => JSON.parse(fs2.readFileSync('./data/' + p, 'utf8'));
+  const { initializeGame: init2 } = await import('../js/setupEngine.js');
+  const ids = ['atreides', 'harkonnen', 'fremen'];
+  const s = init2({ activeFactionIds: ids, playerCircleOrder: ids, rulesConfig: L2('rulesConfig.json'), seed: 3, spiceDeckData: L2('spiceDeck.json'),
+    territoriesData: L2('territories.json'), treacheryDeckData: L2('treacheryDeck.json'), leadersData: L2('leaders.json') });
+  s.factions.fremen.forces.onBoard.theGreatFlat = 3;
+  if (canRideWorm(s, 'theGreatFlat', 'hms').ok) throw new Error('FAILED: rode a worm into an HMS that is not in the game');
+  s.factions.fremen.forces.onBoard = { hms: 2, sietchTabr: 5, tueksSietch: 3 };
+  for (const f of ['atreides', 'harkonnen']) s.factions[f].forces.onBoard = {};
+  s.meta.turn = 3;
+  const r = resolveMentatPause(s, L2('territories.json'));
+  if (r.gameOver && r.winners?.includes('fremen') && r.method !== 'fremen-special') throw new Error('FAILED: an unplaced HMS counted as a stronghold');
+  console.log('  ok - no HMS without the Ixians: no worm ride there, and it never counts toward victory');
+}
