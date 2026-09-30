@@ -259,6 +259,44 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
     chooseOnceAroundDirection() { return 'cw'; },
     chooseRevealNoField() { return false; }, // keep rivals guessing until a battle, storm or worm
+    // --- Karama (each Karama card may be spent on the faction's power; project owner) ---
+    // Win a card outright only when holding a spare Karama and the bidding is already dear.
+    chooseKaramaBuy(state, factionId, { currentBid }) {
+      const karamas = own(state, factionId).treacheryHand.filter(id => id.startsWith('karama')).length;
+      return karamas >= 2 && currentBid >= 6;
+    },
+    chooseKaramaPower(state, factionId, info) {
+      const me = own(state, factionId), ally = allianceEngine.allyOf(state, factionId);
+      switch (info.kind) {
+        case 'seePlan': return state.board.territories[info.territoryId]?.type === 'stronghold' && (own(state, info.opponentId).forces.onBoard[info.territoryId] ?? 0) >= 5;
+        case 'freeRevival': {
+          const best = info.leaders.slice().sort((a, b) => (leaderValue[b] ?? 0) - (leaderValue[a] ?? 0))[0];
+          if (best && (leaderValue[best] ?? 0) >= 5) return { leaderId: best };
+          return info.tanks >= 3 ? { forces: 3, starred: Math.min(3, info.starredTanks) } : null;
+        }
+        case 'stopRevival': {
+          const t = info.targets.filter(f => f !== ally).sort((a, b) => (own(state, b).revivalTanks ?? 0) - (own(state, a).revivalTanks ?? 0))[0];
+          return t && (own(state, t).revivalTanks ?? 0) >= 5 ? t : null;
+        }
+        case 'stopShipment': return info.factionId !== ally && info.amount >= 5 && state.board.territories[info.territoryId]?.type === 'stronghold';
+        case 'takeCards': {
+          const t = info.targets.filter(f => f !== ally).sort((a, b) => own(state, b).treacheryHand.length - own(state, a).treacheryHand.length)[0];
+          return t && own(state, t).treacheryHand.length >= 3 && me.treacheryHand.length >= 3 ? { targetId: t, count: Math.min(own(state, t).treacheryHand.length, me.treacheryHand.length - 1) } : null;
+        }
+        case 'buyCache': {
+          const best = info.cache.slice().sort((a, b) => cardWorth(b) - cardWorth(a))[0];
+          return best && me.spice >= 6 && cardWorth(best) >= 5 ? best : null;
+        }
+        case 'sellCards': {
+          const weak = info.hand.filter(id => !id.startsWith('karama') && cardWorth(id) <= 2);
+          return weak.length >= 2 ? weak : null;
+        }
+      }
+      return null;
+    },
+    chooseCardsToGiveBack(state, factionId, { count }) {
+      return own(state, factionId).treacheryHand.slice().sort((a, b) => cardWorth(a) - cardWorth(b)).slice(0, count);
+    },
     // Weather Control: steer the storm over rivals' forces and away from ours.
     chooseWeatherControl(state, factionId) {
       const ally = allianceEngine.allyOf(state, factionId);
