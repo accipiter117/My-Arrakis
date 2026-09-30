@@ -556,6 +556,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       const spare = own(state, factionId).treacheryHand.filter(id => id.startsWith('karama')).length >= 2;
       if (purpose === 'noFieldShip') return state.board.territories[territoryId]?.type === 'stronghold';
       if (purpose === 'choamCharity') return spare && Object.keys(state.factions).length >= 5;
+      if (purpose === 'ixianMovement') return spare && Object.keys(own(state, 'ixians').forces.onBoard).filter(t => state.board.territories[t]?.type === 'stronghold').length >= 2;
       if (purpose === 'cyborgs') return (own(state, 'ixians').forces.starredOnBoard?.[territoryId] ?? 0) >= 3 && state.board.territories[territoryId]?.type === 'stronghold';
       if (purpose === 'choamRevival') return spare && (own(state, 'choam').revivalTanks ?? 0) >= 8;
       if (purpose === 'tleilaxuRevival') return spare && (own(state, factionId).revivalTanks ?? 0) >= 5;
