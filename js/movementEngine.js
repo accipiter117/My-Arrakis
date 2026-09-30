@@ -10,6 +10,7 @@
 // a real isSectorInStorm(territoryId, sector) implementation is a one-line
 // change at each of the two TODO markers below, not a redesign.
 
+import { fighters, isAdvisorTerritory, afterMove } from './advisors.js';
 import { noteRicheseMove } from './noField.js';
 import { recordTrigger } from './techTokens.js';
 import { balisetBlocks } from './choam.js';
@@ -19,9 +20,7 @@ const ORNITHOPTER_STRONGHOLDS = ['arrakeen', 'carthag'];
 // --- Shared helpers --------------------------------------------------------
 
 function hasOrnithopterAccess(state, factionId) {
-  return ORNITHOPTER_STRONGHOLDS.some(strongholdId =>
-    (state.factions[factionId].forces.onBoard[strongholdId] ?? 0) > 0
-  );
+  return ORNITHOPTER_STRONGHOLDS.some(strongholdId => fighters(state, factionId, strongholdId) > 0); // advisors give no ornithopters
 }
 
 function moveRangeFor(state, factionId, cyborgsMoving = 0) {
@@ -55,8 +54,9 @@ function isStrongholdBlocked(state, territoryId, movingFactionId) {
   const territoryType = state.board.territories[territoryId]?.type;
   if (territoryType !== 'stronghold') return false;
 
+  // Bene Gesserit advisors never count towards the two-faction limit.
   const occupants = Object.keys(state.factions).filter(fid =>
-    fid !== movingFactionId && (state.factions[fid].forces.onBoard[territoryId] ?? 0) > 0
+    fid !== movingFactionId && fighters(state, fid, territoryId) > 0
   );
   return occupants.length >= 2;
 }
@@ -230,6 +230,9 @@ function executeMove(state, factionId, fromTerritoryId, toTerritoryId, amount, s
   // Starred forces travel with the group (starred first by default), and
   // never more starred can stay behind than the forces that remain.
   const forces = state.factions[factionId].forces;
+  // Bene Gesserit: remember the types at both ends before the move (advisors).
+  const bgMove = factionId === 'gesserit' ? { destHadBg: (forces.onBoard[toTerritoryId] ?? 0) > 0, destWasAdvisor: isAdvisorTerritory(state, toTerritoryId),
+    movingWereAdvisors: isAdvisorTerritory(state, fromTerritoryId), wantAdvisors: state.meta?.bgMoveAsAdvisors } : null;
   if (factionId === 'richese') noteRicheseMove(state, fromTerritoryId, toTerritoryId, amount, forces.onBoard[fromTerritoryId]);
   const starredHere = forces.starredOnBoard?.[fromTerritoryId] ?? 0;
   const remaining = forces.onBoard[fromTerritoryId] - amount;
@@ -247,6 +250,7 @@ function executeMove(state, factionId, fromTerritoryId, toTerritoryId, amount, s
   state.factions[factionId].forces.onBoard[toTerritoryId] =
     (state.factions[factionId].forces.onBoard[toTerritoryId] ?? 0) + amount;
   state.factions[factionId].hasMovedThisTurn = true;
+  if (bgMove) afterMove(state, fromTerritoryId, toTerritoryId, bgMove);
 
   return state;
 }
