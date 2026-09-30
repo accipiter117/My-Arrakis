@@ -205,7 +205,7 @@ async function runStormPhase(state, decisionProvider) {
   if (!isFirstStorm && state.factions.ixians && state.board.hms?.placed && (state.factions.ixians.forces.onBoard.hms ?? 0) > 0 && decisionProvider.chooseHmsMove) {
     const reachable = hms.hmsReachable(state);
     const dest = Object.keys(reachable).length ? await decisionProvider.chooseHmsMove(state, 'ixians', reachable) : null;
-    if (dest && reachable[dest]) {
+    if (dest && reachable[dest] && !(await karamaStops(state, decisionProvider, 'ixians', 'hmsMove'))) {
       const r = hms.moveHms(state, reachable[dest]);
       await observe(decisionProvider, { type: 'hmsMove', ...r, path: reachable[dest] }, state);
     }
@@ -326,6 +326,17 @@ async function runSpiceBlowPhase(state, decisionProvider) {
   spiceEngine.resolveSpiceBlowPhase(state);
   foreseeSpice(state); // Atreides see the next card as soon as this Spice Blow is over (house rule)
   for (const draw of state.nexus.draws ?? []) await observe(decisionProvider, { type: 'spiceCard', ...draw }, state);
+  // Fremen Karama power: place a sandworm in any sand territory (a normal worm: it devours there and a Nexus follows).
+  if (state.factions.fremen && state.meta.turn > 1 && cardEffects.holdsKarama(state, 'fremen') && decisionProvider.chooseKaramaPower) {
+    const options = Object.entries(state.board.territories).filter(([, t]) => t.type === 'sand').map(([id]) => id);
+    const pick = await decisionProvider.chooseKaramaPower(state, 'fremen', { kind: 'placeWorm', options });
+    if (pick && options.includes(pick)) {
+      cardEffects.playKarama(state, 'fremen', 'placeWorm');
+      spiceEngine.devourTerritory(state, pick);
+      state.nexus.active = true;
+      await observe(decisionProvider, { type: 'karamaPower', factionId: 'fremen', kind: 'placeWorm', territoryId: pick }, state);
+    }
+  }
   for (const r of state.nexus.noFieldRevealed ?? []) await observe(decisionProvider, { type: 'noFieldReveal', cause: 'worm', ...r }, state);
   if (state.meta.alliancesCancelled) {
     await observe(decisionProvider, { type: 'alliancesCancelled', alliances: state.meta.alliancesCancelled }, state);
@@ -384,13 +395,13 @@ function runCharityPhase(state) {
   const multiplier = inflation === 'double' ? 2 : 1;
   const results = [];
   // CHOAM collects 2 per faction first (this does not trigger Spice Production).
-  const own = choam.collectChoamCharity(state);
+  const own = state.meta.choamCharityBlocked ? 0 : choam.collectChoamCharity(state);
   if (own) results.push({ factionId: 'choam', choamAdvantage: true, amountReceived: own });
   // No real decision here, claiming charity has no downside, so this runs
   // for real rather than going through the decision provider at all.
   for (const factionId of Object.keys(state.factions)) {
     if (choamCharityEngine.canClaimCharity(state, factionId).ok) {
-      results.push(choamCharityEngine.claimCharity(state, factionId, { multiplier }));
+      results.push(choamCharityEngine.claimCharity(state, factionId, { multiplier, fromChoam: Boolean(state.factions.choam) && !state.meta.choamCharityBlocked }));
     }
   }
   if (multiplier > 1) results.push({ inflation: 'double' });
@@ -483,7 +494,7 @@ async function runBiddingPhase(state, decisionProvider) {
   delete state.meta.blackMarketSold;
   if (state.factions.richese?.treacheryHand.length && decisionProvider.chooseBlackMarket) {
     const offer = await decisionProvider.chooseBlackMarket(state, 'richese', { hand: state.factions.richese.treacheryHand.slice() });
-    if (offer) {
+    if (offer && !(await karamaStops(state, decisionProvider, 'richese', 'blackMarket'))) {
       const bm = await richese.runBlackMarket(state, decisionProvider, offer, e => observe(decisionProvider, e, state));
       if (bm.sold) state.meta.blackMarketSold = true;
     }
@@ -497,7 +508,8 @@ async function runBiddingPhase(state, decisionProvider) {
     const cache = richese.cacheOf(state);
     const c = (decisionProvider.chooseCacheAuction ? await decisionProvider.chooseCacheAuction(state, 'richese', { cache }) : null) ?? {};
     cacheChoice = { cardId: cache.includes(c.cardId) ? c.cardId : cache[0], position: c.position === 'last' ? 'last' : 'first', method: c.method === 'silent' ? 'silent' : 'onceAround' };
-    if (cacheChoice.position === 'first') cacheResults.push(await richese.runCacheAuction(state, decisionProvider, cacheChoice, e => observe(decisionProvider, e, state)));
+    if (await karamaStops(state, decisionProvider, 'richese', 'cacheAuction')) cacheChoice = null; // no cache auction this round
+    if (cacheChoice?.position === 'first') cacheResults.push(await richese.runCacheAuction(state, decisionProvider, cacheChoice, e => observe(decisionProvider, e, state)));
   }
   if (state.factions.ixians && state.decks.treacheryDeck.length && state.bidding.cardsUpForBid.length) {
     const all = [...state.bidding.cardsUpForBid, state.decks.treacheryDeck.pop()];
@@ -516,7 +528,7 @@ async function runBiddingPhase(state, decisionProvider) {
     if (ixT && !state.bidding.technologyUsed && ixT.treacheryHand.length && decisionProvider.chooseIxianTechnology) {
       const upcoming = state.bidding.cardsUpForBid[cardIndex];
       const give = await decisionProvider.chooseIxianTechnology(state, 'ixians', upcoming);
-      if (give && ixT.treacheryHand.includes(give)) {
+      if (give && ixT.treacheryHand.includes(give) && !(await karamaStops(state, decisionProvider, 'ixians', 'technology'))) {
         ixT.treacheryHand = [...ixT.treacheryHand.filter(c => c !== give), upcoming];
         state.bidding.cardsUpForBid[cardIndex] = give;
         state.bidding.technologyUsed = true;
@@ -691,7 +703,8 @@ async function runRevivalPhase(state, decisionProvider) {
       const options = Object.entries(state.factions).filter(([f]) => f !== 'tleilaxu')
         .flatMap(([f, x]) => x.leaders.killed.filter(id => id !== 'auditor').map(id => ({ leaderId: id, owner: f, cost: Math.ceil((leaderValueOf(state, id)) / 2) })))
         .filter(o => o.cost <= faction.spice);
-      const pick = options.length ? await decisionProvider.chooseGholaRevival(state, 'tleilaxu', options) : null;
+      const pick0 = options.length ? await decisionProvider.chooseGholaRevival(state, 'tleilaxu', options) : null;
+      const pick = pick0 && await karamaStops(state, decisionProvider, 'tleilaxu', 'ghola', { owner: options.find(x => x.leaderId === pick0)?.owner }) ? null : pick0;
       const o = options.find(x => x.leaderId === pick);
       if (o) {
         faction.spice -= o.cost; state.spiceBank.totalInCirculation += o.cost;
@@ -766,6 +779,17 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     await observe(decisionProvider, { type: 'turnStart', phase: 'shipment', factionId }, state);
     // CHOAM's Kulon: on its own turn, its forces move one extra territory.
     if (factionId === 'choam' && Object.keys(state.factions.choam.forces.onBoard).length) await choamEffectWindow(state, decisionProvider, 'kulon', [true]);
+    // Ixian Karama power: move the HMS up to 2 territories, on top of its usual move.
+    if (factionId === 'ixians' && state.board.hms?.placed && cardEffects.holdsKarama(state, 'ixians') && decisionProvider.chooseKaramaPower) {
+      const reachable = hms.hmsReachable(state, 2);
+      const pick = Object.keys(reachable).length ? await decisionProvider.chooseKaramaPower(state, 'ixians', { kind: 'moveHms', options: Object.keys(reachable) }) : null;
+      if (pick && reachable[pick]) {
+        cardEffects.playKarama(state, 'ixians', 'moveHms');
+        const r = hms.moveHms(state, reachable[pick]);
+        await observe(decisionProvider, { type: 'hmsMove', ...r, path: reachable[pick] }, state);
+        await observe(decisionProvider, { type: 'karamaPower', factionId: 'ixians', kind: 'moveHms', territoryId: pick }, state);
+      }
+    }
     const resultsBefore = results.length;
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
     delete state.meta.karamaHalfPrice;
@@ -794,6 +818,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     if (factionId === 'richese' && decision.shipment && Number.isInteger(nfValue) && noField.usableNoFields(state).includes(nfValue)
         && state.factions.richese.forces.reserve >= 1 && movementEngine.canShip(state, 'richese', decision.shipment.territoryId, 1).ok) {
       const { territoryId } = decision.shipment;
+      if (await karamaStops(state, decisionProvider, 'richese', 'noFieldShip', { territoryId })) { /* stopped: no token placed */ } else {
       if (state.factions.richese.noField.onPlanet) {  // only one on the planet: the old one is revealed first
         const r = noField.revealNoField(state);
         await observe(decisionProvider, { type: 'noFieldReveal', cause: 'newToken', ...r }, state);
@@ -804,6 +829,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         results.push({ factionId, type: 'shipment', territoryId, amount: 1, noField: true });
         await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount: 1, noField: true }, state);
         await spiritualAdvisor(state, decisionProvider, factionId, territoryId, results);
+      }
       }
     } else if (decision.shipment) {
       // starred: how many of the shipped forces are Sardaukar / Fedaykin (default: as many as possible).
@@ -1007,6 +1033,7 @@ async function faceDancerSwap(state, decisionProvider) {
   const leaderId = await decisionProvider.chooseFaceDancerToReplace(state, 'tleilaxu', unrevealed.map(fd => fd.leaderId));
   const idx = tl.faceDancers.findIndex(fd => !fd.revealed && fd.leaderId === leaderId);
   if (idx < 0) return;
+  if (await karamaStops(state, decisionProvider, 'tleilaxu', 'faceDancerSwap')) return;
   const { revealed, ...old } = tl.faceDancers[idx];
   state.decks.traitorDeck.push(old);
   shuffleInPlace(state.decks.traitorDeck);
@@ -1015,6 +1042,22 @@ async function faceDancerSwap(state, decisionProvider) {
 
 // Lets the UI present each event as it happens (cards, sweeps, marches).
 // Awaited so play only continues once the presentation has finished.
+// --- Karama against a faction advantage (outside battle) --------------------
+// Offered, in turn order, to every other faction holding a Karama (never the
+// owner's ally). The first to play it stops the advantage this once.
+async function karamaStops(state, decisionProvider, ownerId, advantage, context = {}) {
+  if (!decisionProvider.chooseKaramaCancel) return false;
+  for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+    if (f === ownerId || !state.factions[f] || allianceEngine.allyOf(state, f) === ownerId || !cardEffects.holdsKarama(state, f)) continue;
+    if (await decisionProvider.chooseKaramaCancel(state, f, advantage, { ...context, ownerId })) {
+      cardEffects.playKarama(state, f, advantage);
+      await observe(decisionProvider, { type: 'karama', factionId: f, purpose: advantage, targetId: ownerId }, state);
+      return true;
+    }
+  }
+  return false;
+}
+
 // --- Bene Gesserit advisors (js/advisors.js) --------------------------------
 // Spiritual advisor: 1 free force with another faction's off-planet shipment,
 // to the Polar Sink or, as an advisor, to that same territory.
@@ -1046,6 +1089,7 @@ async function intrusion(state, decisionProvider, intruderId, territoryId) {
 // choices (targets); the answer must be one of them (or true for Kulon).
 async function choamEffectWindow(state, decisionProvider, cardId, options, context = {}) {
   if (!state.factions.choam?.treacheryHand.includes(cardId) || !decisionProvider.chooseChoamEffect || !options.length) return null;
+  if (state.choamEffects?.treacheryBlockedPhase === state.meta.phase) return null; // stopped by Karama this phase
   const pick = await decisionProvider.chooseChoamEffect(state, 'choam', { cardId, options, context });
   if (pick == null || pick === false) return null;
   const same = o => JSON.stringify(o) === JSON.stringify(pick);
@@ -1060,13 +1104,20 @@ async function choamEffectWindow(state, decisionProvider, cardId, options, conte
 // End of a phase: CHOAM may cash duplicates (3 each) and worthless cards (2 each);
 // then, once a turn, trade a card with its ally. CHOAM is asked only when its
 // hand has changed since it was last asked.
+function initChoamBlock(state) { choam.initChoamEffects(state).treacheryBlockedPhase = state.meta.phase; }
+
 async function choamEndOfPhase(state, decisionProvider, cardLookup) {
   const ch = state.factions.choam;
   if (!ch) return;
   const sfs = ch.specialFactionState ??= {};
   const dup = choam.duplicateSurplus(state, cardLookup), worthless = choam.worthlessInHand(state, cardLookup);
   const sig = ch.treacheryHand.slice().sort().join(',');
-  if ((dup.length || worthless.length) && sig !== sfs.lastDiscardOffer && decisionProvider.chooseChoamDiscards) {
+  // Karama against CHOAM's treachery advantage: no discards for spice and no worthless effects this phase.
+  if ((dup.length || worthless.length) && sig !== sfs.lastDiscardOffer && state.choamEffects?.treacheryBlockedPhase !== state.meta.phase
+      && await karamaStops(state, decisionProvider, 'choam', 'choamTreachery')) {
+    initChoamBlock(state);
+  }
+  if ((dup.length || worthless.length) && sig !== sfs.lastDiscardOffer && decisionProvider.chooseChoamDiscards && state.choamEffects?.treacheryBlockedPhase !== state.meta.phase) {
     sfs.lastDiscardOffer = sig;
     const picks = (await decisionProvider.chooseChoamDiscards(state, 'choam', { duplicates: dup, worthless })) ?? [];
     const done = [];
@@ -1215,6 +1266,18 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       if (await decisionProvider.chooseResidualPoison(state, f, { territoryId, opponentId: opponentOf(f) })) {
         const r = rcards.playResidualPoison(state, f, opponentOf(f), random);
         await observe(decisionProvider, { type: 'richeseCard', cardId: 'residualPoison', factionId: f, opponentId: opponentOf(f), leaderId: r?.leaderId, territoryId }, state);
+      }
+    }
+
+    // Karama against CHOAM's Forces: no share of the battle spice from this battle.
+    if (state.factions.choam && !fighting.includes('choam')) {
+      for (const f of fighting) {
+        if (cardEffects.holdsKarama(state, f) && decisionProvider.chooseKaramaCancel && await decisionProvider.chooseKaramaCancel(state, f, 'choamForces', { territoryId, ownerId: 'choam' })) {
+          cardEffects.playKarama(state, f, 'choamForces');
+          state.meta.currentBattle.choamForcesBlocked = true;
+          await observe(decisionProvider, { type: 'karama', factionId: f, purpose: 'choamForces', targetId: 'choam' }, state);
+          break;
+        }
       }
     }
 
@@ -1442,7 +1505,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     // CHOAM's Auditor: after a battle it led, CHOAM sees 2 random cards of the
     // opponent (1 if the Auditor died), unless the opponent pays 1 spice per card.
     let audit = null;
-    if (fighting.includes('choam') && plans.choam.leaderId === 'auditor' && !outcome.explosion) {
+    if (fighting.includes('choam') && plans.choam.leaderId === 'auditor' && !outcome.explosion
+        && !(await karamaStops(state, decisionProvider, 'choam', 'auditor', { territoryId }))) {
       const opp = opponentOf('choam');
       const survived = state.factions.choam.leaders.available.includes('auditor');
       const size = choam.auditSize(state, opp, survived);
@@ -1567,7 +1631,12 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
     case 'storm': result = await runStormPhase(state, decisionProvider); break;
     case 'spiceBlow': result = await runSpiceBlowPhase(state, decisionProvider); break;
     case 'nexus': result = null; break; // handled inside runSpiceBlowPhase, this step is a no-op pass-through
-    case 'charity': result = runCharityPhase(state); break;
+    case 'charity':
+      // Karama against CHOAM's charity: only normal charity for CHOAM, others paid by the Bank.
+      if (state.factions.choam && choam.inflationStatus(state) !== 'cancel' && await karamaStops(state, decisionProvider, 'choam', 'choamCharity')) state.meta.choamCharityBlocked = true;
+      result = runCharityPhase(state);
+      delete state.meta.choamCharityBlocked;
+      break;
     case 'bidding': result = await runBiddingPhase(state, decisionProvider); break;
     case 'revival': result = await runRevivalPhase(state, decisionProvider); break;
     case 'shipment':
@@ -1594,7 +1663,7 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
         if (moved) await observe(decisionProvider, { type: 'inflation', status: moved }, state);
         else if (choam.inflationStatus(state) === 'unused' && decisionProvider.chooseInflation) {
           const side = await decisionProvider.chooseInflation(state, 'choam');
-          if (choam.placeInflation(state, side)) await observe(decisionProvider, { type: 'inflation', status: side, placed: true }, state);
+          if (side && !(await karamaStops(state, decisionProvider, 'choam', 'inflation')) && choam.placeInflation(state, side)) await observe(decisionProvider, { type: 'inflation', status: side, placed: true }, state);
         }
       }
       break;
