@@ -780,10 +780,14 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     const others = order.filter(f => f !== 'choam' && f !== allianceEngine.allyOf(state, 'choam'));
     await choamEffectWindow(state, decisionProvider, 'baliset', others.flatMap(f => held.map(t => ({ factionId: f, territoryId: t }))));
   }
+  delete state.meta.ixianMoveLimited; // a limit only ever lasts one turn
   for (const factionId of order) {
     await observe(decisionProvider, { type: 'turnStart', phase: 'shipment', factionId }, state);
     // CHOAM's Kulon: on its own turn, its forces move one extra territory.
     if (factionId === 'choam' && Object.keys(state.factions.choam.forces.onBoard).length) await choamEffectWindow(state, decisionProvider, 'kulon', [true]);
+    // Karama against Cyborg and Suboid movement: the Ixians move only 1 territory this turn.
+    if (factionId === 'ixians' && Object.keys(state.factions.ixians.forces.onBoard).some(t => t !== 'hms')
+        && await karamaStops(state, decisionProvider, 'ixians', 'ixianMovement')) state.meta.ixianMoveLimited = true;
     // Ixian Karama power: move the HMS up to 2 territories, on top of its usual move.
     if (factionId === 'ixians' && state.board.hms?.placed && cardEffects.holdsKarama(state, 'ixians') && decisionProvider.chooseKaramaPower) {
       const reachable = hms.hmsReachable(state, 2);
@@ -1720,6 +1724,7 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
   choam.clearPhaseEffects(state, phase);
   advisors.cleanAdvisors(state);
   if (phase === 'revival') { delete state.meta.tleilaxuRevivalBlocked; delete state.meta.choamRevivalBlocked; }
+  if (phase === 'shipment') delete state.meta.ixianMoveLimited;
 
   // Tech Tokens pay out at the end of their phase (Shipment and Movement
   // share one runner, so Heighliners pay once, at the end of 'shipment').
