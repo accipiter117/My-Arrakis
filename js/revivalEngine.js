@@ -34,9 +34,13 @@ const FREE_FORCE_REVIVAL = {
 // (rounded up) paid to the Bank; the Tleilaxu's ally revives at half price.
 // CHOAM: no limit and 1 spice a force (paid to the Tleilaxu when they are seated).
 function revivalTerms(state, factionId) {
-  const choam = factionId === 'choam';
+  // Karama against CHOAM's revival: up to 3 (5 if the Tleilaxu allow) at 2 spice each this turn.
+  const choam = factionId === 'choam' && !state.meta?.choamRevivalBlocked;
   const terms = { cap: choam ? Infinity : FORCE_REVIVAL_CAP_PER_TURN, halfPrice: false, payee: null, perForce: choam ? 1 : FORCE_REVIVAL_SPICE_COST };
   if (!state.factions.tleilaxu) return terms;
+  // Karama against the Tleilaxu revival economy: 3-force limit and full price for them,
+  // and everyone else pays the Bank this turn.
+  if (state.meta?.tleilaxuRevivalBlocked) return { ...terms, cap: factionId === 'tleilaxu' ? 3 : Math.max(terms.cap, state.meta.revivalLimitOverride?.[factionId] ?? 0), halfPrice: false, payee: null };
   if (factionId === 'tleilaxu') return { ...terms, cap: Infinity, halfPrice: true };
   const allyOfF = (state.alliances ?? []).find(a => a.factions.includes(factionId))?.factions.find(f => f !== factionId);
   return { ...terms, cap: Math.max(terms.cap, state.meta.revivalLimitOverride?.[factionId] ?? 0), halfPrice: allyOfF === 'tleilaxu', payee: 'tleilaxu' };
@@ -111,7 +115,7 @@ function reviveForces(state, factionId, amount, starredAmount = 0) {
   if (check.payee === 'tleilaxu') state.factions.tleilaxu.spice += check.cost;   // revival pays the Tleilaxu
   else state.spiceBank.totalInCirculation += check.cost;
   // The Tleilaxu take 1 spice from the Bank for each faction using free revival.
-  if (state.factions.tleilaxu && factionId !== 'tleilaxu' && check.freeUsed > 0 && !faction.freeRevivalTithed) {
+  if (state.factions.tleilaxu && factionId !== 'tleilaxu' && check.freeUsed > 0 && !faction.freeRevivalTithed && !state.meta?.tleilaxuRevivalBlocked) {
     faction.freeRevivalTithed = true;
     state.factions.tleilaxu.spice += 1;
     state.spiceBank.totalInCirculation -= 1;
