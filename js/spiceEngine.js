@@ -117,8 +117,8 @@ function resolvePile(state, pileKey) {
     // storm, per the rulebook, but sector/storm state isn't final yet).
     const doubled = state.meta.sandtrout === 'await';              // the blow after a Sandtrout worm: double spice
     if (doubled) delete state.meta.sandtrout;
-    placeSpiceBlow(state, doubled ? { ...card, maxValue: card.maxValue * 2 } : card, pileKey);
-    (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'territory', territoryId: card.id, amount: card.maxValue * (doubled ? 2 : 1), doubled });
+    const placed = placeSpiceBlow(state, doubled ? { ...card, maxValue: card.maxValue * 2 } : card, pileKey);
+    (state.nexus.draws ??= []).push({ pile: pileKey, kind: 'territory', territoryId: card.id, amount: placed === false ? 0 : card.maxValue * (doubled ? 2 : 1), doubled, inStorm: placed === false });
     state.decks[`spiceDiscard${pileKey}`].push(card);
     break; // this pile is done for the phase
   }
@@ -127,8 +127,9 @@ function resolvePile(state, pileKey) {
 }
 
 function placeSpiceBlow(state, territoryCard, pileKey) {
-  // TODO: skip placement (card still discards, just no spice) if this
-  // territory's spice-blow sector is currently in storm. Needs sector data.
+  // "If the Spice Blow icon is currently in storm, no spice is placed that turn."
+  const t = state.board?.territories?.[territoryCard.id];
+  if (t && state.board.stormPosition != null && t.stormSector === state.board.stormPosition) return false;
   state.board.spiceBlowMarkers.push({
     territoryId: territoryCard.id,
     amount: territoryCard.maxValue,
