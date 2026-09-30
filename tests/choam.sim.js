@@ -116,7 +116,7 @@ s.alliances = [{ factions: ['gesserit', 'choam'], formedTurn: 1 }];
 let voiced = null;
 await turnEngine.runBattlePhase(s, { ...P,
   chooseVoice: (st, f, t, target) => ({ command: 'notPlay', category: 'poisonWeapon' }),
-  chooseKaramaCancel: () => true,
+  chooseKaramaCancel: (st, f, purpose) => purpose === 'voice',
   chooseChoamEffect: (st, f, info) => info.cardId === 'kullWahad' ? info.options[0] : null,
   chooseBattlePlan: (st, f, t, o, intel, voice) => { if (f === 'harkonnen') voiced = voice; return f === 'harkonnen' ? plan('feydRautha', 6, 5) : plan('alia', 5, 1); } }, cards);
 assert(voiced && s.factions.harkonnen.treacheryHand.includes('karama1') && !s.factions.choam.treacheryHand.length, 'Harkonnen tried Karama against the Voice; Kull Wahad stopped it; the Voice stands and Harkonnen keep the Karama');
