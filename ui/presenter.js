@@ -293,7 +293,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
         if (speed()) await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(500), minW: 480 });
         // The spice lands on the board as its card is shown, and the camera stays until both are seen.
         if (speed() && state) renderDisplay(displayUpToDraw(state, e));
-        const shown = showCard('spice', card('Spice blow', names.territory(e.territoryId), `<strong>+${e.amount}</strong> spice`), 2300);
+        const shown = showCard('spice', card('Spice blow', names.territory(e.territoryId), e.inStorm ? 'in the storm: <strong>no spice</strong>' : `<strong>+${e.amount}</strong> spice`), 2300);
         if (speed()) await board.pulse(e.territoryId, 'spice', scaled(900));
         await shown;
         if (speed()) await hold(scaled(350));
