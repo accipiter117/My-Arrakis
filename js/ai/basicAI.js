@@ -287,6 +287,17 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
           const best = info.cache.slice().sort((a, b) => cardWorth(b) - cardWorth(a))[0];
           return best && me.spice >= 6 && cardWorth(best) >= 5 ? best : null;
         }
+        case 'placeWorm': {
+          // Strike the sand territory holding the most rival forces (Fremen and their ally are safe).
+          const score = t => Object.entries(state.factions).filter(([f]) => f !== factionId && f !== ally).reduce((n, [, x]) => n + (x.forces.onBoard[t] ?? 0), 0);
+          const best = info.options.slice().sort((a, b) => score(b) - score(a))[0];
+          return best && score(best) >= 5 ? best : null;
+        }
+        case 'moveHms': {
+          const spice = t => state.board.spiceBlowMarkers.filter(m => m.territoryId === t).reduce((a, m) => a + m.amount, 0);
+          const best = info.options.slice().sort((a, b) => spice(b) - spice(a))[0];
+          return best && spice(best) >= 6 ? best : null;
+        }
         case 'sellCards': {
           const weak = info.hand.filter(id => !id.startsWith('karama') && cardWorth(id) <= 2);
           return weak.length >= 2 ? weak : null;
@@ -538,9 +549,15 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
 
     // Karama: always save a leader from capture; cancel the Voice or
     // Prescience when the battle is for a stronghold.
-    chooseKaramaCancel(state, factionId, purpose, { territoryId }) {
+    chooseKaramaCancel(state, factionId, purpose, { territoryId, ownerId } = {}) {
       if (purpose === 'capture') return true;
-      return state.board.territories[territoryId]?.type === 'stronghold';
+      if (['voice', 'prescience'].includes(purpose)) return state.board.territories[territoryId]?.type === 'stronghold';
+      // Expansion advantages: only the ones that swing a lot, and only with a spare Karama.
+      const spare = own(state, factionId).treacheryHand.filter(id => id.startsWith('karama')).length >= 2;
+      if (purpose === 'noFieldShip') return state.board.territories[territoryId]?.type === 'stronghold';
+      if (purpose === 'choamCharity') return spare && Object.keys(state.factions).length >= 5;
+      if (purpose === 'hmsMove') return spare && Object.keys(own(state, 'ixians').forces.onBoard).filter(t => state.board.territories[t]?.type === 'stronghold').length >= 2;
+      return false;
     },
 
     // Alliance: a well-off faction pledges about a third of its spice to its ally.
