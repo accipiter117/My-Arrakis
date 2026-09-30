@@ -305,6 +305,11 @@ export function createBoard({ container, geometry, territoriesData, factionColor
           label.textContent = seeIt ? nf.value : '?';
         } else if (item.kind === 'force') {
           drawCounter(g, item.f, item.n);
+          // Bene Gesserit advisors: faded, with an "advisors" tag.
+          if (item.f === 'gesserit' && state.factions.gesserit?.forces.advisorTerritories?.includes(id)) {
+            g.classList.add('counter--advisor');
+            const tag = el('text', { class: 'counter__tag', y: 30 }, g); tag.textContent = 'advisors';
+          }
           if (item.s) el('circle', { r: 6, cx: 17, cy: -17, class: 'token__star' }, g);
         } else {
           el('rect', { x: -15, y: -15, width: 30, height: 30, rx: 6, transform: 'rotate(45)', class: 'token__spice-bg' }, g);
