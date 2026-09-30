@@ -124,3 +124,26 @@ console.log('\nAll movement engine sanity checks passed.');
   if (r.gameOver && r.winners?.includes('fremen') && r.method !== 'fremen-special') throw new Error('FAILED: an unplaced HMS counted as a stronghold');
   console.log('  ok - no HMS without the Ixians: no worm ride there, and it never counts toward victory');
 }
+
+// The storm blocks shipping and movement into, out of and through its sector.
+{
+  const { canShip, canMove, reachableTerritories, canRideWorm } = await import('../js/movementEngine.js');
+  const fs3 = (await import('fs')).default;
+  const L3 = p => JSON.parse(fs3.readFileSync('./data/' + p, 'utf8'));
+  const { initializeGame: init3 } = await import('../js/setupEngine.js');
+  const ids = ['atreides', 'harkonnen', 'fremen'];
+  const s = init3({ activeFactionIds: ids, playerCircleOrder: ids, rulesConfig: L3('rulesConfig.json'), seed: 4, spiceDeckData: L3('spiceDeck.json'),
+    territoriesData: L3('territories.json'), treacheryDeckData: L3('treacheryDeck.json'), leadersData: L3('leaders.json') });
+  const sectorOf = t => s.board.territories[t].stormSector;
+  s.board.stormPosition = sectorOf('theGreatFlat'); s.factions.harkonnen.spice = 20;
+  if (canShip(s, 'harkonnen', 'theGreatFlat', 2).ok) throw new Error('FAILED: shipped into the storm');
+  s.factions.harkonnen.forces.onBoard.theGreatFlat = 3;
+  if (canMove(s, 'harkonnen', 'theGreatFlat', 'funeralPlain', 1).ok) throw new Error('FAILED: moved out of the storm');
+  s.factions.harkonnen.forces.onBoard.funeralPlain = 3;
+  if (reachableTerritories(s, 'harkonnen', 'funeralPlain', 3).includes('theGreatFlat')) throw new Error('FAILED: moved into or through the storm');
+  s.factions.fremen.forces.onBoard.funeralPlain = 3;
+  if (canRideWorm(s, 'funeralPlain', 'theGreatFlat').ok) throw new Error('FAILED: rode a worm into the storm');
+  s.board.stormPosition = (sectorOf('theGreatFlat') + 9) % 18;
+  if (!canShip(s, 'harkonnen', 'theGreatFlat', 2).ok) throw new Error('FAILED: storm gone but still blocked');
+  console.log('  ok - the storm blocks shipping, moving and worm rides into, out of and through its sector (the Polar Sink excepted)');
+}
