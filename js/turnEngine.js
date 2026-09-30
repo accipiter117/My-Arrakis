@@ -93,6 +93,8 @@ const passiveDecisionProvider = {
   chooseSilentBid() { return 0; },
   chooseFreeOrRemove() { return 'take'; },
   chooseRevealNoField() { return false; },
+  chooseWeatherControl() { return null; },
+  chooseFamilyAtomics() { return false; },
   chooseNullentropy() { return null; },
   chooseDistrans() { return null; },
   chooseBlackMarket() { return null; },
@@ -217,7 +219,25 @@ async function runStormPhase(state, decisionProvider) {
   //   Afterwards, without the Fremen: the last two battlers dial 1-3 each.
   const useStormDeck = !isFirstStorm && Boolean(state.factions.fremen);
   let dials = null, stormCard = null, sectorsToMove;
-  if (useStormDeck) {
+  // Weather Control: at the start of the Storm phase (not the first storm), its
+  // holder may move the storm 0 to 10 sectors instead.
+  let weather = null;
+  if (!isFirstStorm && decisionProvider.chooseWeatherControl) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      if (!state.factions[f]?.treacheryHand.includes('weatherControl')) continue;
+      const n = await decisionProvider.chooseWeatherControl(state, f);
+      if (Number.isInteger(n) && n >= 0 && n <= 10) {
+        state.factions[f].treacheryHand = state.factions[f].treacheryHand.filter(c => c !== 'weatherControl');
+        state.decks.treacheryDiscard.push('weatherControl');
+        weather = { factionId: f, sectors: n };
+        await observe(decisionProvider, { type: 'weatherControl', ...weather }, state);
+        break;
+      }
+    }
+  }
+  if (weather) {
+    sectorsToMove = weather.sectors;
+  } else if (useStormDeck) {
     stormCard = state.board.nextStormCard ?? stormEngine.drawStormCard(random);
     sectorsToMove = stormCard;
   } else {
@@ -230,6 +250,16 @@ async function runStormPhase(state, decisionProvider) {
   }
 
   const previousPosition = state.board.stormPosition ?? 0;
+  // Family Atomics: once the storm's movement is known, before it moves.
+  if (!isFirstStorm && decisionProvider.chooseFamilyAtomics) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      if (!stormEngine.canUseFamilyAtomics(state, f)) continue;
+      if (await decisionProvider.chooseFamilyAtomics(state, f, { from: previousPosition, sectors: sectorsToMove })) {
+        const r = stormEngine.useFamilyAtomics(state, f);
+        if (r) { await observe(decisionProvider, { type: 'familyAtomics', ...r }, state); break; }
+      }
+    }
+  }
   state.board.stormPosition = stormEngine.advanceStormPosition(previousPosition, sectorsToMove);
   const damage = stormEngine.applyStormDamage(state, previousPosition, sectorsToMove);
   // The Fremen shuffle every Storm card back and secretly preview next turn's.
