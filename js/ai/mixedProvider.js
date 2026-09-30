@@ -56,6 +56,8 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseChoamDiscards: (state, f, info) => pick(f).chooseChoamDiscards(state, f, info),
     chooseCacheAuction: (state, f, info) => pick(f).chooseCacheAuction(state, f, info),
     chooseRevealNoField: (state, f, info) => pick(f).chooseRevealNoField(state, f, info),
+    chooseWeatherControl: (state, f) => pick(f).chooseWeatherControl(state, f),
+    chooseFamilyAtomics: (state, f, info) => pick(f).chooseFamilyAtomics(state, f, info),
     chooseNullentropy: (state, f, info) => pick(f).chooseNullentropy(state, f, info),
     chooseDistrans: (state, f, info) => pick(f).chooseDistrans(state, f, info),
     chooseBlackMarket: (state, f, info) => pick(f).chooseBlackMarket(state, f, info),
