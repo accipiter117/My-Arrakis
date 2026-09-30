@@ -271,7 +271,7 @@ export function createStrategicAI(options) {
   // non-threat factions best placed to do it (most forces in reserve, which
   // is public). Otherwise leave it to them and look after my own position.
   function shouldIDeny(state, me, threat) {
-    if (factionStrategy.wontDeny(state, me, threat)) return false; // the Bene Gesserit let their prediction come true
+    if (useFactionStrategy && factionStrategy.wontDeny(state, me, threat)) return false; // the Bene Gesserit let their prediction come true
     if (threat.urgency >= 3) return true;
     const threatGroup = threat.group ?? ['fremen', allyOf(state, 'fremen')];
     // Best placed = most force it can actually bring: forces on the board plus
@@ -290,6 +290,8 @@ export function createStrategicAI(options) {
 
   // --- Decision override ---------------------------------------------------
 
+  // options.factionStrategy === false plays without the per-faction strategies (for head-to-head tests).
+  const useFactionStrategy = options.factionStrategy !== false;
   const factionStrategy = createFactionStrategy({ allyOf, forcesOf, occupants, strongholds, forcesToContest, shipTo, moveTo, enterTarget });
 
   return {
@@ -334,9 +336,9 @@ export function createStrategicAI(options) {
       if (!goal && me === 'richese') goal = richesePlan(state, me);
       if ((!goal || goal.action.save) && ['guild', 'richese'].includes(me)) goal = musterPlan(state, me) ?? goal;
       // Every other faction plays to its own strengths (js/ai/factionStrategy.js).
-      if (!goal && !['choam', 'richese', 'guild'].includes(me)) goal = factionStrategy.plan(state, me);
+      if (useFactionStrategy && !goal && !['choam', 'richese', 'guild'].includes(me)) goal = factionStrategy.plan(state, me);
       // Weak factions never trickle a handful into a defended territory.
-      if (!goal) return factionStrategy.muster(state, me, plan);
+      if (!goal) return useFactionStrategy ? factionStrategy.muster(state, me, plan) : plan;
       if (goal.action.save) return { ...plan, shipment: null, reason: goal.reason };
 
       const { action, reason } = goal;
