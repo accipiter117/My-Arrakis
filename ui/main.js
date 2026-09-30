@@ -215,7 +215,16 @@ function logEvent(e) {
     const where = e.territoryId ? ` before the battle in ${territoryNameOf(e.territoryId)}` : '';
     addLog('battle', turn, `Truthtrance${where}: ${nameOf(e.asker)} asked ${nameOf(e.target)} "${q}" Answer: ${e.answer ? 'yes' : 'no'}.`);
   }
-  if (e.type === 'karama') addLog('battle', turn, `${nameOf(e.factionId)} played Karama to cancel ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[e.purpose]}${e.territoryId ? ` in ${territoryNameOf(e.territoryId)}` : ''}.`);
+  if (e.type === 'karama') addLog(phaseEngine.currentPhase(gameState), turn, e.purpose === 'buyCard' ? `${nameOf(e.factionId)} played Karama to take the card free.`
+    : e.purpose === 'halfPriceShipment' ? `${nameOf(e.factionId)} played Karama to ship at half price.`
+    : `${nameOf(e.factionId)} played Karama to cancel ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture' }[e.purpose]}${e.territoryId ? ` in ${territoryNameOf(e.territoryId)}` : ''}.`);
+  if (e.type === 'karamaPower') {
+    const t = { seePlan: `saw ${nameOf(e.targetId)}'s whole battle plan in ${territoryNameOf(e.territoryId)}`, stopShipment: `stopped ${nameOf(e.targetId)}'s shipment to ${territoryNameOf(e.territoryId)}`,
+      stopRevival: `stopped ${nameOf(e.targetId)} reviving this turn`, freeRevival: e.leaderId ? `revived ${leaderNameOf(e.leaderId)} free` : `revived ${e.forces} forces free`,
+      takeCards: `took ${e.count} card${e.count > 1 ? 's' : ''} blind from ${nameOf(e.targetId)}, giving back as many`, buyCache: 'bought a card from their cache for 3 spice',
+      sellCards: `sold ${e.count} card${e.count > 1 ? 's' : ''} for 3 spice each` }[e.kind];
+    addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} used their Karama power: ${t}.`);
+  }
   if (e.type === 'technology') addLog('bidding', turn, 'The Ixians used Technology to swap the card about to be auctioned.');
   if (e.type === 'suboidExchange') addLog('battle', turn, `Ixians exchanged ${e.count} surviving Suboids for lost Cyborgs in ${territoryNameOf(e.territoryId)}.`);
   if (e.type === 'earlyLeaderRevival') addLog('revival', turn, `${nameOf(e.factionId)} paid the Tleilaxu ${e.price} spice to revive ${leaderNameOf(e.leaderId)} early.`);
@@ -682,7 +691,7 @@ function cardHelp(id) {
   }[c];
   if (help) return { text: help };
   if (id.startsWith('truthtrance')) return { text: 'Truthtrance. Ask another player one yes/no question about the game. They must answer truthfully, and everyone hears the answer.', truth: true };
-  if (id.startsWith('karama')) return { text: 'Karama. Cancels an enemy faction advantage as it is used against you: the Voice, Atreides Prescience, or a Harkonnen capture. You will be offered it at that moment. (Each faction\'s once-per-game Karama power is not in this version yet.)' };
+  if (id.startsWith('karama')) return { text: 'Karama. Offered at its moments: take a card being auctioned free (button in the bid panel); ship at half price (tick box in your shipment panel); cancel the Voice, Prescience or a Harkonnen capture used against you; or use your faction\'s Karama power (Atreides: see a battle plan; Emperor: revive 3 forces or a leader free; Tleilaxu: stop a revival; Guild: stop a shipment; Harkonnen: take cards blind; Richese: buy a cache card; CHOAM: sell cards for 3 each). Still to come: the Fremen and Ixian powers, and Karama against the expansion factions\' powers.' };
   if (id === 'harvester') return { text: 'Harvester. Just after a Spice Blow lands, double its spice. You will be asked at that moment.' };
   if (id === 'thumper') return { text: 'Thumper. At the start of a Spice Blow, call Shai-Hulud instead of revealing the first card: the worm devours the last spice territory and a Nexus follows. You will be asked at that moment.' };
   if (id === 'amal') return { text: 'Amal. Every faction, including you, discards half its spice (rounded up) to the Spice Bank. Play it between phases.', amal: true };
