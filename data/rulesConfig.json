@@ -215,6 +215,10 @@
       {
         "id": "karamaExpansion2",
         "justification": "Karama, third part. Against the Ixians: Cyborgs count as normal forces for one battle (offered to the Ixians' opponent when the battle starts, if Cyborgs are there); no Suboid-for-Cyborg exchange after that battle; no bury this round (asked before the Ixians look). Against the Tleilaxu revival economy for one turn: the Tleilaxu revive at most 3 at full price, everyone else pays the Bank, no 1-spice payment for free revival, and no early leader revival. Against CHOAM's revival terms for one turn: at most 3 forces (5 if the Tleilaxu allow) at 2 spice each (asked only when CHOAM have more than 3 in the tanks). Against Cyborg and Suboid movement: at the start of the Ixians' Shipment and Movement turn, a Karama limits them to 1 territory that turn (ornithopters from Arrakeen or Carthag still apply, as for any faction)."
+      },
+      {
+        "id": "stormBlocksMovement",
+        "justification": "Storm movement rules, on the project owner's sector model (each territory lies mostly in one storm sector, its stormSector; the storm covers the sector it stands in). No forces may be shipped into, moved into, out of or through a territory whose sector the storm is in, whatever its terrain (rock and strongholds protect only from losses); this covers normal moves, the Guild's cross-planet and retreat shipping, and Fremen worm rides. The Polar Sink is never in storm and the HMS travels above it. A spice blow whose territory is in the storm places no spice (the card is still discarded). Family Atomics additionally needs the storm not to stand between the detonating forces and the Shield Wall: neither territory's sector in storm, nor the storm in a sector between them the short way round. Because the map approximates multi-sector territories as one sector, a big territory is blocked entirely when its main sector is in storm."
       }
     ]
   },
