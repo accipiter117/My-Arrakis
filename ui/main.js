@@ -225,6 +225,9 @@ function logEvent(e) {
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
   if (e.type === 'faceDancer') addLog('battle', turn, `Face Dancer! ${leaderNameOf(e.leaderId)} was a Tleilaxu Face Dancer: ${nameOf(e.winnerId)}'s ${e.returned} force${e.returned === 1 ? '' : 's'} in ${territoryNameOf(e.territoryId)} go back to reserves, and ${e.placed} Tleilaxu force${e.placed === 1 ? '' : 's'} take their place.`);
+  if (e.type === 'advisorFlip') addLog(phaseEngine.currentPhase(gameState), turn, e.toAdvisors
+    ? `Bene Gesserit in ${territoryNameOf(e.territoryId)} became advisors (intrusion).`
+    : `Bene Gesserit advisors in ${territoryNameOf(e.territoryId)} became fighters${e.cause === 'alone' ? ' (alone there)' : ' to battle'}.`);
   if (e.type === 'weatherControl') addLog('storm', turn, `${nameOf(e.factionId)} played Weather Control: the storm moves ${e.sectors} sector${e.sectors === 1 ? '' : 's'}.`);
   if (e.type === 'familyAtomics') addLog('storm', turn, `${nameOf(e.factionId)} detonated Family Atomics: the Shield Wall is destroyed${e.losses.length ? ` (${e.losses.map(l => `${nameOf(l.factionId)} lost ${l.lost}`).join(', ')})` : ''}. Imperial Basin, Arrakeen and Carthag are now open to the storm.`);
   if (e.type === 'richeseCard') {
@@ -561,6 +564,7 @@ function describe(entry) {
         if (r.type === 'movement') return `${nameOf(r.factionId)} ${r.card === 'hajr' ? 'played Hajr and moved' : 'moved'} ${r.amount} from ${territoryNameOf(r.from)} to ${territoryNameOf(r.to)}`;
         if (r.type === 'allyOverlapPenalty') return `${nameOf(r.penalizedFactionId)} lost ${r.forcesLost} forces sharing ${territoryNameOf(r.territoryId)} with an ally`;
         if (r.noField) return `Richese placed a No-Field token in ${territoryNameOf(r.territoryId)}`;
+        if (r.type === 'advisor' && r.territoryId !== 'polarSink') return `Bene Gesserit sent an advisor to ${territoryNameOf(r.territoryId)}`;
         if (r.viaNoField) return `${nameOf(r.factionId)} shipped ${r.amount} to ${territoryNameOf(r.territoryId)} with Richese's No-Field token`;
         return `${nameOf(r.factionId)} shipped ${r.amount} to ${territoryNameOf(r.territoryId)}`;
       }).join('; ') + '.');
