@@ -199,6 +199,10 @@
       {
         "id": "stormCards",
         "justification": "Weather Control: offered at the start of the Storm phase (not the first storm) to each holder in turn order; the first to play it sets the storm's move to 0-10 sectors instead of the dials or the Fremen storm card, then discards it. Family Atomics: offered once the storm's move is known and before it moves, to a holder with fighters (not Bene Gesserit advisors) on the Shield Wall or in a territory next to it; every force on the Shield Wall goes to the tanks, and for the rest of the game the storm also sweeps Imperial Basin, Arrakeen and Carthag. The rule that the storm must not stand between the holder and the Shield Wall is not applied (the app has no sector-level storm blocking yet)."
+      },
+      {
+        "id": "bgAdvisors",
+        "justification": "Bene Gesserit advisors (base game, advanced; GF9 rulebook). A territory's Bene Gesserit forces are all fighters or all advisors. Advisors coexist: no spice, no battles, no stronghold control, not counted for the two-faction stronghold limit, no ornithopter access, cannot set off Family Atomics; storms, worms, Lasgun/Shield explosions and atomics still kill them. Spiritual advisor: with another faction's off-planet shipment, 1 free force to the Polar Sink or, as an advisor, into that same territory (joining as a fighter if Bene Gesserit fighters are already there). Moving: into an empty territory they become fighters; into an occupied one the player chooses; into a territory already holding Bene Gesserit they take that group's type. Intrusion: when a non-allied faction ships or moves into a territory with Bene Gesserit fighters, they may become advisors. Battle: at the start of Shipment and Movement (after the Spice Blow and Nexus, before any shipment) advisors may become fighters where they stand. Universal Stewards: at the start of the Battle phase, advisors alone in a territory become fighters. Not yet applied: the rule that advisors sent with a shipment cannot turn into fighters that same turn (no flip window arises for them this turn except Universal Stewards, which the rule allows)."
       }
     ]
   },
