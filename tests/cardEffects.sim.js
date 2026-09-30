@@ -60,14 +60,9 @@ assert(canPlayGhola(state, 'fremen', { forces: 6 }).ok === false, 'more than 5 r
 state.factions.fremen.revivalTanks = 2; state.factions.fremen.starredRevivalTanks = 0;
 assert(canPlayGhola(state, 'fremen', { forces: 3 }).ok === false, 'more than the tanks hold refused');
 
-console.log('\nTest 5: only cards whose effects are not built yet can be discarded freely');
+console.log('\nTest 5: every card now works, so none can be discarded as "not built yet"');
 state = makeState();
-state.factions.fremen.treacheryHand = ['weatherControl', 'chaumas', 'baliset', 'karama1'];
-assert(canDiscardUnbuilt(state, 'fremen', 'weatherControl').ok, 'Weather Control (needs the storm) can be discarded');
-assert(!canDiscardUnbuilt(state, 'fremen', 'karama1').ok, 'Karama cannot any more: it now works');
-assert(!canDiscardUnbuilt(state, 'fremen', 'chaumas').ok, 'a working weapon cannot');
-assert(!canDiscardUnbuilt(state, 'fremen', 'baliset').ok, 'a worthless card cannot (it is shed by playing it in battle)');
-discardUnbuilt(state, 'fremen', 'weatherControl');
-assert(!state.factions.fremen.treacheryHand.includes('weatherControl') && state.decks.treacheryDiscard.includes('weatherControl'), 'Weather Control moved to the discard pile');
+state.factions.fremen.treacheryHand = ['weatherControl', 'familyAtomics', 'chaumas', 'baliset', 'karama1'];
+for (const c of ['weatherControl', 'familyAtomics', 'karama1', 'chaumas', 'baliset']) assert(!canDiscardUnbuilt(state, 'fremen', c).ok, `${c} cannot be discarded as unbuilt`);
 
 console.log('\nAll card effect checks passed.');
