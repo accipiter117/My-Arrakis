@@ -987,6 +987,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         auditor: 'CHOAM\'s Auditor is about to look at your cards.',
         cacheAuction: 'Richese are about to auction a card from their cache.',
         cyborgs: `The Ixians' Cyborgs fight at double strength${ctx.territoryId ? ` in ${place}` : ''}. Karama makes them count as normal forces in this battle.`,
+        ixianMovement: 'The Ixians are about to move: Cyborgs move 2 territories and take Suboids with them. Karama limits them to 1 territory this turn.',
         suboidExchange: 'The Ixians are about to replace Cyborgs lost in this battle with surviving Suboids.',
         ixianBury: 'The Ixians are about to look at this round\'s cards and remove one.',
         tleilaxuRevival: 'The Tleilaxu revival economy is about to run: no limit and half price for them, everyone\'s revival paid to them. Karama makes this turn\'s revival normal: 3 at full price for them, payments to the Bank, no early leader revival.',
