@@ -7,6 +7,7 @@
 // unconditionally every phase.
 
 import { ownsAllTechTokens, TECH_STRONGHOLD } from './techTokens.js';
+import { isAdvisorTerritory } from './advisors.js';
 
 function strongholdIdsFrom(territoriesData) {
   return Object.keys(territoriesData.territories).filter(
@@ -17,7 +18,7 @@ function strongholdIdsFrom(territoriesData) {
 // Includes the Tech Tokens pseudo-stronghold when one faction holds all three.
 function strongholdsOccupiedBy(state, factionId, strongholdIds) {
   const forces = state.factions[factionId].forces.onBoard;
-  const held = strongholdIds.filter(id => (forces[id] ?? 0) > 0);
+  const held = strongholdIds.filter(id => (forces[id] ?? 0) > 0 && !(factionId === 'gesserit' && isAdvisorTerritory(state, id))); // advisors never control
   if (ownsAllTechTokens(state, factionId)) held.push(TECH_STRONGHOLD);
   return held;
 }
