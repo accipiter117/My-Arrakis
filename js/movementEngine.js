@@ -97,8 +97,9 @@ function shipmentCostPerForce(state, factionId, destinationTerritoryId) {
     ? state.rulesConfig.official.shippingCostPerForce.toStronghold
     : state.rulesConfig.official.shippingCostPerForce.toOtherTerritory;
 
-  // The Guild ships at half price, and so does the Guild's ally (alliance advantage).
-  if (factionId === 'guild' || allyOf(state, factionId) === 'guild') {
+  // The Guild ships at half price, and so does the Guild's ally (alliance advantage),
+  // and anyone paying with a Karama card for this shipment.
+  if (factionId === 'guild' || allyOf(state, factionId) === 'guild' || state.meta?.karamaHalfPrice === factionId) {
     return baseCost * state.rulesConfig.official.guildShippingDiscount;
   }
 
