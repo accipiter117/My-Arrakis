@@ -867,3 +867,10 @@ body.has-console.console-muted .turn-banner { top: 0.45rem; max-width: calc(100%
 /* Bene Gesserit advisors on the board */
 .counter--advisor image { opacity: 0.55; filter: grayscale(0.6); }
 .counter__tag { font: 700 9px var(--font-data, monospace); fill: #f1dfbf; text-anchor: middle; paint-order: stroke; stroke: #000; stroke-width: 2px; }
+
+/* Family Atomics: the blasted Shield Wall and the storm danger markers */
+.board__atomics { filter: saturate(0.95); }
+.danger-marker__disc { fill: #2a1208; stroke: #ff7a3d; stroke-width: 2.5; }
+.danger-marker__mark { font: 800 16px var(--font-data, monospace); fill: #ffb070; text-anchor: middle; }
+.danger-marker { animation: danger-pulse 1.8s ease-in-out infinite; }
+@keyframes danger-pulse { 50% { opacity: 0.55; } }
