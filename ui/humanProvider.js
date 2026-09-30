@@ -35,7 +35,7 @@ const options = (pairs, selected) => pairs.map(([v, label]) =>
   `<option value="${esc(v)}"${String(v) === String(selected) ? ' selected' : ''}>${esc(label)}</option>`).join('');
 const range = (min, max) => Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
 
-export function createHumanProvider({ panel, leadersData, cardLookup, territoriesData, factionNames, onWaiting }) {
+export function createHumanProvider({ panel, leadersData, cardLookup, territoriesData, factionNames, onWaiting, getBattleScene = () => null }) {
   const leader = {};
   for (const list of Object.values(leadersData)) {
     if (!Array.isArray(list)) continue;
@@ -1110,6 +1110,9 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
     },
 
     chooseBattlePlan(state, factionId, territoryId, opponentId, intel, voice) {
+      // The battle scene: build the plan by touching the pieces (ui/battleScene.js).
+      const scene = getBattleScene();
+      if (scene) { onWaiting?.(true); return scene.plan({ state, factionId, territoryId, opponentId, intel, voice }).finally(() => onWaiting?.(false)); }
       const me = state.factions[factionId];
       const present = forcesAfterReveal(state, factionId, territoryId);
       const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
