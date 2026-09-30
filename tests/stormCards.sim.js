@@ -28,8 +28,11 @@ assert(!stormEngine.canUseFamilyAtomics(s, 'harkonnen'), 'needs forces on or nex
 s.factions.harkonnen.forces.onBoard.imperialBasin = 2;
 assert(stormEngine.canUseFamilyAtomics(s, 'harkonnen'), 'Harkonnen next door in Imperial Basin may detonate');
 const arrSector = territories.territories.arrakeen.stormSector;
-s.board.stormPosition = (arrSector + 17) % 18;
-s.factions.harkonnen.forces.onBoard.imperialBasin = 2;
+s.board.stormPosition = (arrSector + 17) % 18;   // sector 7: between Imperial Basin (8) and the Shield Wall (6)
+assert(!stormEngine.canUseFamilyAtomics(s, 'harkonnen'), 'but not with the storm between Imperial Basin and the Shield Wall');
+delete s.factions.harkonnen.forces.onBoard.imperialBasin;
+s.factions.harkonnen.forces.onBoard.holeInTheRock = 2;   // same sector as the Shield Wall: nothing between
+assert(stormEngine.canUseFamilyAtomics(s, 'harkonnen'), 'from Hole in the Rock the way is clear');
 const before = s.factions.emperor.revivalTanks ?? 0;
 await turnEngine.runStormPhase(s, { ...P, chooseStormDial: () => 1, chooseFamilyAtomics: () => true });
 assert(!s.factions.emperor.forces.onBoard.shieldWall && s.factions.emperor.revivalTanks >= before + 4, 'the 4 Emperor forces on the Shield Wall are destroyed');
