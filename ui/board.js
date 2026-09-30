@@ -23,6 +23,9 @@ const el = (tag, attrs = {}, parent) => {
   return node;
 };
 
+// Storm danger marker art (null: a drawn stand-in until the painted token arrives).
+const DANGER_ART = null;
+
 export function createBoard({ container, geometry, territoriesData, factionColors, onTap, onZoom }) {
   const [cx, cy] = geometry.center;
   const radius = geometry.radius;
@@ -223,6 +226,23 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     paths[id] = path;
   }
 
+  // Family Atomics: once the Shield Wall is destroyed, its territory shows the blasted
+  // range for the rest of the match (art clipped to the territory's exact outline).
+  const swGeo = geometry.territories.shieldWall;
+  let atomicsArt = null;
+  if (swGeo) {
+    const clip = el('clipPath', { id: 'clip-shield-wall' }, defs);
+    el('path', { d: swGeo.path }, clip);
+    const nums = swGeo.path.match(/-?\d+\.?\d*/g).map(Number);
+    const xs = nums.filter((_, i) => i % 2 === 0), ys = nums.filter((_, i) => i % 2 === 1);
+    const bx = Math.min(...xs), by = Math.min(...ys), bw = Math.max(...xs) - bx, bh = Math.max(...ys) - by;
+    atomicsArt = el('image', { href: new URL('../assets/tokens/shield-wall-destroyed.jpg?v=1', import.meta.url).href, x: bx, y: by, width: bw, height: bh,
+      preserveAspectRatio: 'none', 'clip-path': 'url(#clip-shield-wall)', class: 'board__atomics', 'pointer-events': 'none', visibility: 'hidden' }, territoryLayer);
+  }
+  // Storm danger markers for the territories the Shield Wall no longer protects.
+  const dangerLayer = el('g', { class: 'board__danger', 'pointer-events': 'none' }, svg);
+  const DANGER = { arrakeen: [26, -30], carthag: [26, -30], imperialBasin: [0, -34] };
+
   function label(id, geo) {
     const name = territoriesData.territories[id]?.name ?? id;
     // Short names wherever a full name would crowd its region; smaller
@@ -235,6 +255,16 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   for (const [id, geo] of Object.entries(geometry.territories)) label(id, geo);
 
   function render(state, { selected = null, highlight = [], foreseen = null, viewer = undefined } = {}) {
+    const blasted = Boolean(state?.board?.shieldWallDestroyed);
+    atomicsArt?.setAttribute('visibility', blasted ? 'visible' : 'hidden');
+    dangerLayer.replaceChildren();
+    if (blasted) for (const [id, [dx, dy]] of Object.entries(DANGER)) {
+      const at = geometry.territories[id]?.label; if (!at) continue;
+      const g = el('g', { transform: `translate(${at[0] + dx},${at[1] + dy})`, class: 'danger-marker' }, dangerLayer);
+      const t = el('title', {}, g); t.textContent = 'Open to the storm: the Shield Wall is destroyed';
+      if (DANGER_ART) el('image', { href: DANGER_ART, x: -14, y: -14, width: 28, height: 28 }, g);
+      else { el('circle', { r: 12, class: 'danger-marker__disc' }, g); const x = el('text', { y: 5, class: 'danger-marker__mark' }, g); x.textContent = '!'; }
+    }
     for (const [id, path] of Object.entries(paths)) {
       path.classList.toggle('territory--selected', id === selected);
       path.classList.toggle('territory--highlight', highlight.includes(id));
