@@ -215,6 +215,15 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       hideBanner();
     },
 
+    async weatherControl(e) {
+      await showCard('storm', card('Weather Control', names.faction(e.factionId), `moves the storm <strong>${e.sectors}</strong> sector${e.sectors === 1 ? '' : 's'}`), 2600);
+    },
+    async familyAtomics(e) {
+      if (speed()) await board.focusOn([board.labelPoint('shieldWall')], { ms: scaled(600), minW: 480 });
+      if (speed()) board.pulse('shieldWall', 'battle', scaled(1400));
+      renderReal();
+      await showCard('storm', card('Family Atomics', 'The Shield Wall falls', `${esc(names.faction(e.factionId))} detonate. Arrakeen, Carthag and Imperial Basin are open to the storm.`), 3200);
+    },
     // A battle is about to be fought: go there before any plans are made.
     async battleStart(e) {
       if (!speed()) return;
