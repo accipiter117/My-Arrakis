@@ -244,6 +244,12 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
            ${me.treacheryHand.includes('ornithopter') ? '<label class="choice"><input type="checkbox" name="thopter"> <span>Play the Ornithopter card: this move may go up to 3 territories</span></label>' : ''}
            <p class="decision__note">Your shipment happens first, then your move. Tip: tap ▾ to see the map, where legal choices are outlined; tapping a territory fills this in.</p>
          </fieldset>
+         ${me.treacheryHand.includes('ornithopter') ? `<fieldset><legend>Or play the Ornithopter card: move a second group</legend>
+           <label class="field"><span>From</span><select name="t2From">${options(fromOptions.map(([v, l]) => [v, v ? l : 'Not this way']), '')}</select></label>
+           <label class="field"><span>To</span><select name="t2To"><option value="">Choose a starting territory</option></select></label>
+           <label class="field"><span>Forces</span><select name="t2Amount">${nums(1, 1, 1)}</select></label>
+           <p class="decision__note">A second group moves at your normal range, after your main move. Use the card one way or the other.</p>
+         </fieldset>` : ''}
          ${me.treacheryHand.includes('hajr') ? `<fieldset><legend>Hajr: an extra move (uses the card)</legend>
            <label class="field"><span>From</span><select name="hajrFrom">${options(fromOptions.map(([v, l]) => [v, v ? l : 'Keep the card']), '')}</select></label>
            <label class="field"><span>To</span><select name="hajrTo"><option value="">Choose a starting territory</option></select></label>
@@ -352,13 +358,20 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             document.removeEventListener('territory-tap', onTap);
             document.dispatchEvent(new CustomEvent('board-highlight', { detail: { ids: [] } }));
           };
+          if (field(p, 't2From')) field(p, 't2From').onchange = () => {
+            const from = field(p, 't2From').value;
+            const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, range_) : [];
+            field(p, 't2To').innerHTML = from ? options(reachable.map(id => [id, territoryName(id)]), reachable[0]) : '<option value="">Choose a starting territory</option>';
+            field(p, 't2Amount').innerHTML = from ? nums(1, me.forces.onBoard[from], me.forces.onBoard[from]) : nums(1, 1, 1);
+            if (from && field(p, 'thopter')) field(p, 'thopter').checked = false; // one use of the card
+          };
           if (field(p, 'hajrFrom')) field(p, 'hajrFrom').onchange = () => {
             const from = field(p, 'hajrFrom').value;
             const reachable = from ? movementEngine.reachableTerritories(state, factionId, from, field(p, 'thopter')?.checked ? Math.max(3, range_) : range_) : [];
             field(p, 'hajrTo').innerHTML = from ? options(reachable.map(id => [id, territoryName(id)]), reachable[0]) : '<option value="">Choose a starting territory</option>';
             field(p, 'hajrAmount').innerHTML = from ? nums(1, me.forces.onBoard[from], me.forces.onBoard[from]) : nums(1, 1, 1);
           };
-          p.querySelectorAll('select, input').forEach(el => { if (!['moveFrom', 'hajrFrom'].includes(el.name)) el.oninput = el.onchange = check; });
+          p.querySelectorAll('select, input').forEach(el => { if (!['moveFrom', 'hajrFrom', 't2From'].includes(el.name)) el.oninput = el.onchange = check; });
           if (field(p, 'gFrom')) field(p, 'gFrom').onchange = field(p, 'gFrom').oninput = () => {
             const n = me.forces.onBoard[field(p, 'gFrom').value] ?? 1;
             field(p, 'gAmount').innerHTML = nums(1, n, Math.min(num(p, 'gAmount') || 1, n));
@@ -369,7 +382,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const shipTo = field(p, 'shipTo').value;
             const from = field(p, 'moveFrom').value;
             done({
-              ornithopter: field(p, 'thopter')?.checked ? 'far' : null,
+              ornithopter: field(p, 't2From')?.value ? { from: field(p, 't2From').value, to: field(p, 't2To').value, amount: num(p, 't2Amount') }
+                : field(p, 'thopter')?.checked ? 'far' : null,
               ...(field(p, 'shipKarama')?.checked && shipTo ? { karamaShip: true } : {}),
               shipment: shipTo ? (field(p, 'shipNF')?.value ? { territoryId: shipTo, amount: 1, noField: Number(field(p, 'shipNF').value) }
                 : { territoryId: shipTo, amount: num(p, 'shipAmount'), starred: field(p, 'shipStarred') ? num(p, 'shipStarred') : undefined }) : null,
