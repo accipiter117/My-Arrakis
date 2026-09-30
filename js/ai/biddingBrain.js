@@ -83,7 +83,7 @@ export function createBiddingBrain({ cardLookup, rng = random }) {
       const keep = Math.min(faction.spice, 3 + (faction.forces.reserve > 4 ? 4 : 0) + Math.min(4, Math.floor(onBoard / 4)));
       // Card value in spice terms, tempered: spice has many other uses.
       // A faction sitting on a fortune (the Guild's shipping fees) should spend it on cards.
-      const flush = faction.spice >= 40 ? 1.6 : faction.spice >= 25 ? 1.25 : 1;
+      const flush = Math.max(faction.spice >= 40 ? 1.6 : faction.spice >= 25 ? 1.25 : 1, me === 'harkonnen' && faction.spice >= 6 ? 1.3 : 1); // Harkonnen live on cards
       const maxBid = Math.floor(value * 0.8 * spiceWorth * flush + rng() * 1.2);
       const next = currentBid + 1;
       if (next > maxBid || next > faction.spice - keep) return null;
