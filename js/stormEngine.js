@@ -126,11 +126,25 @@ function territoriesInPath(state, from, sectors) {
 // before it moves, by a faction with fighters on the Shield Wall or in a territory
 // next to it. Every force on the Shield Wall is destroyed, and the Shield Wall no
 // longer protects Imperial Basin, Arrakeen and Carthag from the storm.
+// ...and the storm must not stand between those forces and the Shield Wall: neither
+// territory's sector in storm, nor the storm in a sector between the two (the short way round).
+function stormBetween(state, a, b) {
+  const pos = state.board.stormPosition;
+  if (pos == null) return false;
+  const sa = state.board.territories[a]?.stormSector, sb = state.board.territories[b]?.stormSector;
+  if (sa == null || sb == null) return false;
+  if (sa === pos || sb === pos) return true;
+  const fwd = (sb - sa + TOTAL_SECTORS) % TOTAL_SECTORS;
+  const steps = fwd <= TOTAL_SECTORS / 2 ? fwd : fwd - TOTAL_SECTORS; // shorter direction
+  for (let k = 1; k < Math.abs(steps); k++) if ((sa + Math.sign(steps) * k + TOTAL_SECTORS) % TOTAL_SECTORS === pos) return true;
+  return false;
+}
 const canUseFamilyAtomics = (state, factionId) => {
   if (state.board.shieldWallDestroyed || !state.factions[factionId]?.treacheryHand.includes('familyAtomics')) return false;
   const near = ['shieldWall', ...(state.board.territories.shieldWall?.adjacentBoard ?? [])];
   const fx = state.factions[factionId].forces;
-  return near.some(t => (fx.onBoard[t] ?? 0) - (fx.advisorsOnBoard?.[t] ?? 0) > 0);
+  const advisorHere = t => factionId === 'gesserit' && (fx.advisorTerritories ?? []).includes(t);
+  return near.some(t => (fx.onBoard[t] ?? 0) > 0 && !advisorHere(t) && !stormBetween(state, t, 'shieldWall'));
 };
 function useFamilyAtomics(state, factionId) {
   if (!canUseFamilyAtomics(state, factionId)) return null;
