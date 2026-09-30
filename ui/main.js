@@ -219,7 +219,8 @@ function logEvent(e) {
     : e.purpose === 'halfPriceShipment' ? `${nameOf(e.factionId)} played Karama to ship at half price.`
     : `${nameOf(e.factionId)} played Karama to stop ${{ voice: 'the Voice', prescience: 'Prescience', capture: 'a Harkonnen capture', technology: 'Ixian Technology', hmsMove: 'the HMS moving',
         faceDancerSwap: 'a Face Dancer swap', ghola: 'a Tleilaxu Ghola', choamCharity: 'CHOAM\'s charity', choamTreachery: 'CHOAM cashing in cards this phase', inflation: 'CHOAM\'s Inflation',
-        choamForces: 'CHOAM\'s share of this battle\'s spice', auditor: 'CHOAM\'s Auditor', cacheAuction: 'the Richese cache auction', blackMarket: 'the Black Market', noFieldShip: 'a No-Field shipment' }[e.purpose] ?? e.purpose}${e.territoryId ? ` in ${territoryNameOf(e.territoryId)}` : ''}.`);
+        choamForces: 'CHOAM\'s share of this battle\'s spice', auditor: 'CHOAM\'s Auditor', cacheAuction: 'the Richese cache auction', cyborgs: 'Ixian Cyborgs (normal strength this battle)', suboidExchange: 'the Ixian Suboid exchange', ixianBury: 'the Ixian card bury',
+        tleilaxuRevival: 'the Tleilaxu revival economy this turn', choamRevival: 'CHOAM\'s revival terms this turn', blackMarket: 'the Black Market', noFieldShip: 'a No-Field shipment' }[e.purpose] ?? e.purpose}${e.territoryId ? ` in ${territoryNameOf(e.territoryId)}` : ''}.`);
   if (e.type === 'karamaPower') {
     const t = { seePlan: `saw ${nameOf(e.targetId)}'s whole battle plan in ${territoryNameOf(e.territoryId)}`, stopShipment: `stopped ${nameOf(e.targetId)}'s shipment to ${territoryNameOf(e.territoryId)}`,
       stopRevival: `stopped ${nameOf(e.targetId)} reviving this turn`, freeRevival: e.leaderId ? `revived ${leaderNameOf(e.leaderId)} free` : `revived ${e.forces} forces free`,
