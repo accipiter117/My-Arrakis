@@ -986,6 +986,11 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         choamForces: `CHOAM would take half the spice spent on forces in this battle${ctx.territoryId ? ` in ${place}` : ''}.`,
         auditor: 'CHOAM\'s Auditor is about to look at your cards.',
         cacheAuction: 'Richese are about to auction a card from their cache.',
+        cyborgs: `The Ixians' Cyborgs fight at double strength${ctx.territoryId ? ` in ${place}` : ''}. Karama makes them count as normal forces in this battle.`,
+        suboidExchange: 'The Ixians are about to replace Cyborgs lost in this battle with surviving Suboids.',
+        ixianBury: 'The Ixians are about to look at this round\'s cards and remove one.',
+        tleilaxuRevival: 'The Tleilaxu revival economy is about to run: no limit and half price for them, everyone\'s revival paid to them. Karama makes this turn\'s revival normal: 3 at full price for them, payments to the Bank, no early leader revival.',
+        choamRevival: 'CHOAM are about to revive without limit at 1 spice a force. Karama limits them to 3 at 2 spice each this turn.',
         blackMarket: 'Richese are about to sell a card on the Black Market.',
         noFieldShip: `Richese are about to ship a No-Field token${ctx.territoryId ? ` into ${place}` : ''}.`
       }[purpose];
