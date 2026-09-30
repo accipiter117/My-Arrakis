@@ -968,3 +968,10 @@ body.has-console .event-layer.event-layer--battle { top: 22%; }
 .bs__side--mine .bs__btn--more { top: 2%; transform: none; left: calc(50% + clamp(104px, 15dvh, 140px) / 2 - 8px); }
 .bs__side--mine .bs__btn--less { top: 2%; transform: none; left: calc(50% - clamp(104px, 15dvh, 140px) / 2 - 36px); }
 .bs__side--mine .bs__hand { top: 58%; left: calc(50% - clamp(104px, 15dvh, 140px) / 2 - 58px); }
+
+/* Battle scene card names: black lettering outlined in white, like the map's territory names */
+.bs__card-name, .bs__pick .bs__card-name {
+  color: #120a04 !important; font-weight: 800; font-size: 9.5px; letter-spacing: 0.01em;
+  text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff, 0 -1px 0 #fff, 0 1px 0 #fff, -1px 0 0 #fff, 1px 0 0 #fff;
+}
+.bs__pick .bs__card-name { font-size: 10.5px; }
