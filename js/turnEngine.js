@@ -38,6 +38,7 @@ import * as choam from './choam.js';
 import * as richese from './richese.js';
 import * as noField from './noField.js';
 import * as rcards from './richeseCards.js';
+import * as advisors from './advisors.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -83,6 +84,8 @@ const passiveDecisionProvider = {
   chooseHarvester() { return null; },
   chooseAmal() { return false; },
   chooseAdvisor() { return false; },
+  chooseIntrusion() { return false; },
+  chooseAdvisorsToFight() { return []; },
   chooseGuildTiming() { return null; }, // null: act last
   chooseFremenPlacement() { return null; }, // null: all 10 in Sietch Tabr
   chooseTechTokenToTake(state, f, options) { return techTokens.defaultTokenChoice(state, f, options); },
@@ -652,6 +655,15 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     order = [...others.slice(0, at), 'guild', ...others.slice(at)];
   }
 
+  // Bene Gesserit: before any shipment, advisors may become fighters to battle where they stand.
+  const advisorSites = (state.factions.gesserit?.forces.advisorTerritories ?? []).filter(t => advisors.othersIn(state, t).length);
+  if (advisorSites.length && decisionProvider.chooseAdvisorsToFight) {
+    const pick = (await decisionProvider.chooseAdvisorsToFight(state, 'gesserit', { territories: advisorSites })) ?? [];
+    for (const t of pick.filter(x => advisorSites.includes(x))) {
+      advisors.setAdvisors(state, t, false);
+      await observe(decisionProvider, { type: 'advisorFlip', territoryId: t, toAdvisors: false, cause: 'battle' }, state);
+    }
+  }
   // Juice of Sapho: its holder may go first or last this phase.
   for (const f of order.slice()) {
     if (!rcards.holds(state, f, 'juiceOfSapho') || !decisionProvider.chooseJuiceOfSapho) continue;
@@ -708,13 +720,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         noField.placeNoField(state, territoryId, nfValue);
         results.push({ factionId, type: 'shipment', territoryId, amount: 1, noField: true });
         await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount: 1, noField: true }, state);
-        if (state.factions.gesserit?.forces.reserve > 0 && decisionProvider.chooseAdvisor && await decisionProvider.chooseAdvisor(state, 'gesserit', factionId)) {
-          state.factions.gesserit.forces.reserve -= 1;
-          state.factions.gesserit.forces.onBoard.polarSink = (state.factions.gesserit.forces.onBoard.polarSink ?? 0) + 1;
-          techTokens.recordTrigger(state, 'heighliner', 'gesserit');
-          results.push({ factionId: 'gesserit', type: 'advisor', territoryId: 'polarSink', amount: 1 });
-          await observe(decisionProvider, { type: 'shipment', factionId: 'gesserit', territoryId: 'polarSink', amount: 1, advisor: true }, state);
-        }
+        await spiritualAdvisor(state, decisionProvider, factionId, territoryId, results);
       }
     } else if (decision.shipment) {
       // starred: how many of the shipped forces are Sardaukar / Fedaykin (default: as many as possible).
@@ -726,14 +732,8 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         // Bene Gesserit Spiritual Advisors: whenever another faction ships in
         // from off-planet, Bene Gesserit may place 1 force in the Polar Sink free.
         // (Not for the Fremen: their forces come from the deep desert, not off-planet.)
-        if (factionId !== 'gesserit' && factionId !== 'fremen' && state.factions.gesserit?.forces.reserve > 0 && decisionProvider.chooseAdvisor
-            && await decisionProvider.chooseAdvisor(state, 'gesserit', factionId)) {
-          state.factions.gesserit.forces.reserve -= 1;
-          state.factions.gesserit.forces.onBoard.polarSink = (state.factions.gesserit.forces.onBoard.polarSink ?? 0) + 1;
-          techTokens.recordTrigger(state, 'heighliner', 'gesserit'); // an advisor ships from off-planet too
-          results.push({ factionId: 'gesserit', type: 'advisor', territoryId: 'polarSink', amount: 1 });
-          await observe(decisionProvider, { type: 'shipment', factionId: 'gesserit', territoryId: 'polarSink', amount: 1, advisor: true }, state);
-        }
+        if (factionId !== 'gesserit' && factionId !== 'fremen') await spiritualAdvisor(state, decisionProvider, factionId, territoryId, results);
+        await intrusion(state, decisionProvider, factionId, territoryId);
       }
     } else if (factionId === 'guild' && decision.crossShip) {
       // Guild (advanced): ship across the planet instead of from reserves.
@@ -765,9 +765,12 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         // Ornithopter access is decided at the start of the move: leaving
         // Arrakeen or Carthag in this very move still flies.
         const ornithopter = movementEngine.hasOrnithopterAccess(state, factionId);
+        if (factionId === 'gesserit') state.meta.bgMoveAsAdvisors = decision.movement.asAdvisors;
         movementEngine.executeMove(state, factionId, from, to, amount, starred);
+        delete state.meta.bgMoveAsAdvisors;
         results.push({ factionId, type: 'movement', from, to, amount, ornithopter });
         await observe(decisionProvider, { type: 'move', factionId, from, to, amount, ornithopter }, state);
+        if (factionId !== 'gesserit') await intrusion(state, decisionProvider, factionId, to);
       }
     }
     delete state.meta.ornithopterFar;
@@ -915,6 +918,32 @@ async function faceDancerSwap(state, decisionProvider) {
 
 // Lets the UI present each event as it happens (cards, sweeps, marches).
 // Awaited so play only continues once the presentation has finished.
+// --- Bene Gesserit advisors (js/advisors.js) --------------------------------
+// Spiritual advisor: 1 free force with another faction's off-planet shipment,
+// to the Polar Sink or, as an advisor, to that same territory.
+async function spiritualAdvisor(state, decisionProvider, shipperId, territoryId, results) {
+  if (!(state.factions.gesserit?.forces.reserve > 0) || !decisionProvider.chooseAdvisor) return;
+  const pick = await decisionProvider.chooseAdvisor(state, 'gesserit', shipperId, { territoryId });
+  const to = pick === true || pick === 'polarSink' ? 'polarSink' : pick === territoryId && territoryId !== 'polarSink' ? territoryId : null;
+  if (!to) return;
+  if (to === 'polarSink') {
+    state.factions.gesserit.forces.reserve -= 1;
+    state.factions.gesserit.forces.onBoard.polarSink = (state.factions.gesserit.forces.onBoard.polarSink ?? 0) + 1;
+  } else advisors.sendAdvisor(state, to);
+  techTokens.recordTrigger(state, 'heighliner', 'gesserit'); // an advisor ships from off-planet too
+  results.push({ factionId: 'gesserit', type: 'advisor', territoryId: to, amount: 1 });
+  await observe(decisionProvider, { type: 'shipment', factionId: 'gesserit', territoryId: to, amount: 1, advisor: true, asAdvisor: to !== 'polarSink' && advisors.isAdvisorTerritory(state, to) }, state);
+}
+// Intrusion: a non-allied faction enters where Bene Gesserit have fighters; they may become advisors.
+async function intrusion(state, decisionProvider, intruderId, territoryId) {
+  if (!state.factions.gesserit || intruderId === 'gesserit' || allianceEngine.allyOf(state, 'gesserit') === intruderId) return;
+  if (territoryId === 'polarSink' || advisors.fighters(state, 'gesserit', territoryId) === 0 || !decisionProvider.chooseIntrusion) return;
+  if (await decisionProvider.chooseIntrusion(state, 'gesserit', { territoryId, intruderId })) {
+    advisors.setAdvisors(state, territoryId, true);
+    await observe(decisionProvider, { type: 'advisorFlip', territoryId, toAdvisors: true, cause: 'intrusion' }, state);
+  }
+}
+
 // --- CHOAM windows ---------------------------------------------------------
 // Offer CHOAM a worthless card's effect at its moment. options: the legal
 // choices (targets); the answer must be one of them (or true for Kulon).
@@ -973,6 +1002,7 @@ function findBattleTerritories(state) {
   for (const factionId of Object.keys(state.factions)) {
     for (const territoryId of Object.keys(state.factions[factionId].forces.onBoard)) {
       if (territoryId === 'polarSink') continue; // free haven, never a battle site
+      if (advisors.fighters(state, factionId, territoryId) === 0) continue; // advisors never fight
       territories[territoryId] = territories[territoryId] ?? [];
       territories[territoryId].push(factionId);
     }
@@ -993,6 +1023,8 @@ function findBattleTerritories(state) {
 async function runBattlePhase(state, decisionProvider, cardLookup) {
   const results = [];
   cardLookup = cardLookup ?? {};
+  // Universal Stewards: advisors alone in a territory become fighters before battles.
+  for (const t of advisors.universalStewards(state)) await observe(decisionProvider, { type: 'advisorFlip', territoryId: t, toAdvisors: false, cause: 'alone' }, state);
   battleEngine.resetKwisatzHaderachPhaseLock(state);
   state.battle = { leaderTerritory: {} }; // which territory each leader fought in this phase
   const participants = new Set();
@@ -1479,6 +1511,7 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
     await choamEndOfPhase(state, decisionProvider, cardLookup ?? {});
   }
   choam.clearPhaseEffects(state, phase);
+  advisors.cleanAdvisors(state);
 
   // Tech Tokens pay out at the end of their phase (Shipment and Movement
   // share one runner, so Heighliners pay once, at the end of 'shipment').
