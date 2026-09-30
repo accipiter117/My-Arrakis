@@ -14,6 +14,7 @@
 
 import { forcesAfterReveal, usableNoFields } from '../js/noField.js';
 import { TECH_TOKENS } from '../js/techTokens.js';
+import * as cardEffects from '../js/cardEffects.js';
 import { battleSpice, battleSupportFor, spendingPower } from '../js/allySupport.js';
 import * as biddingEngine from '../js/biddingEngine.js';
 import * as revivalEngine from '../js/revivalEngine.js';
@@ -144,6 +145,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          <p class="decision__error" hidden></p>
          <div class="decision__actions">
            <button class="btn btn--primary" data-action="bid">Bid</button>
+           ${cardEffects.holdsKarama(state, factionId) ? '<button class="btn" data-action="karama">Karama: take it free</button>' : ''}
            <button class="btn" data-default-action>Pass</button>
          </div>`,
         (p, done) => {
@@ -156,6 +158,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           field(p, 'bid').oninput = check;
           check();
           bidBtn.onclick = () => done(num(p, 'bid'));
+          p.querySelector('[data-action="karama"]')?.addEventListener('click', () => done('karama'));
           p.querySelector('[data-default-action]').onclick = () => done(null);
         });
     },
@@ -237,6 +240,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
            <label class="field"><span>To</span><select name="moveTo"><option value="">Choose a starting territory</option></select></label>
            <label class="field"><span>Forces</span><select name="moveAmount">${nums(1, 1, 1)}</select></label>
            ${eliteName ? `<label class="field" data-elite-move hidden><span>of which ${eliteName}</span><select name="moveStarred">${nums(0, 0, 0)}</select></label>` : ''}
+           ${cardEffects.holdsKarama(state, factionId) && factionId !== 'guild' ? '<label class="choice"><input type="checkbox" name="shipKarama"> <span>Pay for this shipment with a Karama card (half price)</span></label>' : ''}
            ${me.treacheryHand.includes('ornithopter') ? '<label class="choice"><input type="checkbox" name="thopter"> <span>Play the Ornithopter card: this move may go up to 3 territories</span></label>' : ''}
            <p class="decision__note">Your shipment happens first, then your move. Tip: tap ▾ to see the map, where legal choices are outlined; tapping a territory fills this in.</p>
          </fieldset>
@@ -366,6 +370,7 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             const from = field(p, 'moveFrom').value;
             done({
               ornithopter: field(p, 'thopter')?.checked ? 'far' : null,
+              ...(field(p, 'shipKarama')?.checked && shipTo ? { karamaShip: true } : {}),
               shipment: shipTo ? (field(p, 'shipNF')?.value ? { territoryId: shipTo, amount: 1, noField: Number(field(p, 'shipNF').value) }
                 : { territoryId: shipTo, amount: num(p, 'shipAmount'), starred: field(p, 'shipStarred') ? num(p, 'shipStarred') : undefined }) : null,
               movement: from ? { from, to: field(p, 'moveTo').value, amount: num(p, 'moveAmount'),
@@ -604,6 +609,44 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
          ${rows}
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done({ reserve: num(p, 'r'), from: Object.fromEntries(Object.keys(board).map(t => [t, num(p, `t_${t}`)])) }));
+    },
+
+    chooseKaramaBuy() { return false; }, // offered as a button in the bid panel instead
+    chooseKaramaPower(state, factionId, info) {
+      const yesNo = (title, text, yes) => ask(title, `<p>${text}</p><div class="decision__actions"><button class="btn" data-action="yes">${yes}</button><button class="btn btn--primary" data-default-action>Keep the Karama</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(null); });
+      const pickOne = (title, text, opts, label) => ask(title, `<p>${text}</p><label class="field"><span>${label}</span><select name="o">${options([['', 'Keep the Karama'], ...opts], '')}</select></label>
+          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 'o').value || null));
+      switch (info.kind) {
+        case 'seePlan': return yesNo('Karama: see their plan?', `Spend a Karama to see ${esc(factionName(info.opponentId))}'s entire battle plan in ${esc(territoryName(info.territoryId))} before you make yours.`, 'See it');
+        case 'stopShipment': return state.board.territories[info.territoryId]?.type === 'stronghold'
+          ? yesNo('Karama: stop this shipment?', `${esc(factionName(info.factionId))} are shipping ${info.amount} to ${esc(territoryName(info.territoryId))}. Spend a Karama to stop it?`, 'Stop it') : Promise.resolve(null);
+        case 'stopRevival': return pickOne('Karama: stop a revival?', 'Spend a Karama so one faction cannot revive anything this turn.', info.targets.map(f => [f, factionName(f)]), 'Faction');
+        case 'freeRevival': return ask('Karama: free revival?', `<p>Spend a Karama to revive up to 3 forces or 1 leader, free.</p>
+            <label class="field"><span>Revive</span><select name="o">${options([['', 'Keep the Karama'], ...(info.tanks ? [['forces', `${Math.min(3, info.tanks)} forces`]] : []), ...info.leaders.map(l => [l, leaderLabel(l)])], '')}</select></label>
+            <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+          (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'o').value;
+            done(!v ? null : v === 'forces' ? { forces: Math.min(3, info.tanks), starred: Math.min(3, info.tanks, info.starredTanks) } : { leaderId: v }); });
+        case 'takeCards': return ask('Karama: take their cards?', `<p>Spend a Karama to take cards blind from one player; you give back one of yours for each.</p>
+            <label class="field"><span>From</span><select name="t">${options([['', 'Keep the Karama'], ...info.targets.map(f => [f, `${factionName(f)} (${state.factions[f].treacheryHand.length} cards)`])], '')}</select></label>
+            <label class="field"><span>How many</span><select name="n">${options(range(1, state.factions[factionId].treacheryHand.length).map(n => [n, n]), 1)}</select></label>
+            <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+          (p, done) => p.querySelector('[data-default-action]').onclick = () => { const t = field(p, 't').value; done(t ? { targetId: t, count: num(p, 'n') } : null); });
+        case 'buyCache': return pickOne('Karama: buy from your cache?', 'Spend a Karama and 3 spice to take one card from your cache.', info.cache.map(c => [c, cardName(c)]), 'Card');
+        case 'sellCards': return ask('Karama: sell cards?', `<p>Spend a Karama to discard any of your cards for 3 spice each.</p>
+            ${info.hand.map(c => `<label class="choice"><input type="checkbox" name="c" value="${esc(c)}"> <span>${esc(cardName(c))}</span></label>`).join('')}
+            <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+          (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = [...p.querySelectorAll('[name="c"]:checked')].map(i => i.value); done(v.length ? v : null); });
+      }
+      return Promise.resolve(null);
+    },
+    chooseCardsToGiveBack(state, factionId, { targetId, count }) {
+      const hand = state.factions[factionId].treacheryHand;
+      return ask('Give cards back', `<p>Choose ${count} card${count > 1 ? 's' : ''} to give ${esc(factionName(targetId))} in return.</p>
+          ${hand.map(c => `<label class="choice"><input type="checkbox" name="c" value="${esc(c)}"> <span>${esc(cardName(c))}</span></label>`).join('')}
+          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done([...p.querySelectorAll('[name="c"]:checked')].map(i => i.value).slice(0, count)));
     },
 
     chooseWeatherControl(state, factionId) {
@@ -1057,7 +1100,12 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       const kh = me.specialFactionState?.kwisatzHaderachActive &&
         [null, undefined, territoryId].includes(me.specialFactionState?.kwisatzHaderachUsedInTerritoryThisPhase);
 
-      const revealed = !intel ? '' : (() => {
+      const revealed = !intel ? '' : intel.full ? (() => {
+        const q = intel.plan;
+        const bits = [q.leaderId ? leaderLabel(q.leaderId) + ((me.traitorHand ?? []).includes(q.leaderId) ? ' (YOUR TRAITOR)' : '') : (q.cheapHeroCardId ? 'a Cheap Hero' : 'no leader'),
+          `${q.forcesCommitted} dialled`, `${q.spiceCommitted ?? 0} spice`, q.weaponCardId ? cardName(q.weaponCardId) : 'no weapon', q.defenseCardId ? cardName(q.defenseCardId) : 'no defence'];
+        return `<p class="decision__intel">Karama: ${esc(factionName(intel.opponentId))}'s whole plan: <strong>${esc(bits.join(', '))}</strong>.</p>`;
+      })() : (() => {
         const v = intel.value;
         const what = {
           leader: v === 'cheapHero' ? 'a Cheap Hero' : v ? leaderLabel(v) + ((me.traitorHand ?? []).includes(v) ? ', who is YOUR TRAITOR' : '') : 'no leader',
