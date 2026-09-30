@@ -24,7 +24,7 @@ const el = (tag, attrs = {}, parent) => {
 };
 
 // Storm danger marker art (null: a drawn stand-in until the painted token arrives).
-const DANGER_ART = null;
+const DANGER_ART = new URL('../assets/tokens/storm-danger.png?v=1', import.meta.url).href;
 
 export function createBoard({ container, geometry, territoriesData, factionColors, onTap, onZoom }) {
   const [cx, cy] = geometry.center;
