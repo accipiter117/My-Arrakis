@@ -511,7 +511,9 @@ async function runBiddingPhase(state, decisionProvider) {
     if (await karamaStops(state, decisionProvider, 'richese', 'cacheAuction')) cacheChoice = null; // no cache auction this round
     if (cacheChoice?.position === 'first') cacheResults.push(await richese.runCacheAuction(state, decisionProvider, cacheChoice, e => observe(decisionProvider, e, state)));
   }
-  if (state.factions.ixians && state.decks.treacheryDeck.length && state.bidding.cardsUpForBid.length) {
+  // Karama against the Ixian bury: they may not look at the cards and remove one this round.
+  if (state.factions.ixians && state.decks.treacheryDeck.length && state.bidding.cardsUpForBid.length
+      && !(await karamaStops(state, decisionProvider, 'ixians', 'ixianBury'))) {
     const all = [...state.bidding.cardsUpForBid, state.decks.treacheryDeck.pop()];
     const pick = decisionProvider.chooseIxianBury ? await decisionProvider.chooseIxianBury(state, 'ixians', all) : null;
     const buried = all.includes(pick?.cardId) ? pick.cardId : all[all.length - 1];
@@ -608,6 +610,9 @@ async function runRevivalPhase(state, decisionProvider) {
       && revivalEngine.freeRevivalAllowance(f, state) > 0);
     await choamEffectWindow(state, decisionProvider, 'laLaLa', targets);
   }
+  // Karama against the Tleilaxu revival economy, and against CHOAM's revival terms (this turn).
+  if (state.factions.tleilaxu && await karamaStops(state, decisionProvider, 'tleilaxu', 'tleilaxuRevival')) state.meta.tleilaxuRevivalBlocked = true;
+  if (state.factions.choam && ((state.factions.choam.revivalTanks ?? 0) > 3) && await karamaStops(state, decisionProvider, 'choam', 'choamRevival')) state.meta.choamRevivalBlocked = true;
   // Tleilaxu Karama power: one faction may not revive at all this turn.
   let noRevival = null;
   if (state.factions.tleilaxu && cardEffects.holdsKarama(state, 'tleilaxu') && decisionProvider.chooseKaramaPower) {
@@ -669,7 +674,7 @@ async function runRevivalPhase(state, decisionProvider) {
     }
     // Tleilaxu: another faction may ask for a leader back early, for a price the Tleilaxu set.
     const tlR = state.factions.tleilaxu;
-    if (tlR && factionId !== 'tleilaxu' && faction.leaders.killed.length && !revivalEngine.isEligibleForLeaderRevival(state, factionId)
+    if (tlR && !state.meta.tleilaxuRevivalBlocked && factionId !== 'tleilaxu' && faction.leaders.killed.length && !revivalEngine.isEligibleForLeaderRevival(state, factionId)
         && !faction.leaderRevivedThisTurn && decisionProvider.chooseEarlyLeaderRevival) {
       const leaderId = await decisionProvider.chooseEarlyLeaderRevival(state, factionId);
       if (leaderId && faction.leaders.killed.includes(leaderId)) {
@@ -1269,6 +1274,15 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       }
     }
 
+    // Karama against the Ixians' Cyborgs: in this battle they count as normal forces.
+    if (fighting.includes('ixians') && (state.factions.ixians.forces.starredOnBoard?.[territoryId] ?? 0) > 0) {
+      const opp = opponentOf('ixians');
+      if (cardEffects.holdsKarama(state, opp) && decisionProvider.chooseKaramaCancel && await decisionProvider.chooseKaramaCancel(state, opp, 'cyborgs', { territoryId, ownerId: 'ixians' })) {
+        cardEffects.playKarama(state, opp, 'cyborgs');
+        state.meta.currentBattle.cyborgsNormal = true;
+        await observe(decisionProvider, { type: 'karama', factionId: opp, purpose: 'cyborgs', targetId: 'ixians', territoryId }, state);
+      }
+    }
     // Karama against CHOAM's Forces: no share of the battle spice from this battle.
     if (state.factions.choam && !fighting.includes('choam')) {
       for (const f of fighting) {
@@ -1469,7 +1483,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     }
 
     // Ixians: surviving Suboids may be exchanged, one for one, for Cyborgs lost in this battle.
-    if (fighting.includes('ixians') && outcome.winnerFactionId === 'ixians' && decisionProvider.chooseSuboidExchange) {
+    if (fighting.includes('ixians') && outcome.winnerFactionId === 'ixians' && decisionProvider.chooseSuboidExchange
+        && !(await karamaStops(state, decisionProvider, 'ixians', 'suboidExchange', { territoryId }))) {
       const ixB = state.factions.ixians;
       const lost = Math.min(plans.ixians.starredForcesCommitted ?? 0, ixB.starredRevivalTanks ?? 0);
       const suboids = (ixB.forces.onBoard[territoryId] ?? 0) - (ixB.forces.starredOnBoard?.[territoryId] ?? 0);
@@ -1704,6 +1719,7 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
   }
   choam.clearPhaseEffects(state, phase);
   advisors.cleanAdvisors(state);
+  if (phase === 'revival') { delete state.meta.tleilaxuRevivalBlocked; delete state.meta.choamRevivalBlocked; }
 
   // Tech Tokens pay out at the end of their phase (Shipment and Movement
   // share one runner, so Heighliners pay once, at the end of 'shipment').
