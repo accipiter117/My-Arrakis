@@ -89,4 +89,26 @@ console.log('\nTest 7: Fremen call a sandworm; Ixians move the HMS');
   assert(t.factions.choam.spice === ch0 && t.factions.harkonnen.spice === 2, 'Karama on CHOAM charity: CHOAM collected nothing extra, the Bank paid Harkonnen');
 }
 
+console.log('\nTest 9: Karama against Cyborgs, the Ixian bury, and revival terms');
+{
+  const ids3 = ['atreides', 'harkonnen', 'ixians', 'tleilaxu', 'choam'];
+  const g3 = () => initializeGame({ activeFactionIds: ids3, playerCircleOrder: ids3, rulesConfig, seed: 33, spiceDeckData: spiceDeck, territoriesData: territories, treacheryDeckData: treacheryDeck, leadersData: leaders });
+  const battleEngine = await import('../js/battleEngine.js');
+  let t = g3(); t.meta.currentBattle = { cyborgsNormal: true };
+  const plan = (forces, starred) => ({ forcesCommitted: forces, starredForcesCommitted: starred, spiceCommitted: 0, supportedStarredCount: 0, supportedOrdinaryCount: 0, leaderId: null, leaderFightingValue: 0, weaponCardId: null, defenseCardId: null, cheapHeroCardId: null });
+  t.factions.ixians.forces.onBoard.carthag = 4; t.factions.ixians.forces.starredOnBoard = { carthag: 4 };
+  assert(battleEngine.starredUnitValueFor('ixians', 'harkonnen') === 2, 'Cyborgs are normally worth 2');
+  t = g3(); t.meta.turn = 2;
+  for (const f of ids3) t.factions[f].treacheryHand = [];
+  t.factions.atreides.treacheryHand = ['karama1'];
+  let buryAsked = false;
+  await turnEngine.runBiddingPhase(t, { ...P, chooseKaramaCancel: (st, f, purpose) => purpose === 'ixianBury', chooseIxianBury: () => { buryAsked = true; return null; } });
+  assert(!buryAsked && !t.factions.atreides.treacheryHand.includes('karama1'), 'Atreides stopped the Ixian bury before the Ixians looked');
+  t = g3(); t.meta.turn = 2;
+  t.factions.harkonnen.treacheryHand = ['karama1'];
+  t.factions.choam.revivalTanks = 8; t.factions.choam.forces.reserve -= 8; t.factions.choam.spice = 20;
+  await turnEngine.runRevivalPhase(t, { ...P, chooseKaramaCancel: (st, f, purpose) => purpose === 'choamRevival', chooseRevival: (st, f) => f === 'choam' ? { forces: 8 } : { forces: 0 } });
+  assert(t.factions.choam.revivalTanks >= 5, 'Karama on CHOAM\'s revival: they could not revive all 8 at once');
+}
+
 console.log('\nAll Karama tests passed.');
