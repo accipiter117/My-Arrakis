@@ -475,17 +475,34 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         });
     },
 
-    chooseAdvisor(state, factionId, shipperId) {
+    chooseAdvisor(state, factionId, shipperId, { territoryId } = {}) {
+      const withThem = territoryId && territoryId !== 'polarSink';
       return ask('Spiritual Advisor',
-        `<p>${esc(factionName(shipperId))} just shipped in from off-planet. You may place 1 force from your reserves in the Polar Sink, free.</p>
+        `<p>${esc(factionName(shipperId))} just shipped ${withThem ? `into ${esc(territoryName(territoryId))}` : 'in'} from off-planet. You may send 1 force from your reserves, free.</p>
+         ${withThem ? `<p class="decision__note">As an advisor there it coexists with everyone: it collects no spice and never fights until you turn it into a fighter.</p>` : ''}
          <div class="decision__actions">
-           <button class="btn" data-action="yes">Place an advisor</button>
-           <button class="btn" data-default-action>Not this time</button>
+           ${withThem ? `<button class="btn" data-action="with">Advisor to ${esc(territoryName(territoryId))}</button>` : ''}
+           <button class="btn" data-action="sink">Polar Sink</button>
+           <button class="btn btn--primary" data-default-action>Not this time</button>
          </div>`,
         (p, done) => {
-          p.querySelector('[data-action="yes"]').onclick = () => done(true);
+          p.querySelector('[data-action="with"]')?.addEventListener('click', () => done(territoryId));
+          p.querySelector('[data-action="sink"]').onclick = () => done('polarSink');
           p.querySelector('[data-default-action]').onclick = () => done(false);
         });
+    },
+    chooseIntrusion(state, factionId, { territoryId, intruderId }) {
+      return ask('Intrusion',
+        `<p>${esc(factionName(intruderId))} have entered ${esc(territoryName(territoryId))}, where you have fighters. Turn them into advisors (no battle there, but they stop counting for control and spice)?</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Become advisors</button><button class="btn btn--primary" data-default-action>Stay and fight</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+    chooseAdvisorsToFight(state, factionId, { territories }) {
+      return ask('Take up arms?',
+        `<p>Before shipments, your advisors may become fighters and battle where they stand.</p>
+         ${territories.map(t => `<label class="choice"><input type="checkbox" name="t" value="${esc(t)}"> <span>${esc(territoryName(t))} (${state.factions.gesserit.forces.onBoard[t]} advisors)</span></label>`).join('')}
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => done([...p.querySelectorAll('[name="t"]:checked')].map(i => i.value)));
     },
 
     // --- Richese cards, Black Market, alliance --------------------------------------
