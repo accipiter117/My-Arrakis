@@ -97,6 +97,9 @@ const passiveDecisionProvider = {
   chooseFreeOrRemove() { return 'take'; },
   chooseRevealNoField() { return false; },
   chooseWeatherControl() { return null; },
+  chooseKaramaBuy() { return false; },
+  chooseKaramaPower() { return null; },
+  chooseCardsToGiveBack() { return []; },
   chooseFamilyAtomics() { return false; },
   chooseNullentropy() { return null; },
   chooseDistrans() { return null; },
@@ -429,6 +432,39 @@ async function runBiddingPhase(state, decisionProvider) {
       }
     }
   }
+  // Karama powers used at the start of Bidding.
+  // Harkonnen: take any number of cards blind from one player, giving back one of theirs for each.
+  if (state.factions.harkonnen && cardEffects.holdsKarama(state, 'harkonnen') && decisionProvider.chooseKaramaPower) {
+    const targets = Object.keys(state.factions).filter(f => f !== 'harkonnen' && state.factions[f].treacheryHand.length);
+    const pick = targets.length ? await decisionProvider.chooseKaramaPower(state, 'harkonnen', { kind: 'takeCards', targets }) : null;
+    if (pick?.targetId && targets.includes(pick.targetId)) {
+      cardEffects.playKarama(state, 'harkonnen', 'takeCards');
+      const H = state.factions.harkonnen, T = state.factions[pick.targetId];
+      const n = Math.max(1, Math.min(pick.count ?? T.treacheryHand.length, T.treacheryHand.length, H.treacheryHand.length));
+      const taken = [];
+      for (let i = 0; i < n; i++) taken.push(T.treacheryHand.splice(Math.floor(random() * T.treacheryHand.length), 1)[0]);
+      const give = (await decisionProvider.chooseCardsToGiveBack?.(state, 'harkonnen', { targetId: pick.targetId, count: n })) ?? [];
+      const giveBack = give.filter(c => H.treacheryHand.includes(c)).slice(0, n);
+      for (const c of H.treacheryHand) { if (giveBack.length >= n) break; if (!giveBack.includes(c)) giveBack.push(c); }
+      H.treacheryHand = [...H.treacheryHand.filter(c => !giveBack.includes(c)), ...taken];
+      T.treacheryHand.push(...giveBack);
+      await observe(decisionProvider, { type: 'karamaPower', factionId: 'harkonnen', kind: 'takeCards', targetId: pick.targetId, count: n }, state);
+    }
+  }
+  // Richese: pay 3 spice to buy a card from the cache.
+  if (state.factions.richese?.cache?.length && state.factions.richese.spice >= 3 && cardEffects.holdsKarama(state, 'richese') && decisionProvider.chooseKaramaPower
+      && !biddingEngine.isAtHandLimit(state, 'richese')) {
+    const pick = await decisionProvider.chooseKaramaPower(state, 'richese', { kind: 'buyCache', cache: state.factions.richese.cache.slice() });
+    if (pick && state.factions.richese.cache.includes(pick)) {
+      cardEffects.playKarama(state, 'richese', 'buyCache');
+      const R = state.factions.richese;
+      R.spice -= 3; state.spiceBank.totalInCirculation += 3;
+      R.cache = R.cache.filter(c => c !== pick);
+      R.treacheryHand.push(pick);
+      await observe(decisionProvider, { type: 'karamaPower', factionId: 'richese', kind: 'buyCache' }, state);
+    }
+  }
+
   // Richese cache cards played between phases: Distrans and the Nullentropy Box (start of Bidding).
   for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
     if (rcards.holds(state, f, 'nullentropyBox') && state.factions[f].spice >= 2 && decisionProvider.chooseNullentropy) {
@@ -503,7 +539,23 @@ async function runBiddingPhase(state, decisionProvider) {
       idx++;
       if (state.bidding.passedThisCard.includes(factionId)) continue;
       if (factionId === state.bidding.currentBidder) continue;
+      // Karama: win this card now, paying nothing (project owner's reading of the card).
+      if (cardEffects.holdsKarama(state, factionId) && decisionProvider.chooseKaramaBuy
+          && await decisionProvider.chooseKaramaBuy(state, factionId, { cardId, currentBid: state.bidding.currentBid })) {
+        cardEffects.playKarama(state, factionId, 'buyCard');
+        state.bidding.currentBidder = factionId;
+        state.bidding.currentBid = 0;
+        await observe(decisionProvider, { type: 'karama', factionId, purpose: 'buyCard' }, state);
+        break;
+      }
       const bid = await decisionProvider.chooseBid(state, factionId, cardId, state.bidding.currentBid);
+      if (bid === 'karama' && cardEffects.holdsKarama(state, factionId)) {
+        cardEffects.playKarama(state, factionId, 'buyCard');
+        state.bidding.currentBidder = factionId;
+        state.bidding.currentBid = 0;
+        await observe(decisionProvider, { type: 'karama', factionId, purpose: 'buyCard' }, state);
+        break;
+      }
       if (bid && biddingEngine.canBid(state, factionId, bid).ok) {
         biddingEngine.placeBid(state, factionId, bid);
         await observe(decisionProvider, { type: 'bid', factionId, amount: bid }, state);
@@ -544,8 +596,38 @@ async function runRevivalPhase(state, decisionProvider) {
       && revivalEngine.freeRevivalAllowance(f, state) > 0);
     await choamEffectWindow(state, decisionProvider, 'laLaLa', targets);
   }
+  // Tleilaxu Karama power: one faction may not revive at all this turn.
+  let noRevival = null;
+  if (state.factions.tleilaxu && cardEffects.holdsKarama(state, 'tleilaxu') && decisionProvider.chooseKaramaPower) {
+    const targets = Object.keys(state.factions).filter(f => f !== 'tleilaxu' && ((state.factions[f].revivalTanks ?? 0) > 0 || state.factions[f].leaders.killed.length));
+    const pick = targets.length ? await decisionProvider.chooseKaramaPower(state, 'tleilaxu', { kind: 'stopRevival', targets }) : null;
+    if (pick && targets.includes(pick)) {
+      cardEffects.playKarama(state, 'tleilaxu', 'stopRevival');
+      noRevival = pick;
+      await observe(decisionProvider, { type: 'karamaPower', factionId: 'tleilaxu', kind: 'stopRevival', targetId: pick }, state);
+    }
+  }
   for (const factionId of Object.keys(state.factions)) {
+    if (factionId === noRevival) continue;
     const faction = state.factions[factionId];
+    // Emperor Karama power: revive up to 3 forces or 1 leader, free.
+    if (factionId === 'emperor' && cardEffects.holdsKarama(state, 'emperor') && decisionProvider.chooseKaramaPower
+        && ((faction.revivalTanks ?? 0) > 0 || faction.leaders.killed.length)) {
+      const pick = await decisionProvider.chooseKaramaPower(state, 'emperor', { kind: 'freeRevival', tanks: faction.revivalTanks ?? 0, starredTanks: faction.starredRevivalTanks ?? 0, leaders: faction.leaders.killed.slice() });
+      if (pick && (pick.leaderId ? faction.leaders.killed.includes(pick.leaderId) : pick.forces > 0)) {
+        cardEffects.playKarama(state, 'emperor', 'freeRevival');
+        if (pick.leaderId) {
+          faction.leaders.killed = faction.leaders.killed.filter(l => l !== pick.leaderId);
+          faction.leaders.available.push(pick.leaderId);
+        } else {
+          const n = Math.min(3, pick.forces, faction.revivalTanks ?? 0);
+          const st = Math.min(n, pick.starred ?? 0, faction.starredRevivalTanks ?? 0);
+          faction.revivalTanks -= n; faction.forces.reserve += n;
+          if (st) { faction.starredRevivalTanks -= st; faction.forces.starredReserve = (faction.forces.starredReserve ?? 0) + st; }
+        }
+        await observe(decisionProvider, { type: 'karamaPower', factionId: 'emperor', kind: 'freeRevival', ...pick }, state);
+      }
+    }
     // Only factions with something they could revive take a visible turn.
     const canAct = (faction.revivalTanks ?? 0) > 0 || faction.leaders.killed.length > 0 || faction.treacheryHand.includes('ghola');
     const tanksBefore = faction.revivalTanks ?? 0, deadBefore = faction.leaders.killed.length;
@@ -686,6 +768,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     if (factionId === 'choam' && Object.keys(state.factions.choam.forces.onBoard).length) await choamEffectWindow(state, decisionProvider, 'kulon', [true]);
     const resultsBefore = results.length;
     const decision = await decisionProvider.chooseShipmentAndMovement(state, factionId);
+    delete state.meta.karamaHalfPrice;
     // Richese alliance: the ally ships with one of Richese's No-Field tokens, revealed at once.
     const allyNf = decision.shipment?.noField;
     if (factionId !== 'richese' && Number.isInteger(allyNf) && allianceEngine.allyOf(state, factionId) === 'richese'
@@ -725,7 +808,20 @@ async function runShipmentMovementPhase(state, decisionProvider) {
     } else if (decision.shipment) {
       // starred: how many of the shipped forces are Sardaukar / Fedaykin (default: as many as possible).
       const { territoryId, amount, starred } = decision.shipment;
-      if (movementEngine.canShip(state, factionId, territoryId, amount).ok) {
+      // Karama: ship at half price (paid to the Guild as usual).
+      const karamaHalf = Boolean(decision.shipment.karama || decision.karamaShip) && cardEffects.holdsKarama(state, factionId);
+      if (karamaHalf) state.meta.karamaHalfPrice = factionId;
+      // Guild Karama power: stop this off-planet shipment (not the Fremen's, which is not off-planet).
+      let stopped = false;
+      if (factionId !== 'guild' && factionId !== 'fremen' && state.factions.guild && cardEffects.holdsKarama(state, 'guild') && decisionProvider.chooseKaramaPower
+          && movementEngine.canShip(state, factionId, territoryId, amount).ok
+          && await decisionProvider.chooseKaramaPower(state, 'guild', { kind: 'stopShipment', factionId, territoryId, amount })) {
+        cardEffects.playKarama(state, 'guild', 'stopShipment');
+        stopped = true;
+        await observe(decisionProvider, { type: 'karamaPower', factionId: 'guild', kind: 'stopShipment', targetId: factionId, territoryId }, state);
+      }
+      if (!stopped && movementEngine.canShip(state, factionId, territoryId, amount).ok) {
+        if (karamaHalf) { cardEffects.playKarama(state, factionId, 'halfPriceShipment'); await observe(decisionProvider, { type: 'karama', factionId, purpose: 'halfPriceShipment' }, state); }
         movementEngine.executeShipment(state, factionId, territoryId, amount, starred);
         results.push({ factionId, type: 'shipment', territoryId, amount });
         await observe(decisionProvider, { type: 'shipment', factionId, territoryId, amount }, state);
@@ -735,6 +831,7 @@ async function runShipmentMovementPhase(state, decisionProvider) {
         if (factionId !== 'gesserit' && factionId !== 'fremen') await spiritualAdvisor(state, decisionProvider, factionId, territoryId, results);
         await intrusion(state, decisionProvider, factionId, territoryId);
       }
+      delete state.meta.karamaHalfPrice;
     } else if (factionId === 'guild' && decision.crossShip) {
       // Guild (advanced): ship across the planet instead of from reserves.
       const { from, to, amount } = decision.crossShip;
@@ -979,6 +1076,18 @@ async function choamEndOfPhase(state, decisionProvider, cardLookup) {
       await observe(decisionProvider, { type: 'choamDiscards', discards: done, revealed: done.filter(d => d.spice === 3).map(d => d.cardId) }, state);
     }
   }
+  // CHOAM Karama power: discard any treachery cards for 3 spice each.
+  if (cardEffects.holdsKarama(state, 'choam') && ch.treacheryHand.length > 1 && decisionProvider.chooseKaramaPower && sfs.karamaOfferTurn !== state.meta.turn) {
+    sfs.karamaOfferTurn = state.meta.turn;
+    const pick = await decisionProvider.chooseKaramaPower(state, 'choam', { kind: 'sellCards', hand: ch.treacheryHand.slice() });
+    if (Array.isArray(pick) && pick.length) {
+      cardEffects.playKarama(state, 'choam', 'sellCards');
+      const sold = pick.filter(c => ch.treacheryHand.includes(c));
+      for (const c of sold) { ch.treacheryHand = ch.treacheryHand.filter(x => x !== c); state.decks.treacheryDiscard.push(c); }
+      ch.spice += 3 * sold.length; state.spiceBank.totalInCirculation -= 3 * sold.length;
+      await observe(decisionProvider, { type: 'karamaPower', factionId: 'choam', kind: 'sellCards', count: sold.length }, state);
+    }
+  }
   const ally = allianceEngine.allyOf(state, 'choam');
   if (ally && sfs.allyTradeTurn !== state.meta.turn && ch.treacheryHand.length && state.factions[ally].treacheryHand.length
       && decisionProvider.chooseChoamAllyTrade) {
@@ -1135,8 +1244,22 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const plans = {};
     let prescience = null;
     let seer = state.factions.atreides ? beneficiary('atreides') : null;
+    // Atreides Karama power: see the opponent's entire battle plan before making their own.
+    let fullSight = null;
+    if (fighting.includes('atreides') && cardEffects.holdsKarama(state, 'atreides') && decisionProvider.chooseKaramaPower
+        && await decisionProvider.chooseKaramaPower(state, 'atreides', { kind: 'seePlan', territoryId, opponentId: opponentOf('atreides') })) {
+      cardEffects.playKarama(state, 'atreides', 'seePlan');
+      const opp = opponentOf('atreides');
+      plans[opp] = await planFor(opp);
+      fullSight = { full: true, plan: plans[opp], opponentId: opp, forFaction: 'atreides' };
+      await observe(decisionProvider, { type: 'karamaPower', factionId: 'atreides', kind: 'seePlan', targetId: opp, territoryId }, state);
+      plans.atreides = await planFor('atreides', fullSight);
+      seer = null;
+    }
     if (seer && await karamaCancels(opponentOf(seer), 'prescience')) seer = null;
-    if (seer) {
+    if (fullSight) {
+      // both plans made
+    } else if (seer) {
       const opp = opponentOf(seer);
       let element = await decisionProvider.choosePrescienceElement(state, 'atreides', territoryId, opp);
       if (nfHere && opp === 'richese' && element === 'number') element = 'weapon'; // No-Field: the dial stays hidden
