@@ -15,7 +15,7 @@ const CATEGORY_TEXT = { poisonWeapon: 'a poison weapon', projectileWeapon: 'a pr
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export function createPresenter({ board, layer, banner = null, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null, cardLookup = null,
-  techTray = null, onTechChange = () => {} }) {
+  techTray = null, onTechChange = () => {}, battleScene = null }) {
   const speed = () => getSpeed();
   const scaled = ms => ms * speed();
   const wait = ms => new Promise(resolve => setTimeout(resolve, scaled(ms)));
@@ -227,7 +227,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     // A battle is about to be fought: go there before any plans are made.
     async battleStart(e) {
       if (!speed()) return;
-      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.22 });
+      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.12 });
     },
 
     async auctionStart(e) {
@@ -435,7 +435,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       if (!speed()) { pendingFaceDancer = null; return; }
       battleState = state;
       const agg = e.aggressorId, def = e.defenderId, sides = [agg, def];
-      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.22 });
+      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.12 });
       const P = e.plans;
       const opp = f => (f === agg ? def : agg);
       const cat = id => cardLookup?.[id]?.category;
@@ -460,6 +460,18 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
         return { troops, leader, kh, total: troops + leader + kh };
       };
       const fmt = n => (Number.isInteger(n) ? String(n) : n.toFixed(1));
+
+      // The battle scene (ui/battleScene.js): both sides face down together, then the reveal.
+      if (battleScene) {
+        const w = e.winnerFactionId, l = e.loserFactionId;
+        const outcomeText = e.explosion ? 'Lasgun meets shield: everything here is destroyed.'
+          : e.mutualTraitors ? 'Both leaders were traitors: both sides lose everything.'
+          : e.traitor ? `${esc(names.faction(w))} win by treachery: ${esc(names.leader(e.traitorCard?.leaderId))} was a traitor.`
+          : `${esc(names.faction(w))} win ${fmt(strength(w).total)} to ${fmt(strength(l).total)}.`;
+        await battleScene.present(e, state, { viewer: getViewer(), strengthOf: f => strength(f).total, killed, outcomeText, speed: speed() });
+        await afterBattle(e);
+        return;
+      }
 
       // Battles you are not fighting in get one compact card; your own keep
       // the full step-by-step reveal below.
