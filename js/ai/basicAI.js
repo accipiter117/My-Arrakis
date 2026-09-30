@@ -519,8 +519,23 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
 
     // Bene Gesserit: always send a free advisor to the Polar Sink.
-    chooseAdvisor(state) {
-      return (own(state, 'gesserit').forces.reserve ?? 0) > 0;
+    // Spiritual advisor: plant an advisor in a stronghold (to turn into a fighter later);
+    // otherwise build the Polar Sink army.
+    chooseAdvisor(state, factionId, shipperId, { territoryId } = {}) {
+      if (!((own(state, 'gesserit').forces.reserve ?? 0) > 0)) return false;
+      return territoryId && state.board.territories[territoryId]?.type === 'stronghold' ? territoryId : 'polarSink';
+    },
+    // Intrusion: step aside as advisors when the newcomer would probably beat our fighters.
+    chooseIntrusion(state, factionId, { territoryId, intruderId }) {
+      return (own(state, intruderId).forces.onBoard[territoryId] ?? 0) >= (own(state, factionId).forces.onBoard[territoryId] ?? 0);
+    },
+    // Take up arms where our advisors outnumber everyone else there.
+    chooseAdvisorsToFight(state, factionId, { territories }) {
+      return territories.filter(t => {
+        const mine = own(state, factionId).forces.onBoard[t] ?? 0;
+        const theirs = Object.entries(state.factions).filter(([f]) => f !== factionId).reduce((n, [, x]) => n + (x.forces.onBoard[t] ?? 0), 0);
+        return mine >= theirs + 2 && state.board.territories[t]?.type === 'stronghold';
+      });
     },
 
     // Spacing Guild: act last, having seen everyone else's shipments.
