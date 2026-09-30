@@ -72,17 +72,24 @@ export function createFactionStrategy({ allyOf, forcesOf, occupants, strongholds
     const x = state.factions[me];
     const ally = allyOf(state, me);
     // The Bene Gesserit hold back until late unless their Polar Sink army is ready.
+    // The Bene Gesserit only move in around their predicted turn (head-to-head tests:
+    // committing earlier cost them wins); before that their usual play builds the Polar Sink army.
     if (me === 'gesserit') {
       const pred = state.factions.gesserit.specialFactionState?.prediction;
-      const sink = forcesOf(state, me, 'polarSink');
-      if (pred && state.meta.turn < Math.max(3, pred.turn - 2) && sink < 5) return null;
+      if (!pred || state.meta.turn < pred.turn - 1) return null;
     }
     const options = strongholds(state)
       .filter(t => forcesOf(state, me, t) === 0 && !(ally && forcesOf(state, ally, t) > 0))
       .map(t => ({ t, need: forcesToContest(state, t, me) - 3 }))
       .map(o => ({ ...o, score: targetBonus(state, me, o.t) - o.need * 0.8 }))
       .sort((a, b) => b.score - a.score);
-    for (const { t, need } of options.slice(0, 4)) {
+    // Only soft targets for factions whose ordinary play is already strong (the
+    // Fremen and Ixians lost wins when their plan overrode it against held strongholds).
+    // Head-to-head results: the Fremen lost wins in every run with their plan; the Atreides
+    // one was no better than their ordinary play. Both keep their ordinary play.
+    if (me === 'fremen' || me === 'atreides') return null;
+    const maxNeed = { ixians: 1 }[me] ?? Infinity;
+    for (const { t, need } of options.slice(0, 4).filter(o => o.need <= maxNeed)) {
       const want = Math.max(need + (margin[me] ?? 2), me === 'emperor' ? 5 : 4);
       const action = enterTarget(state, me, t, want);
       const amount = action?.amount ?? action?.movement?.amount ?? 0;
@@ -94,7 +101,9 @@ export function createFactionStrategy({ allyOf, forcesOf, occupants, strongholds
   // The general muster rule: a weak faction does not trickle small groups into
   // defended territory. Returns the plan with that shipment or move cancelled.
   function muster(state, me, planned) {
-    if (!isWeak(state, me) || !planned) return planned;
+    // Not the Fremen (they fight at full strength in small groups) nor the Bene
+    // Gesserit (small moves feed their army): both lost wins under this rule.
+    if (['fremen', 'gesserit'].includes(me) || !isWeak(state, me) || !planned) return planned;
     const risky = (t, n) => t && n < 4 && occupants(state, t).some(f => f !== me && f !== allyOf(state, me) && forcesOf(state, f, t) >= n);
     let out = planned;
     if (planned.shipment && !planned.shipment.noField && risky(planned.shipment.territoryId, planned.shipment.amount)) out = { ...out, shipment: null, reason: 'muster: too few to land there' };
