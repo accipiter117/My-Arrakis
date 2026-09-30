@@ -111,4 +111,19 @@ console.log('\nTest 9: Karama against Cyborgs, the Ixian bury, and revival terms
   assert(t.factions.choam.revivalTanks >= 5, 'Karama on CHOAM\'s revival: they could not revive all 8 at once');
 }
 
+console.log('\nTest 10: Karama against Cyborg and Suboid movement');
+{
+  const ids4 = ['atreides', 'harkonnen', 'ixians'];
+  const t = initializeGame({ activeFactionIds: ids4, playerCircleOrder: ids4, rulesConfig, seed: 41, spiceDeckData: spiceDeck, territoriesData: territories, treacheryDeckData: treacheryDeck, leadersData: leaders });
+  t.meta.turn = 2;
+  const { moveRangeFor } = await import('../js/movementEngine.js');
+  assert(moveRangeFor(t, 'ixians', 2) === 2, 'Cyborgs normally move 2');
+  t.factions.ixians.forces.onBoard.theGreatFlat = 3; t.factions.ixians.forces.starredOnBoard = { theGreatFlat: 2 };
+  t.factions.atreides.treacheryHand = ['karama1'];
+  let range = null;
+  await turnEngine.runShipmentMovementPhase(t, { ...P, chooseKaramaCancel: (st, f, purpose) => purpose === 'ixianMovement',
+    chooseShipmentAndMovement: (st, f) => { if (f === 'ixians') range = moveRangeFor(st, 'ixians', 2); return { shipment: null, movement: null }; } });
+  assert(range === 1 && !t.factions.atreides.treacheryHand.length, 'Atreides spent a Karama and held the Ixians to 1 territory that turn');
+}
+
 console.log('\nAll Karama tests passed.');
