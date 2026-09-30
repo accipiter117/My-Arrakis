@@ -141,6 +141,12 @@ function devourTopOfPile(state, pileKey) {
   const discard = state.decks[`spiceDiscard${pileKey}`];
   const topCard = discard[discard.length - 1];
   if (!topCard || topCard.type !== 'territory') return; // nothing to devour yet, empty pile
+  devourTerritory(state, topCard.id);
+}
+
+// A sandworm strikes a territory (from the spice deck, or the Fremen's Karama power).
+function devourTerritory(state, territoryId) {
+  const topCard = { id: territoryId };
 
   // Remove spice at that territory back to the bank.
   state.board.spiceBlowMarkers = state.board.spiceBlowMarkers.filter(
@@ -197,5 +203,6 @@ export {
   resolvePile,
   resolveSpiceBlowPhase,
   placeSpiceBlow,
-  devourTopOfPile
+  devourTopOfPile,
+  devourTerritory
 };
