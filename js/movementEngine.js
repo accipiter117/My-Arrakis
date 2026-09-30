@@ -34,7 +34,8 @@ function moveRangeFor(state, factionId, cyborgsMoving = 0) {
   if (hasOrnithopters) return 3 + kulon;
   if (kulon) return 1 + kulon;
   // Ixians: Cyborgs move 2, and Suboids move 2 when accompanied by a Cyborg.
-  if (factionId === 'ixians') return cyborgsMoving > 0 ? 2 : 1; // capped at 3 even for Fremen; desert knowledge doesn't make the 'thopter fly faster, confirmed ruling
+  // Karama against Cyborg and Suboid movement: 1 territory this turn.
+  if (factionId === 'ixians') return cyborgsMoving > 0 && !state.meta?.ixianMoveLimited ? 2 : 1; // capped at 3 even for Fremen; desert knowledge doesn't make the 'thopter fly faster, confirmed ruling
   if (isFremen) return 2;
   return 1;
 }
