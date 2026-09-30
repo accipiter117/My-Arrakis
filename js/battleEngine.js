@@ -12,6 +12,12 @@
 import { battleSupportFor, battleSpice } from './allySupport.js';
 import { takeForcesShare } from './choam.js';
 
+// Karama against the Ixians' Cyborgs: in this battle they count as normal forces.
+function cyborgAware(state, factionId, opponentFactionId) {
+  if (factionId === 'ixians' && state.meta?.currentBattle?.cyborgsNormal) return 1;
+  return starredUnitValueFor(factionId, opponentFactionId);
+}
+
 function starredUnitValueFor(factionId, opponentFactionId) {
   if (factionId === 'ixians') return 2; // Cyborgs
   if (factionId === 'emperor') {
@@ -321,12 +327,12 @@ function resolveBattle(state, territoryId, aggressorFactionId, defenderFactionId
   // calculateStrength itself deliberately stays ignorant of.
   const aggressorPlan = {
     ...fremenFullStrength(aggressorFactionId, aggressorPlanInput),
-    starredUnitValue: starredUnitValueFor(aggressorFactionId, defenderFactionId),
+    starredUnitValue: cyborgAware(state, aggressorFactionId, defenderFactionId),
     kwisatzHaderachBonus: kwisatzHaderachBonusFor(state, aggressorFactionId, territoryId, aggressorPlanInput)
   };
   const defenderPlan = {
     ...fremenFullStrength(defenderFactionId, defenderPlanInput),
-    starredUnitValue: starredUnitValueFor(defenderFactionId, aggressorFactionId),
+    starredUnitValue: cyborgAware(state, defenderFactionId, aggressorFactionId),
     kwisatzHaderachBonus: kwisatzHaderachBonusFor(state, defenderFactionId, territoryId, defenderPlanInput)
   };
 
