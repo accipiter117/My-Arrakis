@@ -10,19 +10,20 @@
 //      Carthag, Arrakeen, or Tuek's Sietch at collection time, 2/2/1
 //      respectively, entirely independent of any spice blow existing.
 //      Always active, part of the advanced rules that are always on.
+import { fighters } from './advisors.js';
 
 const RATE_BOOST_STRONGHOLDS = ['carthag', 'arrakeen'];
 const INCREASED_FLOW_INCOME = { carthag: 2, arrakeen: 2, tueksSietch: 1 };
 
 function occupantsOf(state, territoryId) {
   return Object.keys(state.factions).filter(
-    factionId => (state.factions[factionId].forces.onBoard[territoryId] ?? 0) > 0
+    factionId => fighters(state, factionId, territoryId) > 0
   );
 }
 
 function collectionRateFor(state, factionId) {
   const occupiesRateBoostStronghold = RATE_BOOST_STRONGHOLDS.some(
-    strongholdId => (state.factions[factionId].forces.onBoard[strongholdId] ?? 0) > 0
+    strongholdId => fighters(state, factionId, strongholdId) > 0
   );
   return occupiesRateBoostStronghold ? 3 : 2;
 }
@@ -44,7 +45,7 @@ function collectFromSpiceBlow(state, marker, turnOrder) {
 
   for (const factionId of orderedOccupants) {
     if (remaining <= 0) break;
-    const forcesPresent = state.factions[factionId].forces.onBoard[marker.territoryId] ?? 0;
+    const forcesPresent = fighters(state, factionId, marker.territoryId);
     const rate = collectionRateFor(state, factionId);
     const entitled = forcesPresent * rate;
     const collected = Math.min(entitled, remaining);
