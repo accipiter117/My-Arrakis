@@ -61,4 +61,32 @@ await turnEngine.runBattlePhase(s, { ...P, chooseKaramaPower: (st, f, i) => i.ki
   chooseBattlePlan: (st, f, t, o, intel) => { if (f === 'atreides') intelSeen = intel; return f === 'atreides' ? plan('ladyJessica', 5, 4) : plan('feydRautha', 6, 3); } }, cards);
 assert(intelSeen?.full && intelSeen.plan.leaderId === 'feydRautha' && intelSeen.plan.forcesCommitted === 3, 'Atreides planned knowing Feyd-Rautha and a dial of 3');
 
+console.log('\nTest 7: Fremen call a sandworm; Ixians move the HMS');
+{
+  const ids2 = ['fremen', 'harkonnen', 'ixians', 'choam', 'richese'];
+  const g2 = () => initializeGame({ activeFactionIds: ids2, playerCircleOrder: ids2, rulesConfig, seed: 21, spiceDeckData: spiceDeck, territoriesData: territories, treacheryDeckData: treacheryDeck, leadersData: leaders });
+  let t = g2(); t.meta.turn = 2;
+  t.factions.fremen.treacheryHand = ['karama1'];
+  t.factions.harkonnen.forces.onBoard.theGreatFlat = 6; t.factions.harkonnen.forces.reserve -= 6;
+  await turnEngine.runSpiceBlowPhase(t, { ...P, chooseKaramaPower: (st, f, i) => i.kind === 'placeWorm' ? 'theGreatFlat' : null });
+  assert(!t.factions.harkonnen.forces.onBoard.theGreatFlat && t.factions.harkonnen.revivalTanks >= 6, 'the Fremen worm swallowed 6 Harkonnen in the Great Flat');
+  const { placeHms } = await import('../js/hms.js');
+  t = g2(); t.meta.turn = 2; placeHms(t, 'theGreatFlat');
+  t.factions.ixians.treacheryHand = ['karama1'];
+  let opts = null;
+  await turnEngine.runShipmentMovementPhase(t, { ...P, chooseKaramaPower: (st, f, i) => { if (i.kind !== 'moveHms') return null; opts = i.options; return i.options[i.options.length - 1]; } });
+  assert(opts?.length && t.board.hms.territoryId === opts[opts.length - 1] && t.board.hms.territoryId !== 'theGreatFlat', `the Ixians moved the HMS to ${t.board.hms.territoryId} (up to 2 away)`);
+
+  console.log('\nTest 8: Karama against expansion powers');
+  t = g2(); t.meta.turn = 2; t.factions.harkonnen.treacheryHand = ['karama1']; t.factions.richese.spice = 10;
+  await turnEngine.runShipmentMovementPhase(t, { ...P, chooseKaramaCancel: (st, f, purpose) => purpose === 'noFieldShip',
+    chooseShipmentAndMovement: (st, f) => f === 'richese' ? { shipment: { territoryId: 'habbanyaSietch', amount: 1, noField: 5 }, movement: null } : { shipment: null, movement: null } });
+  assert(!t.factions.richese.noField.onPlanet && !t.factions.richese.forces.onBoard.habbanyaSietch, 'Harkonnen stopped the Richese No-Field shipment');
+  t = g2(); t.meta.turn = 2; t.meta.phase = 'charity'; t.factions.harkonnen.treacheryHand = ['karama1'];
+  for (const f of ids2) t.factions[f].spice = 10; t.factions.harkonnen.spice = 0;
+  const ch0 = t.factions.choam.spice;
+  await turnEngine.stepOnePhase(t, { ...P, chooseKaramaCancel: (st, f, purpose) => purpose === 'choamCharity' }, territories, cards);
+  assert(t.factions.choam.spice === ch0 && t.factions.harkonnen.spice === 2, 'Karama on CHOAM charity: CHOAM collected nothing extra, the Bank paid Harkonnen');
+}
+
 console.log('\nAll Karama tests passed.');
