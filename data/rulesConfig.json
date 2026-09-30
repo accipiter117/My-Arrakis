@@ -211,6 +211,10 @@
       {
         "id": "karamaExpansion",
         "justification": "Karama, second part. Fremen power: at the Spice Blow (from turn 2), place a sandworm in any sand territory; it devours as a normal worm (Fremen and their ally safe, No-Field revealed) and a Nexus follows. Ixian power: at the start of the Ixians' Shipment and Movement turn, move the HMS up to 2 territories (collecting spice as usual), on top of its storm-phase move. Karama against the expansion factions' advantages, offered in turn order to other factions holding Karama (never the owner's ally) as each advantage is used: Ixian Technology and the HMS storm move; Tleilaxu Face Dancer replacement at the Mentat Pause and Ghola revival; CHOAM charity (CHOAM takes only normal charity and the Bank pays everyone), treachery (no discards for spice or worthless effects that phase), Inflation placement, Forces (no spice share from that battle; asked of the fighters at the battle's start) and the Auditor; Richese cache auction (none that round), Black Market and No-Field shipping. Not built: Karama against Cyborg/Suboid battle values, Suboid replacement, the Ixian bury, the Tleilaxu revival economy and CHOAM's revival terms."
+      },
+      {
+        "id": "karamaExpansion2",
+        "justification": "Karama, third part. Against the Ixians: Cyborgs count as normal forces for one battle (offered to the Ixians' opponent when the battle starts, if Cyborgs are there); no Suboid-for-Cyborg exchange after that battle; no bury this round (asked before the Ixians look). Against the Tleilaxu revival economy for one turn: the Tleilaxu revive at most 3 at full price, everyone else pays the Bank, no 1-spice payment for free revival, and no early leader revival. Against CHOAM's revival terms for one turn: at most 3 forces (5 if the Tleilaxu allow) at 2 spice each (asked only when CHOAM have more than 3 in the tanks). Not built: Karama against Cyborg and Suboid movement."
       }
     ]
   },
