@@ -589,6 +589,20 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done({ reserve: num(p, 'r'), from: Object.fromEntries(Object.keys(board).map(t => [t, num(p, `t_${t}`)])) }));
     },
 
+    chooseWeatherControl(state, factionId) {
+      return ask('Weather Control?',
+        `<p>Play Weather Control to move the storm yourself this turn, from 0 to 10 sectors.</p>
+         <label class="field"><span>Storm moves</span><select name="n">${options([['', 'Keep the card'], ...range(0, 10).map(n => [n, `${n} sector${n === 1 ? '' : 's'}`])], '')}</select></label>
+         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
+        (p, done) => p.querySelector('[data-default-action]').onclick = () => { const v = field(p, 'n').value; done(v === '' ? null : Number(v)); });
+    },
+    chooseFamilyAtomics(state, factionId, { sectors }) {
+      return ask('Family Atomics?',
+        `<p>The storm will move ${sectors} sector${sectors === 1 ? '' : 's'}. Play Family Atomics now to destroy every force on the Shield Wall (yours too). For the rest of the game the storm also sweeps Imperial Basin, Arrakeen and Carthag.</p>
+         <div class="decision__actions"><button class="btn" data-action="yes">Detonate</button><button class="btn btn--primary" data-default-action>Keep it</button></div>`,
+        (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
+    },
+
     chooseRevealNoField(state, factionId, { territoryId, value }) {
       return ask('Reveal your No-Field token?',
         `<p>Your No-Field token in ${esc(territoryName(territoryId))} is worth ${value}. Revealing it now places ${value} forces from your reserves there (it is revealed anyway in a battle, or if the storm or a worm catches it).</p>
