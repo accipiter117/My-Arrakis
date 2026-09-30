@@ -13,6 +13,7 @@
 import { withNoField, usableNoFields } from '../noField.js';
 import { ownsAllTechTokens, TECH_STRONGHOLD, tokensOwnedBy } from '../techTokens.js';
 import { createBasicAI } from './basicAI.js';
+import { createFactionStrategy } from './factionStrategy.js';
 import * as movementEngine from '../movementEngine.js';
 import { createDiplomacy } from './diplomacy.js';
 import { createBattleBrain } from './battleBrain.js';
@@ -270,6 +271,7 @@ export function createStrategicAI(options) {
   // non-threat factions best placed to do it (most forces in reserve, which
   // is public). Otherwise leave it to them and look after my own position.
   function shouldIDeny(state, me, threat) {
+    if (factionStrategy.wontDeny(state, me, threat)) return false; // the Bene Gesserit let their prediction come true
     if (threat.urgency >= 3) return true;
     const threatGroup = threat.group ?? ['fremen', allyOf(state, 'fremen')];
     // Best placed = most force it can actually bring: forces on the board plus
@@ -287,6 +289,8 @@ export function createStrategicAI(options) {
   }
 
   // --- Decision override ---------------------------------------------------
+
+  const factionStrategy = createFactionStrategy({ allyOf, forcesOf, occupants, strongholds, forcesToContest, shipTo, moveTo, enterTarget });
 
   return {
     ...base,
@@ -329,7 +333,10 @@ export function createStrategicAI(options) {
       if (!goal && me === 'choam') goal = choamPlan(state, me);
       if (!goal && me === 'richese') goal = richesePlan(state, me);
       if ((!goal || goal.action.save) && ['guild', 'richese'].includes(me)) goal = musterPlan(state, me) ?? goal;
-      if (!goal) return plan;
+      // Every other faction plays to its own strengths (js/ai/factionStrategy.js).
+      if (!goal && !['choam', 'richese', 'guild'].includes(me)) goal = factionStrategy.plan(state, me);
+      // Weak factions never trickle a handful into a defended territory.
+      if (!goal) return factionStrategy.muster(state, me, plan);
       if (goal.action.save) return { ...plan, shipment: null, reason: goal.reason };
 
       const { action, reason } = goal;
