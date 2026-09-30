@@ -108,11 +108,54 @@ function determineFirstPlayer(state, currentStormSector, playerCircleSectorMap) 
 // Fremen (advanced) lose only half their forces, rounded up.
 const SHELTERED = ['imperialBasin'];
 
+// Once Family Atomics destroy the Shield Wall, Imperial Basin, Arrakeen and
+// Carthag lose its protection for the rest of the game.
+const SHIELD_WALL_PROTECTED = ['imperialBasin', 'arrakeen', 'carthag'];
+function stormExposed(state, id, t) {
+  if (state.board.shieldWallDestroyed && SHIELD_WALL_PROTECTED.includes(id)) return true;
+  return t.type === 'sand' && !SHELTERED.includes(id);
+}
+
+// Territories the storm would sweep moving `sectors` from `from` (AI previews).
+function territoriesInPath(state, from, sectors) {
+  const swept = new Set(sectorsSwept(from, sectors));
+  return Object.entries(state.board.territories).filter(([id, t]) => stormExposed(state, id, t) && swept.has(t.stormSector)).map(([id]) => id);
+}
+
+// Family Atomics (base card): playable after the storm's movement is known and
+// before it moves, by a faction with fighters on the Shield Wall or in a territory
+// next to it. Every force on the Shield Wall is destroyed, and the Shield Wall no
+// longer protects Imperial Basin, Arrakeen and Carthag from the storm.
+const canUseFamilyAtomics = (state, factionId) => {
+  if (state.board.shieldWallDestroyed || !state.factions[factionId]?.treacheryHand.includes('familyAtomics')) return false;
+  const near = ['shieldWall', ...(state.board.territories.shieldWall?.adjacentBoard ?? [])];
+  const fx = state.factions[factionId].forces;
+  return near.some(t => (fx.onBoard[t] ?? 0) - (fx.advisorsOnBoard?.[t] ?? 0) > 0);
+};
+function useFamilyAtomics(state, factionId) {
+  if (!canUseFamilyAtomics(state, factionId)) return null;
+  const f = state.factions[factionId];
+  f.treacheryHand = f.treacheryHand.filter(c => c !== 'familyAtomics');
+  state.decks.treacheryDiscard.push('familyAtomics');
+  const losses = [];
+  for (const [id, x] of Object.entries(state.factions)) {
+    const here = x.forces.onBoard.shieldWall ?? 0;
+    if (!here) continue;
+    const starred = x.forces.starredOnBoard?.shieldWall ?? 0;
+    delete x.forces.onBoard.shieldWall;
+    if (x.forces.starredOnBoard) delete x.forces.starredOnBoard.shieldWall;
+    if (x.forces.advisorsOnBoard) delete x.forces.advisorsOnBoard.shieldWall;
+    x.revivalTanks = (x.revivalTanks ?? 0) + here;
+    x.starredRevivalTanks = (x.starredRevivalTanks ?? 0) + starred;
+    losses.push({ factionId: id, lost: here });
+  }
+  state.board.shieldWallDestroyed = true;
+  return { factionId, losses };
+}
+
 function applyStormDamage(state, from, sectors) {
   const swept = new Set(sectorsSwept(from, sectors));
-  const hit = Object.entries(state.board.territories)
-    .filter(([id, t]) => t.type === 'sand' && !SHELTERED.includes(id) && swept.has(t.stormSector))
-    .map(([id]) => id);
+  const hit = territoriesInPath(state, from, sectors);
   const losses = [];
   let spiceLost = [];
   const revealed = [];
@@ -148,6 +191,9 @@ function applyStormDamage(state, from, sectors) {
 }
 
 export {
+  territoriesInPath,
+  canUseFamilyAtomics,
+  useFamilyAtomics,
   STORM_DECK,
   drawStormCard,
   TOTAL_SECTORS,
