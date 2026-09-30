@@ -633,6 +633,8 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             <label class="field"><span>How many</span><select name="n">${options(range(1, state.factions[factionId].treacheryHand.length).map(n => [n, n]), 1)}</select></label>
             <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm</button></div>`,
           (p, done) => p.querySelector('[data-default-action]').onclick = () => { const t = field(p, 't').value; done(t ? { targetId: t, count: num(p, 'n') } : null); });
+        case 'placeWorm': return pickOne('Karama: call a sandworm?', 'Spend a Karama to place a sandworm in any sand territory. It devours as a normal worm, then a Nexus follows.', info.options.map(t => [t, territoryName(t)]), 'Territory');
+        case 'moveHms': return pickOne('Karama: move the HMS?', 'Spend a Karama to move the Hidden Mobile Stronghold up to 2 territories now, on top of its usual move.', info.options.map(t => [t, territoryName(t)]), 'To');
         case 'buyCache': return pickOne('Karama: buy from your cache?', 'Spend a Karama and 3 spice to take one card from your cache.', info.cache.map(c => [c, cardName(c)]), 'Card');
         case 'sellCards': return ask('Karama: sell cards?', `<p>Spend a Karama to discard any of your cards for 3 spice each.</p>
             ${info.hand.map(c => `<label class="choice"><input type="checkbox" name="c" value="${esc(c)}"> <span>${esc(cardName(c))}</span></label>`).join('')}
@@ -973,7 +975,19 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       const what = {
         voice: `Bene Gesserit use the Voice on you in ${place}: you ${ctx.voice?.command === 'play' ? 'must play' : 'must not play'} ${CATEGORY_NAMES[ctx.voice?.category] ?? 'a kind of card'}.`,
         prescience: `Atreides are about to see part of your battle plan in ${place} (Prescience).`,
-        capture: `Harkonnen are about to capture your leader ${leaderLabel(ctx.leaderId)}.`
+        capture: `Harkonnen are about to capture your leader ${leaderLabel(ctx.leaderId)}.`,
+        technology: 'The Ixians are about to use Technology to swap a card into this auction.',
+        hmsMove: 'The Ixians are about to move the Hidden Mobile Stronghold.',
+        faceDancerSwap: 'The Tleilaxu are about to replace one of their Face Dancers.',
+        ghola: 'The Tleilaxu are about to revive another faction\'s leader as a Ghola.',
+        choamCharity: 'CHOAM are about to collect 2 spice per faction and pay everyone\'s charity. Karama leaves them only normal charity, and the Bank pays everyone else.',
+        choamTreachery: 'CHOAM are about to cash in cards or use a worthless card\'s effect this phase.',
+        inflation: 'CHOAM are about to place their Inflation token.',
+        choamForces: `CHOAM would take half the spice spent on forces in this battle${ctx.territoryId ? ` in ${place}` : ''}.`,
+        auditor: 'CHOAM\'s Auditor is about to look at your cards.',
+        cacheAuction: 'Richese are about to auction a card from their cache.',
+        blackMarket: 'Richese are about to sell a card on the Black Market.',
+        noFieldShip: `Richese are about to ship a No-Field token${ctx.territoryId ? ` into ${place}` : ''}.`
       }[purpose];
       return ask('Play Karama?',
         `<p>${esc(what)}</p><p>Play a Karama card to cancel it. The card is then discarded.</p>
