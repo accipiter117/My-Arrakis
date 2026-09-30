@@ -87,7 +87,7 @@ export function playGhola(state, factionId, choice) {
 // may discard them so they don't sit dead in a hand. A temporary
 // implementation decision (data/rulesConfig.json: unbuiltCardDiscard).
 // Richese cache cards whose effects are not built yet (M6 in progress) join the list.
-export const UNBUILT_CARDS = ['weatherControl', 'familyAtomics'];
+export const UNBUILT_CARDS = [];
 
 export function canDiscardUnbuilt(state, factionId, cardId) {
   if (!UNBUILT_CARDS.includes(cardId)) return { ok: false, reason: 'Only cards whose effects are not in the game yet can be discarded freely.' };
