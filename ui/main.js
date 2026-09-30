@@ -17,6 +17,8 @@ import { createStrategicAI } from '../js/ai/strategicAI.js';
 import { createAI, DIFFICULTIES } from '../js/ai/difficulty.js';
 import { createMixedProvider } from '../js/ai/mixedProvider.js';
 import { createRecorder, summarise } from './recorder.js';
+import { createBattleScene } from './battleScene.js';
+let battleScene = null;
 import { createHumanProvider } from './humanProvider.js';
 import { createBoard } from './board.js';
 import * as cardEffects from '../js/cardEffects.js';
@@ -310,7 +312,7 @@ function buildDecisionMaker(data) {
         humanFactionId, ai,
         human: createHumanProvider({
           panel: $('decision-panel'), leadersData: data.leaders, cardLookup,
-          territoriesData: data.territories, factionNames: FACTION_NAMES, onWaiting: setWaiting
+          territoriesData: data.territories, factionNames: FACTION_NAMES, onWaiting: setWaiting, getBattleScene: () => battleScene
         })
       })
     : ai;
@@ -640,7 +642,10 @@ function ensureBoard(data) {
     onZoom: (zoomed, manual) => { $('zoom-reset').hidden = !zoomed; cameraFocused = zoomed && !manual; updateConsoleMute(); }
   });
   board.setCamera(localStorage.getItem('my-arrakis-camera') !== 'off');
+  battleScene = createBattleScene({ layer: $('event-layer'), cardLookup, leadersData: data.leaders, factionColors: FACTION_COLORS,
+    names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf }, scaled: ms => ms * speed });
   presenter = createPresenter({
+    battleScene,
     board, layer: $('event-layer'), banner: $('turn-banner'), factionColors: FACTION_COLORS, getSpeed: () => speed,
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf },
     renderDisplay: st => board.render(st, { selected: selectedTerritory, highlight: highlightIds, viewer: humanFactionId ?? null }),
