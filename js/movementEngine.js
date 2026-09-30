@@ -65,6 +65,17 @@ function isStrongholdBlocked(state, territoryId, movingFactionId) {
 // Returns every territory reachable within `maxHops` adjacency steps,
 // respecting the stronghold-block rule at each step. Sector/storm blocking
 // is NOT yet applied here, see isSectorInStormCheck TODO below.
+// The storm (project owner's sector rule: each territory lies mostly in one sector,
+// its stormSector). No forces may ship into, move into, out of or through a
+// territory whose sector the storm is in, whatever its terrain; the Polar Sink is
+// never in storm, and the HMS travels above it.
+function territoryInStorm(state, territoryId) {
+  if (territoryId === 'polarSink' || territoryId === 'hms') return false;
+  const pos = state.board?.stormPosition;
+  const sector = state.board?.territories?.[territoryId]?.stormSector;
+  return pos != null && sector != null && sector === pos;
+}
+
 function reachableTerritories(state, factionId, fromTerritoryId, maxHops) {
   const territories = state.board.territories;
   const visited = new Set([fromTerritoryId]);
@@ -77,8 +88,7 @@ function reachableTerritories(state, factionId, fromTerritoryId, maxHops) {
       for (const neighbor of neighbors) {
         if (visited.has(neighbor)) continue;
         if (isStrongholdBlocked(state, neighbor, factionId)) continue;
-        // TODO: skip `neighbor` here if isSectorInStormCheck(neighbor) once
-        // sector data and a real storm position exist on state.board.
+        if (territoryInStorm(state, neighbor)) continue; // never into or through the storm
         visited.add(neighbor);
         nextFrontier.push(neighbor);
       }
@@ -133,8 +143,9 @@ function canShip(state, factionId, destinationTerritoryId, amount) {
   if (allyOccupies(state, factionId, destinationTerritoryId)) {
     return { ok: false, reason: 'Your ally already has forces there; allies may only share the Polar Sink.' };
   }
-  // TODO: return { ok: false, reason: 'Destination sector is in storm.' }
-  // once isSectorInStormCheck(destinationTerritoryId) is real.
+  if (territoryInStorm(state, destinationTerritoryId)) {
+    return { ok: false, reason: 'That territory is in the storm: nothing can be shipped there.' };
+  }
 
   const costPerForce = shipmentCostPerForce(state, factionId, destinationTerritoryId);
   // Guild ships at half price, rounded up (rulebook), which is the only
@@ -197,6 +208,9 @@ function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount, starr
   }
   if (state.factions[factionId].hasMovedThisTurn) {
     return { ok: false, reason: 'Only one force move is allowed per faction per turn.' };
+  }
+  if (territoryInStorm(state, fromTerritoryId)) {
+    return { ok: false, reason: 'Those forces are in the storm: they cannot move out this turn.' };
   }
 
   // Elite forces in the group (default: as many as possible, as executeMove does).
@@ -271,7 +285,7 @@ function canRideWorm(state, fromTerritoryId, toTerritoryId) {
   if (toTerritoryId === fromTerritoryId) return { ok: false, reason: 'Already there.' };
   if (isStrongholdBlocked(state, toTerritoryId, 'fremen')) return { ok: false, reason: 'That stronghold already holds two other factions.' };
   if (allyOccupies(state, 'fremen', toTerritoryId)) return { ok: false, reason: 'Your ally already has forces there.' };
-  // TODO: riders may not leave or enter a sector in storm, once sector data exists.
+  if (territoryInStorm(state, fromTerritoryId) || territoryInStorm(state, toTerritoryId)) return { ok: false, reason: 'Riders may not leave or enter a territory in storm.' };
   return { ok: true };
 }
 
@@ -308,6 +322,7 @@ function canCrossShip(state, factionId, from, to, amount) {
   if (from === to || !state.board.territories[to]) return { ok: false, reason: 'Choose a different territory.' };
   if (isStrongholdBlocked(state, to, 'guild')) return { ok: false, reason: 'Stronghold already occupied by two other factions.' };
   if (allyOccupies(state, 'guild', to)) return { ok: false, reason: 'Your ally already has forces there.' };
+  if (territoryInStorm(state, from) || territoryInStorm(state, to)) return { ok: false, reason: 'The storm is over one of those territories.' };
   const totalCost = Math.ceil(shipmentCostPerForce(state, 'guild', to) * amount);
   if (totalCost > spendingPower(state, 'guild')) return { ok: false, reason: 'Not enough spice.' };
   return { ok: true, totalCost };
@@ -347,6 +362,7 @@ function executeRetreatToReserves(state, factionId, from, amount) {
 }
 
 export {
+  territoryInStorm,
   canCrossShip,
   executeCrossShip,
   canRetreatToReserves,
