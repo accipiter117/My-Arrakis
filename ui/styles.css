@@ -863,3 +863,7 @@ body.has-console #sheet-truth { max-height: max(calc(var(--below-board) - var(--
 /* While the map fills the screen, the turn banner moves to the top of the map, between
    the Tech Token tray and the zoom buttons, so it never covers ships landing mid-map. */
 body.has-console.console-muted .turn-banner { top: 0.45rem; max-width: calc(100% - 7.5rem); }
+
+/* Bene Gesserit advisors on the board */
+.counter--advisor image { opacity: 0.55; filter: grayscale(0.6); }
+.counter__tag { font: 700 9px var(--font-data, monospace); fill: #f1dfbf; text-anchor: middle; paint-order: stroke; stroke: #000; stroke-width: 2px; }
