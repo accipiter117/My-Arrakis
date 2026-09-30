@@ -225,6 +225,8 @@ function logEvent(e) {
   if (e.type === 'amal') addLog(phaseEngine.currentPhase(gameState), turn, `${nameOf(e.factionId)} played Amal: every faction discards half its spice.`);
   if (e.type === 'alliancesCancelled') addLog('spiceBlow', turn, `Sandtrout: all alliances are cancelled (${e.alliances.map(a => a.map(nameOf).join(' + ')).join('; ')}).`);
   if (e.type === 'faceDancer') addLog('battle', turn, `Face Dancer! ${leaderNameOf(e.leaderId)} was a Tleilaxu Face Dancer: ${nameOf(e.winnerId)}'s ${e.returned} force${e.returned === 1 ? '' : 's'} in ${territoryNameOf(e.territoryId)} go back to reserves, and ${e.placed} Tleilaxu force${e.placed === 1 ? '' : 's'} take their place.`);
+  if (e.type === 'weatherControl') addLog('storm', turn, `${nameOf(e.factionId)} played Weather Control: the storm moves ${e.sectors} sector${e.sectors === 1 ? '' : 's'}.`);
+  if (e.type === 'familyAtomics') addLog('storm', turn, `${nameOf(e.factionId)} detonated Family Atomics: the Shield Wall is destroyed${e.losses.length ? ` (${e.losses.map(l => `${nameOf(l.factionId)} lost ${l.lost}`).join(', ')})` : ''}. Imperial Basin, Arrakeen and Carthag are now open to the storm.`);
   if (e.type === 'richeseCard') {
     const who = nameOf(e.factionId);
     const t = { nullentropyBox: `${who} used the Nullentropy Box to take a card from the discard pile`,
@@ -692,6 +694,8 @@ function cardHelp(id) {
     stoneBurner: 'Stone Burner. A weapon: after plans are revealed choose to kill both leaders or reduce both to 0; the side with more undialled forces wins. Discarded after use.'
   }[id];
   if (rich) return { text: rich };
+  if (id === 'weatherControl') return { text: 'Weather Control. At the start of the Storm phase (after the first turn), move the storm 0 to 10 sectors yourself. You will be offered it then.' };
+  if (id === 'familyAtomics') return { text: 'Family Atomics. After the storm\'s move is known and before it moves, if you have forces on the Shield Wall or next to it: destroy every force on the Shield Wall. For the rest of the game the storm also sweeps Imperial Basin, Arrakeen and Carthag. You will be offered it then.' };
   if (id === 'hajr') return { text: 'Hajr. One extra move in the Movement phase: it is offered in your Shipment and movement panel.' };
   if (id === 'ghola') return { text: 'Ghola. Revive a leader, or up to 5 troops, for free: it is offered in your Revival panel.' };
   return { text: 'A special card.' };
