@@ -18,6 +18,7 @@
 // canX() validators a human action would use, so an illegal proposal is
 // simply refused rather than bending the rules.
 
+import * as stormEngine from '../stormEngine.js';
 import { withNoField, forcesAfterReveal } from '../noField.js';
 import * as cardEffects from '../cardEffects.js';
 import { spendingPower } from '../allySupport.js';
@@ -199,7 +200,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     // Ixian Technology: swap a dud from our hand for a strong card about to be auctioned.
     chooseIxianTechnology(state, factionId, upcoming) {
       const good = id => id.startsWith('karama') || [...WEAPON_CATEGORIES, ...DEFENSE_CATEGORIES].includes(cardLookup[id]?.category);
-      const dud = own(state, factionId).treacheryHand.find(id => cardLookup[id]?.category === 'worthless' || ['weatherControl', 'familyAtomics'].includes(id));
+      const dud = own(state, factionId).treacheryHand.find(id => cardLookup[id]?.category === 'worthless');
       return good(upcoming) && dud ? dud : null;
     },
     chooseSuboidExchange(state, factionId, { max }) { return max; },
@@ -258,6 +259,36 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
     chooseOnceAroundDirection() { return 'cw'; },
     chooseRevealNoField() { return false; }, // keep rivals guessing until a battle, storm or worm
+    // Weather Control: steer the storm over rivals' forces and away from ours.
+    chooseWeatherControl(state, factionId) {
+      const ally = allianceEngine.allyOf(state, factionId);
+      const from = state.board.stormPosition ?? 0;
+      let best = null;
+      for (let n = 0; n <= 10; n++) {
+        let score = 0;
+        for (const t of stormEngine.territoriesInPath(state, from, n)) for (const [f, x] of Object.entries(state.factions)) {
+          const here = x.forces.onBoard[t] ?? 0;
+          if (!here) continue;
+          const hurt = f === 'fremen' ? Math.ceil(here / 2) : here;
+          score += f === factionId || f === ally ? -1.5 * hurt : hurt;
+        }
+        if (!best || score > best.score) best = { n, score };
+      }
+      return best && best.score >= 4 ? best.n : null;
+    },
+    // Family Atomics: when it destroys more of the rivals than of us, counting what
+    // this storm then catches in the newly exposed Arrakeen, Carthag and Imperial Basin.
+    chooseFamilyAtomics(state, factionId, { from, sectors }) {
+      const ally = allianceEngine.allyOf(state, factionId);
+      const swept = new Set(stormEngine.sectorsSwept(from, sectors));
+      let value = 0;
+      for (const [f, x] of Object.entries(state.factions)) {
+        const side = f === factionId || f === ally ? -2 : 1;
+        value += side * (x.forces.onBoard.shieldWall ?? 0);
+        for (const t of ['arrakeen', 'carthag', 'imperialBasin']) if (swept.has(state.board.territories[t]?.stormSector)) value += side * (x.forces.onBoard[t] ?? 0);
+      }
+      return value >= 5;
+    },
     // --- Richese cache cards and Black Market -----------------------------------
     chooseNullentropy(state, factionId, { cards }) {
       const best = cards.slice().sort((a, b) => cardWorth(b) - cardWorth(a))[0];
@@ -388,7 +419,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     },
     chooseChoamAllyTradeResponse(state, factionId, { offered }) {
       const worth = id => { const c = cardLookup[id]?.category;
-        return c === 'worthless' ? 0 : ['weatherControl', 'familyAtomics'].includes(id) ? 1 : c === 'special' ? 2 : 5; };
+        return c === 'worthless' ? 0 : ['weatherControl', 'familyAtomics'].includes(id) ? 3 : c === 'special' ? 2 : 5; };
       const mine = own(state, factionId).treacheryHand.slice().sort((a, b) => worth(a) - worth(b))[0];
       return mine && worth(mine) <= worth(offered) ? mine : null;
     },
@@ -400,12 +431,12 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
     // Auction: bury the least useful card at the bottom of the deck.
     chooseIxianBury(state, factionId, ids) {
       const worth = id => { const c = cardLookup[id]?.category;
-        return c === 'worthless' ? 0 : ['weatherControl', 'familyAtomics'].includes(id) ? 1 : c === 'special' ? 2 : 5; };
+        return c === 'worthless' ? 0 : ['weatherControl', 'familyAtomics'].includes(id) ? 3 : c === 'special' ? 2 : 5; };
       return { cardId: ids.slice().sort((a, b) => worth(a) - worth(b))[0], where: 'bottom' };
     },
     // Ixian ally: swap a dud card just bought for the top of the deck.
     chooseIxianAllySwap(state, factionId, cardId) {
-      return cardLookup[cardId]?.category === 'worthless' || ['weatherControl', 'familyAtomics'].includes(cardId);
+      return cardLookup[cardId]?.category === 'worthless';
     },
 
     // Tleilaxu: always spring a Face Dancer (the win still counts for them,
