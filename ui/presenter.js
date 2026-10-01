@@ -158,7 +158,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       renderDisplay(displayBeforeSwap(battleState, fd));
       board.pulse(e.territoryId, 'battle', scaled(800));
       await hold(scaled(1000));
-      await showCard('traitor', `<div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(fd.leaderId))}</div>
+      await showCard('traitor', `<img class="event-card__art" src="${new URL('../assets/cards/faceDancer.webp?v=1', import.meta.url).href}" alt=""><div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(fd.leaderId))}</div>
         <div class="event-card__detail">was a Tleilaxu Face Dancer. ${esc(names.faction(fd.winnerId))} keep the win, but lose the leader, and ${fd.returned} troops go home; ${fd.placed} Tleilaxu take ${esc(names.territory(fd.territoryId))}.</div>`, 3200);
       renderReal();
       board.pulse(e.territoryId, 'battle', scaled(800));
