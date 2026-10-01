@@ -22,14 +22,13 @@ const V = '?v=1';
 const url = p => new URL(`../assets/${p}${V}`, import.meta.url).href;
 const ART = {
   leader: id => url(`leaders/${id}.webp`), cheapHero: url('leaders/cheapHero.webp'),
-  cardBack: url('cards/back.webp'), cardFace: url('cards/face.webp'), traitor: url('cards/traitor.webp'), faceDancer: url('cards/faceDancer.webp'),
+  cardBack: new URL('../assets/cards/back.webp?v=2', import.meta.url).href, cardFace: url('cards/face.webp'), traitor: url('cards/traitor.webp'), faceDancer: url('cards/faceDancer.webp'),
   wheelBack: url('battle/wheel-back.webp'), wheelFront: url('battle/wheel-front.webp'), kh: url('tokens/kwisatzHaderach.webp'),
   spice: n => url(`tokens/spice-${n >= 6 ? 8 : n >= 3 ? 3 : 1}.webp`),
   counter: f => new URL(`../assets/counters/${f}.png`, import.meta.url).href
 };
-// The provisional card back is narrower than the face (211 vs 263 px): until the
-// matching back arrives, cards cross-fade at the reveal instead of flipping.
-const CARD_FLIP = false;
+// The card back now matches the face exactly (263 x 360), so cards flip at the reveal.
+const CARD_FLIP = true;
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = n => (Number.isInteger(n) ? String(n) : n.toFixed(1));
@@ -81,6 +80,11 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
   function setHand(el, n) { el.querySelector('[data-hand-count]').textContent = n; el.querySelector('[data-hand]').dataset.n = Math.min(n, 3); }
   function faceCard(id, extra = '') { return `<div class="bs__card bs__card--face ${extra}"><img src="${ART.cardFace}" alt=""><span class="bs__card-name">${esc(names.card(id))}</span></div>`; }
   const backCard = () => `<div class="bs__card bs__card--back"><img src="${ART.cardBack}" alt=""></div>`;
+  // A card turning over: back on one side, face (with its name) on the other.
+  const flipCard = id => `<div class="bs__card bs__flipper"><div class="bs__flip-inner">
+      <div class="bs__flip-side bs__flip-side--back"><img src="${ART.cardBack}" alt=""></div>
+      <div class="bs__flip-side bs__flip-side--front"><img src="${ART.cardFace}" alt=""><span class="bs__card-name">${esc(names.card(id))}</span></div>
+    </div></div>`;
   function setSlot(el, which, html) { const s = el.querySelector(`[data-slot="${which}"]`); s.querySelectorAll('.bs__card, .bs__slot-q').forEach(n => n.remove()); s.insertAdjacentHTML('afterbegin', html ?? '<span class="bs__slot-q">–</span>'); }
   function setLeader(el, id, cheapHero, value) {
     const box = el.querySelector('[data-leader]');
@@ -297,8 +301,8 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
       setLeader(el, p.leaderId, p.cheapHero, p.leaderId || p.cheapHero ? p.leaderValue : null);
       setSpice(el, p.spice ?? 0);
       if (p.kwisatzHaderach) { const kh = el.querySelector('[data-kh]'); kh.hidden = false; kh.classList.add('bs__kh--on'); }
-      setSlot(el, 'weapon', p.weapon ? faceCard(p.weapon, CARD_FLIP ? 'bs__flip' : 'bs__fade') : null);
-      setSlot(el, 'defense', p.defense ? faceCard(p.defense, CARD_FLIP ? 'bs__flip' : 'bs__fade') : null);
+      setSlot(el, 'weapon', p.weapon ? (CARD_FLIP ? flipCard(p.weapon) : faceCard(p.weapon, 'bs__fade')) : null);
+      setSlot(el, 'defense', p.defense ? (CARD_FLIP ? flipCard(p.defense) : faceCard(p.defense, 'bs__fade')) : null);
     }
     if (speed) await wait(scaled(1100));
     // 3. Result.
