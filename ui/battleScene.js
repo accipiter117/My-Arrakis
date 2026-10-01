@@ -16,6 +16,7 @@
 import * as battleEngine from '../js/battleEngine.js';
 import { battleSpice } from '../js/allySupport.js';
 import { forcesAfterReveal } from '../js/noField.js';
+import { slotAllows, voiceProblem, voiceSlot, planFromChoices } from './battlePlan.js';
 
 const V = '?v=1';
 const url = p => new URL(`../assets/${p}${V}`, import.meta.url).href;
@@ -99,7 +100,11 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
     el.querySelector('[data-wheel-img]').src = open_ ? ART.wheelFront : ART.wheelBack;
     el.querySelector('[data-wheel]').classList.toggle('bs__wheel--open', Boolean(open_));
   }
-  function foreseen(el, what) { el.querySelector(what)?.classList.add('bs__foreseen'); }
+  function foreseen(el, what) {
+    const t = el.querySelector(what); if (!t) return;
+    t.classList.add('bs__foreseen');
+    t.insertAdjacentHTML('beforeend', '<i class="bs__tag-foreseen">Foreseen</i>');
+  }
 
   // --- Planning mode --------------------------------------------------------------
   function plan({ state, factionId, territoryId, opponentId, intel, voice }) {
@@ -145,20 +150,14 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
       <button class="btn btn--primary bs__commit" data-act="commit">Commit plan</button>`;
     const relevant = (me.traitorHand ?? []).filter(id => id === 'cheapHeroTraitor' || leader[id]?.faction === opponentId);
     const notes = [
-      voice ? `The Voice: you ${voice.command === 'play' ? 'must play' : 'must not play'} ${esc(voice.category)}` : '',
+      voice ? `The Voice: you ${voice.command === 'play' ? 'must play' : 'must not play'} ${esc(names.category?.(voice.category) ?? voice.category)}` : '',
       relevant.length ? `Traitor ready: ${esc(relevant.map(id => id === 'cheapHeroTraitor' ? 'any Cheap Hero' : names.leader(id)).join(', '))}` : '',
       (() => { const k = Object.entries(state.meta.knownCards ?? {}).filter(([, f]) => f === opponentId).map(([id]) => names.card(id)); return k.length ? `Known in their hand: ${esc(k.join(', '))}` : ''; })()
     ].filter(Boolean);
-    if (voice) { const slot = WEAPONS.includes(voice.category) ? 'weapon' : 'defense'; mine.querySelector(`[data-slot="${slot}"]`).insertAdjacentHTML('beforeend', '<i class="bs__voice">Voice</i>'); }
+    if (voice) mine.querySelector(`[data-slot="${voiceSlot(voice.category)}"]`).insertAdjacentHTML('beforeend', `<i class="bs__voice">${voice.command === 'play' ? 'Must play' : 'Voice'}</i>`);
 
-    const build = () => {
-      const starred = Math.min(pl.starred, pl.forces), spice = Math.min(pl.spice, pl.forces);
-      const supportedStarredCount = Math.min(starred, spice);
-      const leaderId = pl.lead?.kind === 'leader' ? pl.lead.id : null;
-      return { forcesCommitted: pl.forces, starredForcesCommitted: starred, spiceCommitted: spice, supportedStarredCount, supportedOrdinaryCount: spice - supportedStarredCount,
-        leaderId, leaderFightingValue: leaderId ? (leader[leaderId]?.fightingValue ?? 0) : 0, cheapHeroCardId: pl.lead?.kind === 'hero' ? pl.lead.id : null,
-        weaponCardId: pl.weapon, defenseCardId: pl.defense, useKwisatzHaderach: pl.kh };
-    };
+    const build = () => planFromChoices(pl, id => leader[id]?.fightingValue);
+    const vctx = { voice, hand, cat, categoryName: c => names.category?.(c) ?? c };
     const render = () => {
       setDial(mine, pl.forces, true);
       pl.spice = Math.min(pl.spice, pl.forces, spiceCap);
@@ -171,7 +170,9 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
       setHand(mine, hand.filter(id => id !== pl.weapon && id !== pl.defense && id !== pl.lead?.id).length);
       const kh = mine.querySelector('[data-kh]'); kh.hidden = !khAvail; kh.classList.toggle('bs__kh--on', pl.kh);
       const p = build();
-      const check = battleEngine.canDeclareBattlePlan(state, territoryId, factionId, p, cardLookup);
+      const engineCheck = battleEngine.canDeclareBattlePlan(state, territoryId, factionId, p, cardLookup);
+      const vp = engineCheck.ok ? voiceProblem(pl, vctx) : null;
+      const check = vp ? { ok: false, reason: vp } : engineCheck;
       const strength = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(factionId, p), starredUnitValue: battleEngine.starredUnitValueFor(factionId, opponentId), leaderWasKilled: false, kwisatzHaderachBonus: p.useKwisatzHaderach ? 2 : 0 });
       const lasgunShield = cat(p.weaponCardId) === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[p.defenseCardId]);
       setCaption(root, `<strong>Battle in ${esc(names.territory(territoryId))}</strong> · you ${present}, ${esc(names.faction(opponentId))} ${state.factions[opponentId].forces.onBoard[territoryId] ?? 0}
@@ -204,7 +205,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
         if (!mine.contains(t) && !dock.contains(t)) return;
         const act = t.closest('[data-act]')?.dataset.act;
         if (act === 'less' || act === 'more') { pl.forces = Math.max(0, Math.min(present, pl.forces + (act === 'more' ? 1 : -1))); navigator.vibrate?.(8); render(); return; }
-        if (act === 'commit') { const p = build(); if (battleEngine.canDeclareBattlePlan(state, territoryId, factionId, p, cardLookup).ok) { cleanup(); resolve(p); } return; }
+        if (act === 'commit') { const p = build(); if (battleEngine.canDeclareBattlePlan(state, territoryId, factionId, p, cardLookup).ok && !voiceProblem(pl, vctx)) { cleanup(); resolve(p); } return; }
         if (act === 'star') { stepper(t.closest('[data-act]'), 'Elite forces dialled', () => pl.starred, v => { pl.starred = v; }, () => 0, () => Math.min(pl.forces, starredPresent)); return; }
         if (t.closest('[data-kh]')) { pl.kh = !pl.kh; render(); return; }
         if (t.closest('[data-spice]')) {
@@ -213,10 +214,22 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
           return;
         }
         if (t.closest('[data-leader]')) {
-          const opts = [...leaders.map(id => ({ kind: 'leader', id })), ...heroes.map(id => ({ kind: 'hero', id }))];
-          const p = popover(t.closest('[data-leader]'), `<div class="bs__fan">${opts.map((o, i) => `<button data-i="${i}" class="bs__fan-item${pl.lead?.id === o.id ? ' is-on' : ''}"><img src="${o.kind === 'hero' ? ART.cheapHero : ART.leader(o.id)}" alt=""><b>${o.kind === 'hero' ? 0 : leader[o.id]?.fightingValue ?? 0}</b><span>${esc(o.kind === 'hero' ? 'Cheap Hero' : names.leader(o.id))}</span></button>`).join('')}
-            ${unavailable.map(([id, why]) => `<span class="bs__fan-item is-off"><img src="${ART.leader(id)}" alt=""><span>${esc(why)}</span></span>`).join('')}</div>`);
-          p.onclick = ev => { const b = ev.target.closest('[data-i]'); if (!b) return; ev.stopPropagation(); const o = opts[Number(b.dataset.i)];
+          // The leaders fan out in an arc above the wheel.
+          const opts = [...leaders.map(id => ({ kind: 'leader', id })), ...heroes.map(id => ({ kind: 'hero', id })), ...unavailable.map(([id, why]) => ({ kind: 'off', id, why }))];
+          closePop();
+          pop = document.createElement('div'); pop.className = 'bs__arc';
+          const n = opts.length, spread = Math.min(170, 30 * Math.max(1, n - 1));
+          pop.innerHTML = opts.map((o, i) => {
+            const ang = (-90 - spread / 2 + (n > 1 ? (spread * i) / (n - 1) : spread / 2)) * Math.PI / 180;
+            const x = Math.cos(ang) * 122, y = Math.sin(ang) * 96;
+            const img = o.kind === 'hero' ? ART.cheapHero : ART.leader(o.id);
+            const label = o.kind === 'hero' ? 'Cheap Hero' : names.leader(o.id);
+            return o.kind === 'off'
+              ? `<span class="bs__fan-item is-off" style="--x:${x}px;--y:${y}px"><img src="${img}" alt=""><span>${esc(o.why)}</span></span>`
+              : `<button data-i="${i}" class="bs__fan-item${pl.lead?.id === o.id ? ' is-on' : ''}" style="--x:${x}px;--y:${y}px" aria-label="${esc(label)}"><img src="${img}" alt=""><b>${o.kind === 'hero' ? 0 : leader[o.id]?.fightingValue ?? 0}</b><span>${esc(label)}</span></button>`;
+          }).join('');
+          mine.querySelector('[data-wheel]').appendChild(pop);
+          pop.onclick = ev => { const b = ev.target.closest('[data-i]'); if (!b) return; ev.stopPropagation(); const o = opts[Number(b.dataset.i)];
             if (o.kind === 'hero' && (pl.weapon === o.id || pl.defense === o.id)) return; pl.lead = o; closePop(); render(); };
           return;
         }
@@ -224,8 +237,8 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
         if (slotEl) {
           const which = slotEl.dataset.slot;
           if (t.closest('.bs__card') && pl[which]) { pl[which] = null; render(); return; } // return it to the hand
-          const ok = id => (which === 'weapon' ? WEAPONS : DEFENSES).includes(cat(id)) || cat(id) === 'worthless';
-          const voiceBlocks = id => voice?.command === 'notPlay' && cat(id) === voice.category;
+          const ok = id => slotAllows(id, which, vctx);
+          const voiceBlocks = () => false;
           const free = hand.filter(id => id !== pl.weapon && id !== pl.defense && id !== pl.lead?.id);
           const p = popover(slotEl, `<div class="bs__row">${free.map(id => `<button class="bs__pick" data-card="${esc(id)}" ${ok(id) && !voiceBlocks(id) ? '' : 'disabled'}>${faceCard(id)}</button>`).join('') || '<small>No cards in hand</small>'}</div><small>${which === 'weapon' ? 'Weapon' : 'Defence'}: tap a card</small>`);
           p.onclick = ev => { const b = ev.target.closest('[data-card]'); if (!b || b.disabled) return; ev.stopPropagation(); pl[which] = b.dataset.card; closePop(); render(); };
@@ -308,7 +321,19 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
     close();
   }
 
+  // A choice asked inside the open scene (traitor reveal, Portable Snooper, Stone Burner).
+  function choose(captionHtml, buttons) {
+    const root = layer.querySelector('.bs');
+    if (!root || !open) return null;
+    setCaption(root, captionHtml);
+    const dock = root.querySelector('.bs__dock');
+    dock.innerHTML = `<div class="bs__choices">${buttons.map((b, i) => `<button class="btn${b.primary ? ' btn--primary' : ''}" data-choice="${i}">${esc(b.label)}</button>`).join('')}</div>`;
+    return new Promise(resolve => {
+      dock.onclick = ev => { const b = ev.target.closest('[data-choice]'); if (!b) return; ev.stopPropagation(); dock.onclick = null; dock.innerHTML = ''; resolve(buttons[Number(b.dataset.choice)].value); };
+    });
+  }
+
   function close() { open = null; layer.hidden = true; layer.innerHTML = ''; layer.classList.remove('event-layer--battle'); }
 
-  return { plan, present, close, isOpen: () => Boolean(open) };
+  return { plan, present, close, choose, isOpen: () => Boolean(open) };
 }
