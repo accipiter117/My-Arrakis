@@ -400,6 +400,9 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
 
     chooseRevealTraitor(state, holder, leaderId, territoryId, againstId, forFaction) {
       const forAlly = forFaction !== holder;
+      const scene = getBattleScene();
+      if (scene?.isOpen()) return scene.choose(`<strong>Traitor!</strong> ${esc(leaderLabel(leaderId))}, leading ${esc(factionName(againstId))}, is in your pay.<br><small>Reveal them and ${forAlly ? `your ally ${esc(factionName(forFaction))}` : 'you'} win outright, losing nothing. Or keep the secret for a bigger moment.</small>`,
+        [{ label: 'Keep the secret', value: false }, { label: 'Reveal the traitor', value: true, primary: true }]);
       return ask('Traitor!',
         `<p class="decision__traitor"><strong>${esc(leaderLabel(leaderId))}</strong>, leading ${esc(factionName(againstId))} in ${esc(territoryName(territoryId))}, is secretly in your pay.</p>
          <p>Reveal them and ${forAlly ? `your ally ${esc(factionName(forFaction))}` : 'you'} win outright, losing nothing, while ${esc(factionName(againstId))} loses everything there. Or keep the secret and let the battle play out, saving the traitor for a bigger moment.</p>
@@ -576,12 +579,18 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
     },
     choosePortableSnooper(state, factionId, { opponentPlan }) {
+      const scene = getBattleScene();
+      if (scene?.isOpen()) return scene.choose(`<strong>Portable Snooper?</strong> Their weapon: ${esc(opponentPlan.weaponCardId ? cardName(opponentPlan.weaponCardId) : 'none')}.<br><small>You played no defence: add the Portable Snooper as a poison defence?</small>`,
+        [{ label: 'Keep it', value: false }, { label: 'Add it', value: true, primary: true }]);
       return ask('Portable Snooper?',
         `<p>Plans are revealed. Their weapon: <strong>${esc(opponentPlan.weaponCardId ? cardName(opponentPlan.weaponCardId) : 'none')}</strong>. You played no defence: add Portable Snooper as a poison defence?</p>
          <div class="decision__actions"><button class="btn" data-action="yes">Add it</button><button class="btn btn--primary" data-default-action>Keep it</button></div>`,
         (p, done) => { p.querySelector('[data-action="yes"]').onclick = () => done(true); p.querySelector('[data-default-action]').onclick = () => done(false); });
     },
     chooseStoneBurnerMode(state, factionId, { opponentPlan }) {
+      const scene = getBattleScene();
+      if (scene?.isOpen()) return scene.choose(`<strong>Stone Burner.</strong> Their leader: ${esc(opponentPlan.leaderId ? leaderLabel(opponentPlan.leaderId) : 'none')}.<br><small>Either way, the side with more undialled forces wins.</small>`,
+        [{ label: 'Both leaders to 0', value: 'zero' }, { label: 'Kill both leaders', value: 'kill', primary: true }]);
       return ask('Stone Burner',
         `<p>Kill both leaders, or reduce both leaders to 0? Either way the side with more undialled forces wins, and dialled forces are lost normally. Their leader: ${esc(opponentPlan.leaderId ? leaderLabel(opponentPlan.leaderId) : 'none')}.</p>
          <div class="decision__actions"><button class="btn" data-action="yes">Reduce both to 0</button><button class="btn btn--primary" data-default-action>Kill both</button></div>`,
@@ -1109,108 +1118,11 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
           done(p.querySelector('input[name="element"]:checked').value));
     },
 
+    // Planned in the battle scene (ui/battleScene.js): build the plan by touching the pieces.
+    // (The old form-style plan panel was removed once the scene reached parity.)
     chooseBattlePlan(state, factionId, territoryId, opponentId, intel, voice) {
-      // The battle scene: build the plan by touching the pieces (ui/battleScene.js).
-      const scene = getBattleScene();
-      if (scene) { onWaiting?.(true); return scene.plan({ state, factionId, territoryId, opponentId, intel, voice }).finally(() => onWaiting?.(false)); }
-      const me = state.factions[factionId];
-      const present = forcesAfterReveal(state, factionId, territoryId);
-      const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
-      const theirs = state.factions[opponentId].forces.onBoard[territoryId] ?? 0;
-      const hand = me.treacheryHand.map(id => ({ id, category: cardLookup[id]?.category }));
-      // Leaders who already fought in another territory this turn can't fight here.
-      const leaders = me.leaders.available.filter(id => battleEngine.isLeaderAvailable(state, factionId, id, territoryId))
-        .sort((a, b) => (leader[b]?.fightingValue ?? 0) - (leader[a]?.fightingValue ?? 0));
-      const heroes = hand.filter(c => c.category === 'specialLeaderSubstitute');
-      const leaderOptions = [
-        ...leaders.map(id => [`leader:${id}`, leaderLabel(id)]),
-        ...heroes.map(c => [`hero:${c.id}`, `${cardName(c.id)} (0)`]),
-        ['', 'None available']
-      ];
-      // Worthless cards may be played in either slot as a bluff (and to get rid of them).
-      const label = c => c.category === 'worthless' ? `${cardName(c.id)} (worthless bluff)` : cardName(c.id);
-      const weaponOptions = [['', 'No weapon'], ...hand.filter(c => WEAPONS.includes(c.category) || c.category === 'worthless').map(c => [c.id, label(c)])];
-      const defenseOptions = [['', 'No defence'], ...hand.filter(c => DEFENSES.includes(c.category) || c.category === 'worthless').map(c => [c.id, label(c)])];
-      const voiceNote = voice
-        ? `<p class="decision__error">The Voice: you ${voice.command === 'play' ? 'must play' : 'must not play'} ${esc(CATEGORY_NAMES[voice.category] ?? voice.category)}${voice.command === 'play' ? ' if you hold one' : ''}. Your plan will be adjusted to obey.</p>` : '';
-      // Offered only if active and not already used in another territory this phase.
-      const kh = me.specialFactionState?.kwisatzHaderachActive &&
-        [null, undefined, territoryId].includes(me.specialFactionState?.kwisatzHaderachUsedInTerritoryThisPhase);
-
-      const revealed = !intel ? '' : intel.full ? (() => {
-        const q = intel.plan;
-        const bits = [q.leaderId ? leaderLabel(q.leaderId) + ((me.traitorHand ?? []).includes(q.leaderId) ? ' (YOUR TRAITOR)' : '') : (q.cheapHeroCardId ? 'a Cheap Hero' : 'no leader'),
-          `${q.forcesCommitted} dialled`, `${q.spiceCommitted ?? 0} spice`, q.weaponCardId ? cardName(q.weaponCardId) : 'no weapon', q.defenseCardId ? cardName(q.defenseCardId) : 'no defence'];
-        return `<p class="decision__intel">Karama: ${esc(factionName(intel.opponentId))}'s whole plan: <strong>${esc(bits.join(', '))}</strong>.</p>`;
-      })() : (() => {
-        const v = intel.value;
-        const what = {
-          leader: v === 'cheapHero' ? 'a Cheap Hero' : v ? leaderLabel(v) + ((me.traitorHand ?? []).includes(v) ? ', who is YOUR TRAITOR' : '') : 'no leader',
-          weapon: v ? cardName(v) : 'no weapon',
-          defense: v ? cardName(v) : 'no defence',
-          number: `${v} forces`
-        }[intel.element];
-        return `<p class="decision__intel">Prescience: ${esc(factionName(opponentId))} is playing <strong>${esc(what)}</strong>.</p>`;
-      })();
-      const knownTheirs = Object.entries(state.meta.knownCards ?? {}).filter(([, f]) => f === opponentId).map(([id]) => `${cardName(id)} (${(CATEGORY_NAMES[cardLookup[id]?.category] ?? 'a special card').replace(/^an? /, '').replace(/ \(.*\)$/, '')})`);
-      const knownNote = knownTheirs.length
-        ? `<p class="decision__known">Known in their hand: <strong>${esc(knownTheirs.join(', '))}</strong></p>` : '';
-      // Only the traitors that matter here: leaders of this opponent (and a Cheap Hero traitor).
-      const relevant = (me.traitorHand ?? []).filter(id => id === 'cheapHeroTraitor' || leader[id]?.faction === opponentId);
-      const traitorNote = relevant.length
-        ? `<p class="decision__note">Traitor ready: <strong>${esc(relevant.map(id => id === 'cheapHeroTraitor' ? 'any Cheap Hero' : leaderLabel(id)).join(', '))}</strong> (you'll be offered the reveal)</p>` : '';
-      return ask(`Battle in ${territoryName(territoryId)}`,
-        `${voiceNote}${revealed}${knownNote}${traitorNote}
-         <p class="battle-summary"><span>You <strong>${present}</strong>${starredPresent ? ` (${starredPresent}★)` : ''}</span><span>${esc(factionName(opponentId))} <strong>${theirs}</strong></span><span>Spice <strong>${me.spice}${battleSupportFor(state, factionId) ? `+${battleSupportFor(state, factionId)}` : ''}</strong></span></p>
-         <div class="field-pair">
-           <label class="field field--stack"><span>Dial</span><select name="forces">${options(range(0, present).map(n => [n, n]), Math.ceil(present / 2))}</select></label>
-           ${factionId === 'fremen' ? '<input type="hidden" name="spice" value="0">'
-             : `<label class="field field--stack"><span>Spice backing</span><select name="spice">${options(range(0, Math.min(present, battleSpice(state, factionId))).map(n => [n, n]), 0)}</select></label>`}
-           ${starredPresent ? `<label class="field field--stack"><span>Of which ★</span><select name="starred">${options(range(0, starredPresent).map(n => [n, n]), 0)}</select></label>` : ''}
-         </div>
-         <label class="field field--stack"><span>Leader</span><select name="leader">${options(leaderOptions, leaderOptions[0][0])}</select></label>
-         <div class="field-pair">
-           <label class="field field--stack"><span>Weapon</span><select name="weapon">${options(weaponOptions, '')}</select></label>
-           <label class="field field--stack"><span>Defence</span><select name="defense">${options(defenseOptions, '')}</select></label>
-         </div>
-         <details class="decision__help"><summary>How battles work</summary>Higher total wins; ties go to the aggressor. Dialled forces are lost even if you win; the loser loses everything here. ${factionId === 'fremen' ? 'Fremen count fully without spice.' : 'A dialled force counts fully only if backed by 1 spice, otherwise half.'}</details>
-         ${kh ? '<label class="choice"><input type="checkbox" name="kh"> <span>Add the Kwisatz Haderach (+2)</span></label>' : ''}
-         <p class="decision__note" data-for="strength"></p>
-         <p class="decision__error" hidden></p>
-         <div class="decision__actions"><button class="btn btn--primary" data-default-action>Lock battle plan</button></div>`,
-        (p, done) => {
-          const btn = p.querySelector('[data-default-action]');
-          const build = () => {
-            const forces = num(p, 'forces');
-            const starred = Math.min(num(p, 'starred'), forces);
-            const spice = Math.min(num(p, 'spice'), forces);
-            const choice = field(p, 'leader').value;
-            const leaderId = choice.startsWith('leader:') ? choice.slice(7) : null;
-            const supportedStarredCount = Math.min(starred, spice);
-            return {
-              forcesCommitted: forces, starredForcesCommitted: starred, spiceCommitted: spice,
-              supportedStarredCount, supportedOrdinaryCount: spice - supportedStarredCount,
-              leaderId, leaderFightingValue: leaderId ? (leader[leaderId]?.fightingValue ?? 0) : 0,
-              cheapHeroCardId: choice.startsWith('hero:') ? choice.slice(5) : null,
-              weaponCardId: field(p, 'weapon').value || null,
-              defenseCardId: field(p, 'defense').value || null,
-              useKwisatzHaderach: Boolean(field(p, 'kh')?.checked)
-            };
-          };
-          const check = () => {
-            const plan = build();
-            const result = battleEngine.canDeclareBattlePlan(state, territoryId, factionId, plan, cardLookup);
-            const warn = cardLookup[plan.weaponCardId]?.category === 'specialWeapon' && battleEngine.isShieldCard(cardLookup[plan.defenseCardId])
-              ? ' Warning: a lasgun with your own shield explodes, destroying everything here.' : '';
-            const strength = battleEngine.calculateStrength({ ...battleEngine.fremenFullStrength(factionId, plan), starredUnitValue: battleEngine.starredUnitValueFor(factionId, opponentId), leaderWasKilled: false, kwisatzHaderachBonus: plan.useKwisatzHaderach ? 2 : 0 });
-            p.querySelector('[data-for="strength"]').textContent = `Your total if your leader survives: ${strength}.${warn}`;
-            setError(p, result.ok ? null : result.reason);
-            btn.disabled = !result.ok;
-          };
-          p.querySelectorAll('select, input').forEach(el => el.onchange = check);
-          check();
-          btn.onclick = () => done(build());
-        });
+      onWaiting?.(true);
+      return getBattleScene().plan({ state, factionId, territoryId, opponentId, intel, voice }).finally(() => onWaiting?.(false));
     }
   };
 }
