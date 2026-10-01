@@ -643,7 +643,10 @@ function ensureBoard(data) {
   });
   board.setCamera(localStorage.getItem('my-arrakis-camera') !== 'off');
   battleScene = createBattleScene({ layer: $('event-layer'), cardLookup, leadersData: data.leaders, factionColors: FACTION_COLORS,
-    names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf }, scaled: ms => ms * speed });
+    names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf,
+      category: c => ({ poisonWeapon: 'a poison weapon', projectileWeapon: 'a projectile weapon', specialWeapon: 'a Lasgun', poisonDefense: 'a poison defence',
+        projectileDefense: 'a projectile defence', worthless: 'a worthless card', poisonBlade: 'a Poison Blade', weirdingWay: 'Weirding Way', chemistry: 'Chemistry' }[c] ?? c) },
+    scaled: ms => ms * speed });
   presenter = createPresenter({
     battleScene,
     board, layer: $('event-layer'), banner: $('turn-banner'), factionColors: FACTION_COLORS, getSpeed: () => speed,
