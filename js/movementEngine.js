@@ -14,6 +14,7 @@ import { fighters, isAdvisorTerritory, afterMove } from './advisors.js';
 import { noteRicheseMove } from './noField.js';
 import { recordTrigger } from './techTokens.js';
 import { balisetBlocks } from './choam.js';
+import { promiseBlocksEntry } from './negotiation.js';
 import { spendingPower, paySpice } from './allySupport.js';
 const ORNITHOPTER_STRONGHOLDS = ['arrakeen', 'carthag'];
 
@@ -137,6 +138,7 @@ function canShip(state, factionId, destinationTerritoryId, amount) {
   if (isStrongholdBlocked(state, destinationTerritoryId, factionId)) {
     return { ok: false, reason: 'Stronghold already occupied by two other factions.' };
   }
+  if (promiseBlocksEntry(state, factionId, destinationTerritoryId)) return { ok: false, reason: promiseBlocksEntry(state, factionId, destinationTerritoryId) };
   if (destinationTerritoryId === 'hms' && (factionId !== 'ixians' || !state.board.hms?.placed)) {
     return { ok: false, reason: 'Only the Ixians may ship straight into the Hidden Mobile Stronghold; others enter from the territory it is over.' };
   }
@@ -220,6 +222,7 @@ function canMove(state, factionId, fromTerritoryId, toTerritoryId, amount, starr
   if (!reachable.includes(toTerritoryId)) {
     return { ok: false, reason: `${toTerritoryId} is not reachable within this faction's movement range.` };
   }
+  if (promiseBlocksEntry(state, factionId, toTerritoryId)) return { ok: false, reason: promiseBlocksEntry(state, factionId, toTerritoryId) };
   if (balisetBlocks(state, factionId, toTerritoryId)) {
     return { ok: false, reason: 'CHOAM played Baliset: you may not move into that territory this turn (you may still ship in).' };
   }
@@ -283,6 +286,7 @@ function canRideWorm(state, fromTerritoryId, toTerritoryId) {
   // The Hidden Mobile Stronghold only exists once the Ixians have placed it.
   if (toTerritoryId === 'hms' && !state.board.hms?.placed) return { ok: false, reason: 'There is no Hidden Mobile Stronghold in this game.' };
   if (toTerritoryId === fromTerritoryId) return { ok: false, reason: 'Already there.' };
+  if (promiseBlocksEntry(state, 'fremen', toTerritoryId)) return { ok: false, reason: promiseBlocksEntry(state, 'fremen', toTerritoryId) };
   if (isStrongholdBlocked(state, toTerritoryId, 'fremen')) return { ok: false, reason: 'That stronghold already holds two other factions.' };
   if (allyOccupies(state, 'fremen', toTerritoryId)) return { ok: false, reason: 'Your ally already has forces there.' };
   if (territoryInStorm(state, fromTerritoryId) || territoryInStorm(state, toTerritoryId)) return { ok: false, reason: 'Riders may not leave or enter a territory in storm.' };
@@ -321,6 +325,7 @@ function canCrossShip(state, factionId, from, to, amount) {
   if (amount < 1 || amount > here) return { ok: false, reason: 'Not that many Guild forces there.' };
   if (from === to || !state.board.territories[to]) return { ok: false, reason: 'Choose a different territory.' };
   if (isStrongholdBlocked(state, to, 'guild')) return { ok: false, reason: 'Stronghold already occupied by two other factions.' };
+  if (promiseBlocksEntry(state, 'guild', to)) return { ok: false, reason: promiseBlocksEntry(state, 'guild', to) };
   if (allyOccupies(state, 'guild', to)) return { ok: false, reason: 'Your ally already has forces there.' };
   if (territoryInStorm(state, from) || territoryInStorm(state, to)) return { ok: false, reason: 'The storm is over one of those territories.' };
   const totalCost = Math.ceil(shipmentCostPerForce(state, 'guild', to) * amount);
