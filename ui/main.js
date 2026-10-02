@@ -20,6 +20,7 @@ import { createRecorder, summarise } from './recorder.js';
 import { createBattleScene } from './battleScene.js';
 let battleScene = null;
 import { createHumanProvider } from './humanProvider.js';
+import * as negotiation from '../js/negotiation.js';
 import { createBoard } from './board.js';
 import * as cardEffects from '../js/cardEffects.js';
 import * as hmsModule from '../js/hms.js';
@@ -91,6 +92,7 @@ let logEntries = [];
 let recorder = createRecorder(); // the match record carried in saves and exports
 let decisionProvider = turnEngine.passiveDecisionProvider;
 let humanFactionId = null;
+let humanProviderRef = null; // for the Deal button
 let busy = false;
 let board = null;
 let selectedTerritory = null;
@@ -301,6 +303,58 @@ function logEvent(e) {
   if (e.type === 'techIncome') addLog(TOKEN_PHASE[e.token], turn, `${TOKEN_NAMES[e.token]} paid ${nameOf(e.factionId)} ${e.amount} spice.`);
   if (e.type === 'techTokenTaken') addLog('battle', turn, `${nameOf(e.to)} took ${TOKEN_NAMES[e.token]} from ${nameOf(e.from)} in ${territoryNameOf(e.territoryId)}.`);
   if (e.type === 'pledge') addLog('bidding', turn, `${nameOf(e.from)} pledged ${e.amount} spice to ally ${nameOf(e.to)} for this turn.`);
+  logNegotiation(e, turn);
+}
+
+// --- Negotiation: log lines, the Deal button, sheet notes ---------------------------
+const dealNames = { faction: id => nameOf(id), territory: id => territoryNameOf(id) };
+const spiceCardName = id => (territoriesData?.territories?.[id] ? territoryNameOf(id) : /hulud|worm/i.test(id) ? 'Shai-Hulud' : id === 'sandtrout' ? 'Sandtrout' : id);
+function logNegotiation(e, turn) {
+  const phase = gameState ? phaseEngine.currentPhase(gameState) : 'bidding';
+  const youOr = f => (f === humanFactionId ? 'You' : nameOf(f));
+  if (e.type === 'offer') addLog(phase, turn, `${youOr(e.from)} ${e.counterOf ? 'countered' : 'offered'} ${e.to === humanFactionId ? 'you' : nameOf(e.to)}: ${negotiation.describeSide(e.give, dealNames)} for ${negotiation.describeSide(e.ask, dealNames)}.`);
+  if (e.type === 'offerRefused') addLog(phase, turn, `${youOr(e.to)} refused ${e.from === humanFactionId ? 'your' : `${nameOf(e.from)}'s`} offer.`);
+  if (e.type === 'dealFailed') addLog(phase, turn, `The deal between ${nameOf(e.from)} and ${nameOf(e.to)} fell through: ${e.reason}`);
+  if (e.type === 'deal') {
+    const promises = e.promises.map(p => `${youOr(p.by)} promised ${p.text}`).join('; ');
+    addLog(phase, turn, `Deal: ${youOr(e.from)} and ${e.to === humanFactionId ? 'you' : nameOf(e.to)} agreed.${promises ? ` ${promises}.` : ''}`);
+  }
+  // Secrets: only the buyer sees what they learned (a spectator sees all).
+  if (e.type === 'secretLearned' && (!humanFactionId || e.privateTo === humanFactionId)) {
+    const who = humanFactionId ? 'You learned' : `${nameOf(e.privateTo)} learned`;
+    addLog(phase, turn, `${who}: ${negotiation.describeKnowledge(e.knowledge, dealNames, { card: cardNameOf, leader: leaderNameOf, spiceCard: spiceCardName })}${e.knowledge.resoldBy ? ` (passed on by ${nameOf(e.knowledge.resoldBy)})` : ''}.`);
+  }
+  if (e.type === 'bribesCollected') addLog('mentatPause', turn, `Bribe spice collected: ${Object.entries(e.collected).map(([f, n]) => `${nameOf(f)} ${n}`).join(', ')}.`);
+  if (e.type === 'promiseEnded') addLog('mentatPause', turn, `${youOr(e.by)} kept the promise ${e.text}.`);
+  if (e.type === 'pass' && e.promised && e.factionId === humanFactionId) addLog('bidding', turn, 'You passed, as you promised.');
+}
+
+function renderDealButton() {
+  const btn = $('dock-deal');
+  if (!btn) return;
+  btn.hidden = !humanFactionId || !gameState;
+  const armed = Boolean(humanProviderRef?.isNegotiateArmed());
+  btn.classList.toggle('dock__btn--active', armed);
+  btn.setAttribute('aria-pressed', String(armed));
+  btn.querySelector('.dock__label').textContent = armed ? 'Deal: on' : 'Deal';
+  btn.title = armed ? 'The offer builder opens at the next negotiation moment. Tap to cancel.' : 'Make an offer at the next negotiation moment';
+}
+
+// Public: spice in front of shields and active promises. Private: what you've learned.
+function negotiationNotes() {
+  const n = gameState?.negotiation;
+  if (!n) return '';
+  const held = Object.entries(n.held ?? {}).filter(([, v]) => v > 0).map(([f, v]) => `${nameOf(f)} ${v}`);
+  const active = (n.promises ?? []).filter(p => p.status === 'active')
+    .map(p => `${nameOf(p.by)} to ${nameOf(p.to)}: ${negotiation.describePromise(p, dealNames)}`);
+  return (held.length ? `<p class="sheet__note">Bribe spice in front of shields (collected at the Mentat Pause): ${held.join(', ')}.</p>` : '')
+    + (active.length ? `<p class="sheet__note"><strong>Promises in force:</strong><br>${active.join('<br>')}</p>` : '');
+}
+function learnedNotes() {
+  if (!humanFactionId || !gameState?.negotiation) return '';
+  const list = negotiation.knowledgeFor(gameState, humanFactionId);
+  if (!list.length) return '';
+  return `<p class="hand-meta"><strong>Learned in deals:</strong><br>${list.map(k => `Turn ${k.turn}: ${negotiation.describeKnowledge(k, dealNames, { card: cardNameOf, leader: leaderNameOf, spiceCard: spiceCardName })}`).join('<br>')}</p>`;
 }
 
 function buildDecisionMaker(data) {
@@ -310,10 +364,11 @@ function buildDecisionMaker(data) {
   return humanFactionId
     ? createMixedProvider({
         humanFactionId, ai,
-        human: createHumanProvider({
+        human: (humanProviderRef = createHumanProvider({
           panel: $('decision-panel'), leadersData: data.leaders, cardLookup,
-          territoriesData: data.territories, factionNames: FACTION_NAMES, onWaiting: setWaiting, getBattleScene: () => battleScene
-        })
+          territoriesData: data.territories, factionNames: FACTION_NAMES, onWaiting: setWaiting, getBattleScene: () => battleScene,
+          onNegotiateArmed: renderDealButton
+        }))
       })
     : ai;
 }
@@ -922,6 +977,7 @@ function renderPhaseTrack() {
 function renderHand() {
   const me = humanFactionId && gameState?.factions[humanFactionId];
   $('dock-hand').hidden = !me;
+  renderDealButton();
   $('topbar-hand').hidden = !me;
   $('status-storm').hidden = Boolean(me); // the storm shows on the map; the Hand needs the space
   if (!me) return;
@@ -951,7 +1007,8 @@ function renderHand() {
       : `<p class="hand-meta"><strong>Traitor:</strong> ${traitors}</p>`}
     <p class="hand-meta"><strong>Leaders:</strong> ${leaders}</p>
     ${humanFactionId === 'fremen' && gameState.board.nextStormCard ? `<p class="hand-meta"><strong>Next storm:</strong> ${gameState.board.nextStormCard} sectors <em>(only you can see this)</em></p>` : ''}
-    ${me.specialFactionState?.prediction ? `<p class="hand-meta"><strong>Prediction:</strong> ${nameOf(me.specialFactionState.prediction.factionId)} on turn ${me.specialFactionState.prediction.turn}</p>` : ''}`;
+    ${me.specialFactionState?.prediction ? `<p class="hand-meta"><strong>Prediction:</strong> ${nameOf(me.specialFactionState.prediction.factionId)} on turn ${me.specialFactionState.prediction.turn}</p>` : ''}
+    ${learnedNotes()}`;
 }
 
 // Cards a faction revealed in battle and kept: public knowledge at the table.
@@ -978,7 +1035,7 @@ function renderFactions() {
   const inf = gameState.factions.choam?.specialFactionState?.inflation?.status;
   const infNote = inf && inf !== 'unused' ? `<p class="sheet__note">CHOAM Inflation: ${inf === 'removed' ? 'used and gone' : `${inf === 'double' ? 'Double' : 'Cancel'} for next turn's Charity`}.</p>` : '';
   const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.png?v=2" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
-  grid.innerHTML = techNote + (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
+  grid.innerHTML = techNote + negotiationNotes() + (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
 function renderTerritories() {
@@ -1157,6 +1214,7 @@ $('zoom-reset').addEventListener('click', () => board?.resetZoom());
 // Decision panels outline legal choices on the map.
 document.addEventListener('board-highlight', e => { highlightIds = e.detail.ids ?? []; renderBoard(); });
 $('btn-run-turn').addEventListener('click', runTurn);
+$('dock-deal')?.addEventListener('click', () => { if (humanProviderRef) humanProviderRef.setNegotiateArmed(!humanProviderRef.isNegotiateArmed()); renderDealButton(); });
 
 // The score: two tracks in order, then cycling. Starts on the first tap,
 // since phones only allow audio to begin from one.
