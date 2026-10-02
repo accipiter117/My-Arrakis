@@ -998,3 +998,9 @@ body.has-console .event-layer.event-layer--battle { top: 22%; }
 .bs__flip-side img { width: 100%; height: 100%; border-radius: 3px; display: block; }
 .bs__flip-side--front { transform: rotateY(180deg); }
 @keyframes bs-turn { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
+
+/* Painted storm wedge and spice marker */
+.board__storm-art { pointer-events: none; opacity: 0.92; }
+.board__storm-edge { fill: none; stroke: rgba(34, 20, 10, 0.8); stroke-width: 2; pointer-events: none; }
+.token__spice-art { filter: drop-shadow(0 0 5px rgba(240, 141, 62, 0.8)); }
+.token__count--on-art { fill: #fff; font-size: 13px; paint-order: stroke; stroke: #2a1205; stroke-width: 3.5px; }
