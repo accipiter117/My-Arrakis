@@ -27,7 +27,7 @@ const el = (tag, attrs = {}, parent) => {
 // The storm art is painted for a wedge with its point at the board's centre and its
 // arc at the rim, blowing towards its left side (the way the storm travels).
 const STORM_ART = new URL('../assets/tokens/storm.webp?v=1', import.meta.url).href;
-const SPICE_ART = null;
+const SPICE_ART = new URL('../assets/tokens/spice-marker.webp?v=1', import.meta.url).href;
 // Storm danger marker art (null: a drawn stand-in until the painted token arrives).
 const DANGER_ART = new URL('../assets/tokens/storm-danger.png?v=1', import.meta.url).href;
 
@@ -360,8 +360,8 @@ export function createBoard({ container, geometry, territoriesData, factionColor
           if (item.s) el('circle', { r: 6, cx: 17, cy: -17, class: 'token__star' }, g);
         } else {
           if (SPICE_ART) {
-            el('image', { href: SPICE_ART, x: -19, y: -19, width: 38, height: 38, class: 'token__spice-art' }, g);
-            const t = el('text', { class: 'token__count token__count--spice token__count--on-art', y: 11 }, g);
+            el('image', { href: SPICE_ART, x: -23, y: -23, width: 46, height: 46, class: 'token__spice-art' }, g);
+            const t = el('text', { class: 'token__count token__count--spice token__count--on-art', y: 13 }, g);
             t.textContent = item.n;
           } else {
             el('rect', { x: -15, y: -15, width: 30, height: 30, rx: 6, transform: 'rotate(45)', class: 'token__spice-bg' }, g);
