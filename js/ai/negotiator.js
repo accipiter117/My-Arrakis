@@ -16,7 +16,9 @@
 import * as neg from '../negotiation.js';
 import { random } from '../random.js';
 
-const MARGIN = 1;          // must come out at least this far ahead
+// Must come out at least this far ahead. Raised from 1: in test games the AIs
+// accepted almost every deal between themselves.
+const MARGIN = 2.5;
 const COUNTER_RANGE = 4;   // counter when within this of acceptable
 const PITCH_CHANCE = 0.35; // chance to look for a deal at each window
 
@@ -46,6 +48,7 @@ export function createNegotiator({ leadersData = {}, rng = random, diplomacy = n
   const BASE_SECRET = { cardPeek: 2, traitor: 3, noFieldValue: 2, spiceTotal: 0.5, bgPrediction: 2, stormCard: 1.5, faceDancers: 3, nextSpiceCard: 1.5 };
 
   function secretValueToBuyer(state, buyer, seller, s, ctx) {
+    if (neg.alreadyKnows(state, buyer, seller, s)) return 0; // nothing new
     let kind = s.kind, about = seller, mult = 1;
     if (kind === 'resale') {
       // The buyer is told only who the knowledge is about (it's in the offer's
@@ -191,9 +194,13 @@ export function createNegotiator({ leadersData = {}, rng = random, diplomacy = n
   function priceIdea(state, me, idea, ctx) {
     const o = { to: idea.to, give: plain(idea.give), ask: plain(idea.ask) };
     const asOffer = () => ({ from: me, to: o.to, give: o.give, ask: o.ask });
-    const theirNet = netValue(state, o.to, asOffer(), ctx, true);
-    if (theirNet < MARGIN) {
-      const need = Math.ceil((MARGIN - theirNet) / spiceWorth(state, o.to));
+    // A pitcher can't read the other side's mind: it judges the deal by a rough,
+    // noisy guess, and haggles by aiming a little low. (Pricing with the
+    // receiver's exact valuation made every AI offer an automatic yes.)
+    const theirNet = netValue(state, o.to, asOffer(), ctx, true) + (rng() - 0.5) * 1.6;
+    const aim = MARGIN + 0.3 - rng() * 0.9;
+    if (theirNet < aim) {
+      const need = Math.ceil((aim - theirNet) / spiceWorth(state, o.to));
       if (o.give.spice) o.give.spice += need;
       else if (o.ask.spice && o.ask.spice - need >= 1) o.ask.spice -= need;
       else return null;
