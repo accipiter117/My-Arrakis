@@ -1003,4 +1003,4 @@ body.has-console .event-layer.event-layer--battle { top: 22%; }
 .board__storm-art { pointer-events: none; opacity: 0.92; }
 .board__storm-edge { fill: none; stroke: rgba(34, 20, 10, 0.8); stroke-width: 2; pointer-events: none; }
 .token__spice-art { filter: drop-shadow(0 0 5px rgba(240, 141, 62, 0.8)); }
-.token__count--on-art { fill: #fff; font-size: 13px; paint-order: stroke; stroke: #2a1205; stroke-width: 3.5px; }
+.token__count--on-art { fill: #fff; font-size: 15px; paint-order: stroke; stroke: #2a1205; stroke-width: 3.5px; }
