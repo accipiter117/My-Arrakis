@@ -90,7 +90,33 @@ export function canReceiveOffer(state, to) {
 // --- Secrets ---------------------------------------------------------------------
 
 // The secrets `seller` could sell to `buyer` right now: [{ kind, about?, entryId?, label }].
+// Does the buyer already hold this secret, still true? (Never sell, or pay for, it twice.)
+const sameSet = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every(x => b.includes(x));
+export function alreadyKnows(state, buyer, seller, secret) {
+  if (!buyer) return false;
+  const mine = N(state).knowledge[buyer] ?? [];
+  const f = state.factions[seller];
+  const about = (kind, test) => mine.some(k => k.kind === kind && k.about === seller && test(k));
+  switch (secret.kind) {
+    case 'traitor': return about('traitor', k => sameSet(k.value, f?.traitorHand ?? []));
+    case 'faceDancers': return about('faceDancers', k => sameSet(k.value, faceDancersOf(state)));
+    case 'stormCard': return about('stormCard', k => k.turn === state.meta.turn && k.value === state.board?.nextStormCard);
+    case 'spiceTotal': return about('spiceTotal', k => k.turn === state.meta.turn && k.value === f?.spice);
+    case 'nextSpiceCard': return about('nextSpiceCard', k => k.turn === state.meta.turn);
+    case 'bgPrediction': return about('bgPrediction', () => true);
+    case 'noFieldValue': { const nf = f?.noField?.onPlanet; return Boolean(nf) && about('noFieldValue', k => k.value?.territoryId === nf.territoryId && k.value?.value === nf.value); }
+    case 'resale': {
+      const src = (N(state).knowledge[seller] ?? []).find(k => k.id === secret.entryId);
+      return Boolean(src) && mine.some(k => k.kind === src.kind && k.about === src.about && JSON.stringify(k.value) === JSON.stringify(src.value));
+    }
+  }
+  return false;
+}
+
 export function sellableSecrets(state, seller, buyer) {
+  return sellableSecretsAll(state, seller, buyer).filter(s => !alreadyKnows(state, buyer, seller, s));
+}
+function sellableSecretsAll(state, seller, buyer) {
   const f = state.factions[seller], out = [];
   if (!f) return out;
   if (f.treacheryHand?.length) out.push({ kind: 'cardPeek', label: 'A random card from my hand' });
@@ -222,9 +248,11 @@ export function closeAlliancePromises(state, by, outcome = 'kept') {
   for (const p of activePromises(state, by, 'allianceAt')) p.status = outcome;
 }
 
-// End of turn: promises past their last turn are kept.
+// End of turn: promises past their last turn are kept. An alliance promise is
+// settled only by the next Nexus (it would otherwise be "kept" without ever
+// being tested), so it stays in force until a Nexus comes.
 export function expirePromises(state) {
-  for (const p of N(state).promises) if (p.status === 'active' && state.meta.turn >= p.untilTurn) p.status = 'kept';
+  for (const p of N(state).promises) if (p.status === 'active' && p.type !== 'allianceAt' && state.meta.turn >= p.untilTurn) p.status = 'kept';
 }
 
 // --- Offers ---------------------------------------------------------------------
@@ -348,7 +376,7 @@ export function describePromise(p, names = plainNames) {
     case 'noTraitorOn': return `not to call a traitor on ${names.faction(p.factionId)}${t}`;
     case 'bidPass': return `to pass on card ${p.cardIndex + 1}`;
     case 'noBid': return 'not to bid this round';
-    case 'allianceAt': return `to ally with ${names.faction(p.factionId)} at the next Nexus`;
+    case 'allianceAt': return `to ally with ${names.faction(p.factionId)} at the next Nexus (whenever it comes)`;
   }
   return p.type;
 }
