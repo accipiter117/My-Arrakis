@@ -6,9 +6,16 @@
 // because iOS ignores the volume of a plain <audio> element; that also
 // gives smooth fades between tracks and when the tab is hidden.
 
+// The original two alternate with the three newer scores, so every other track
+// is one of the originals and each new one comes round in turn.
+const YAH = { title: 'Yah-Lama-Yah', src: '../assets/music/yah-lama-yah.m4a' };
+const VAST = { title: 'The Vast Sands', src: '../assets/music/the-vast-sands.m4a' };
+const DESMONES = { title: 'Desmones', src: '../assets/music/desmones.m4a' };
+const WEIGHT = { title: 'Desion Weight', src: '../assets/music/desion-weight.m4a' };
+const DRONES = { title: 'Desert Drones', src: '../assets/music/desert-drones.m4a' };
 const TRACKS = [
-  { title: 'Yah-Lama-Yah', src: '../assets/music/yah-lama-yah.m4a' },
-  { title: 'The Vast Sands', src: '../assets/music/the-vast-sands.m4a' }
+  YAH, DESMONES, VAST, WEIGHT, YAH, DRONES,
+  VAST, DESMONES, YAH, WEIGHT, VAST, DRONES
 ];
 const KEY = 'my-arrakis-music';
 const FADE = 1.2; // seconds
