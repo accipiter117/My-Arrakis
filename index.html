@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-10-02e">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-10-02f">
 </head>
 <body>
   <div class="app">
@@ -53,6 +53,7 @@
       <button class="dock__btn" id="dock-hand" data-sheet="hand" hidden><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="11" height="15" rx="1.5" transform="rotate(-8 9 12)"/><rect x="9" y="4" width="11" height="15" rx="1.5" transform="rotate(8 14 11)"/></svg></span>Hand</button>
       <button class="dock__btn" data-sheet="factions"><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 21V4"/><path d="M6 5h11l-2.5 4L17 13H6"/></svg></span>Factions</button>
       <button class="dock__btn" data-sheet="log"><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7"/><path d="M7 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2"/><path d="M9 9h7M9 13h7M9 17h4"/></svg></span>Log</button>
+      <button class="dock__btn" id="dock-deal" hidden aria-pressed="false"><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12l4-4 4 3 3-2 7 5"/><path d="M7 8l-4 4 5 5 2-1"/><path d="M14 9l3 3-6 5-2-1"/></svg></span><span class="dock__label">Deal</span></button>
       <button class="dock__btn" id="btn-step-phase" disabled><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></span>Step</button>
       <button class="dock__btn dock__btn--primary" id="btn-run-turn" disabled><span class="dock__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5l7 7-7 7"/><path d="M12 5l7 7-7 7"/></svg></span>Run turn</button>
     </nav>
@@ -145,7 +146,7 @@
         <p>Ornithopter flight: supplied for the game by its creator.</p>
         <p>Based on the board game Dune (Gale Force Nine, 2019). A personal fan project; map and art are original.</p>
       </details>
-      <p class="build-version">Version 2026-10-02e</p>
+      <p class="build-version">Version 2026-10-02f</p>
     </div>
   </section>
 
@@ -193,6 +194,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-10-02e"></script>
+  <script type="module" src="./ui/main.js?v=2026-10-02f"></script>
 </body>
 </html>
