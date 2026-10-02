@@ -75,6 +75,8 @@ export function createRecorder(saved = null) {
       rec.turns.push({
         turn,
         alliances: clone(state.alliances ?? []),
+        // Negotiation: spice still in front of shields, and every promise with its status.
+        negotiation: state.negotiation ? { held: clone(state.negotiation.held), promises: clone(state.negotiation.promises) } : null,
         techTokens: state.techTokens ? Object.fromEntries(Object.entries(state.techTokens).map(([t, v]) => [t, v.owner])) : null,
         factions: Object.fromEntries(Object.entries(state.factions).map(([f, x]) => [f, {
           spice: x.spice, reserve: x.forces.reserve, tanks: x.revivalTanks ?? 0, onBoard: clone(x.forces.onBoard),
