@@ -8,7 +8,7 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
 - D3 Tech Tokens: on in every game by default (menu: Always / With Ixians or Tleilaxu / Off). Decided.
 - D4 Leader Skills / Stronghold Cards: toggles, off until M7 / M8 ship (plan default).
 - D5 CHOAM charity: CHOAM collects spice for every player, so it can always pay. Decided.
-- D6 Bribes: not implemented in the app; record the Inflation flag only.
+- D6 Bribes: built (js/negotiation.js). Inflation on Double blocks all deals that turn.
 - D7 Cyborg revival: no separate cap, within the normal 3 a turn. Decided.
 - D8 Hidden information: to be enforced per faction as each is built.
 
