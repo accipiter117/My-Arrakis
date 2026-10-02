@@ -12,6 +12,7 @@
 
 import { forcesAfterReveal } from '../noField.js';
 import { tokensOwnedBy, TECH_TOKENS } from '../techTokens.js';
+import { privatelyKnownCards } from '../negotiation.js';
 import { battleSpice } from '../allySupport.js';
 import * as battleEngine from '../battleEngine.js';
 import { random } from '../random.js';
@@ -24,13 +25,15 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
   const allyOf = (state, f) => (state.alliances ?? []).find(a => a.factions.includes(f))?.factions.find(x => x !== f) ?? null;
 
   // Cards that could be in any unknown hand.
+  // Public known cards plus any this faction bought a look at in a deal.
+  const knownMap = (state, me) => ({ ...(state.meta.knownCards ?? {}), ...privatelyKnownCards(state, me) });
   function unknownPool(state, me) {
-    const known = new Set([...state.factions[me].treacheryHand, ...state.decks.treacheryDiscard, ...Object.keys(state.meta.knownCards ?? {})]);
+    const known = new Set([...state.factions[me].treacheryHand, ...state.decks.treacheryDiscard, ...Object.keys(knownMap(state, me))]);
     return Object.keys(cardLookup).filter(id => !known.has(id));
   }
 
-  function sampleHand(state, opp, pool) {
-    const theirs = Object.entries(state.meta.knownCards ?? {}).filter(([, f]) => f === opp).map(([id]) => id);
+  function sampleHand(state, opp, pool, me) {
+    const theirs = Object.entries(knownMap(state, me)).filter(([, f]) => f === opp).map(([id]) => id);
     const need = Math.max(0, state.factions[opp].treacheryHand.length - theirs.length);
     const bag = pool.slice();
     for (let i = 0; i < need && bag.length; i++) {
@@ -205,7 +208,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
       // a soft target and made the AI about 15 points overconfident).
       const futures = [];
       for (let i = 0; i < samples; i++) {
-        const hand = sampleHand(state, opp, pool);
+        const hand = sampleHand(state, opp, pool, me);
         futures.push([0, 1, 2].map(() => samplePlan(state, opp, territoryId, hand, intel, voiceWeIssued)));
       }
       const against = (plan, theirPlans) => {
@@ -231,7 +234,7 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
       // set, so scoring it on that same set flatters it (the optimiser's curse).
       let freshWins = 0;
       for (let i = 0; i < samples; i++) {
-        const hand = sampleHand(state, opp, pool);
+        const hand = sampleHand(state, opp, pool, me);
         against(best.plan, [0, 1, 2].map(() => samplePlan(state, opp, territoryId, hand, intel, voiceWeIssued))); if (lastWin) freshWins++;
       }
       plan._ai = { winChance: Math.round((1 - best.risk) * (freshWins / samples) * 100) / 100, traitorRisk: Math.round(best.risk * 100) / 100,
