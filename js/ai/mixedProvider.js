@@ -87,6 +87,9 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseChoamAllyTrade: (state, f, ally) => pick(f).chooseChoamAllyTrade(state, f, ally),
     chooseChoamAllyTradeResponse: (state, f, info) => pick(f).chooseChoamAllyTradeResponse(state, f, info),
     chooseChoamBattleSupport: (state, f, info) => pick(f).chooseChoamBattleSupport(state, f, info),
+    // Negotiation (deals and bribes): each side decides for itself.
+    chooseNegotiationOffers: (state, f, ctx) => pick(f).chooseNegotiationOffers?.(state, f, ctx) ?? [],
+    chooseOfferResponse: (state, f, offer) => pick(f).chooseOfferResponse?.(state, f, offer) ?? { action: 'refuse' },
     // Diplomacy: each faction decides for itself, human or AI.
     chooseBreakAlliance: (state, factionId, ally) => pick(factionId).chooseBreakAlliance(state, factionId, ally),
     chooseAllianceProposal: (state, factionId) => pick(factionId).chooseAllianceProposal(state, factionId),
