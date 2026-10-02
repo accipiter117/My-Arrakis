@@ -23,6 +23,11 @@ const el = (tag, attrs = {}, parent) => {
   return node;
 };
 
+// Painted storm wedge and spice marker (null: the drawn stand-ins until the art arrives).
+// The storm art is painted for a wedge with its point at the board's centre and its
+// arc at the rim, blowing towards its left side (the way the storm travels).
+const STORM_ART = null;
+const SPICE_ART = null;
 // Storm danger marker art (null: a drawn stand-in until the painted token arrives).
 const DANGER_ART = new URL('../assets/tokens/storm-danger.png?v=1', import.meta.url).href;
 
@@ -277,8 +282,20 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       const end = start - 20 * Math.PI / 180;
       const p = a => `${cx + radius * Math.cos(a)},${cy + radius * Math.sin(a)}`;
       const d = `M${cx},${cy} L${p(start)} A${radius},${radius} 0 0 0 ${p(end)} Z`;
-      el('path', { d, class: 'board__storm' }, stormLayer);
-      el('path', { d, class: 'board__storm-swirl' }, stormLayer); // churning bands
+      if (STORM_ART) {
+        // The painted wedge, turned to face out along this sector and clipped to it exactly.
+        const clip = el('clipPath', { id: 'clip-storm' }, stormLayer);
+        el('path', { d }, clip);
+        const mid = (start + end) / 2 * 180 / Math.PI;
+        const w = 2 * radius * Math.sin(10 * Math.PI / 180);
+        const g = el('g', { 'clip-path': 'url(#clip-storm)', class: 'board__storm-art' }, stormLayer);
+        el('image', { href: STORM_ART, x: -w / 2, y: -radius, width: w, height: radius, preserveAspectRatio: 'none',
+          transform: `translate(${cx},${cy}) rotate(${mid + 90})` }, g);
+        el('path', { d, class: 'board__storm-edge' }, stormLayer);
+      } else {
+        el('path', { d, class: 'board__storm' }, stormLayer);
+        el('path', { d, class: 'board__storm-swirl' }, stormLayer); // churning bands
+      }
     }
 
     tokenLayer.replaceChildren();
@@ -342,9 +359,15 @@ export function createBoard({ container, geometry, territoriesData, factionColor
           }
           if (item.s) el('circle', { r: 6, cx: 17, cy: -17, class: 'token__star' }, g);
         } else {
-          el('rect', { x: -15, y: -15, width: 30, height: 30, rx: 6, transform: 'rotate(45)', class: 'token__spice-bg' }, g);
-          const t = el('text', { class: 'token__count token__count--spice', y: 6 }, g);
-          t.textContent = item.n;
+          if (SPICE_ART) {
+            el('image', { href: SPICE_ART, x: -19, y: -19, width: 38, height: 38, class: 'token__spice-art' }, g);
+            const t = el('text', { class: 'token__count token__count--spice token__count--on-art', y: 11 }, g);
+            t.textContent = item.n;
+          } else {
+            el('rect', { x: -15, y: -15, width: 30, height: 30, rx: 6, transform: 'rotate(45)', class: 'token__spice-bg' }, g);
+            const t = el('text', { class: 'token__count token__count--spice', y: 6 }, g);
+            t.textContent = item.n;
+          }
         }
         x += step;
       }
