@@ -39,6 +39,7 @@ import * as richese from './richese.js';
 import * as noField from './noField.js';
 import * as rcards from './richeseCards.js';
 import * as advisors from './advisors.js';
+import * as negotiation from './negotiation.js';
 
 // --- The decision provider interface --------------------------------
 //
@@ -123,6 +124,9 @@ const passiveDecisionProvider = {
   chooseChoamBattleSupport() { return 0; },
   chooseKaramaCancel() { return false; },
   chooseAllyPledge() { return 0; },
+  // Negotiation (deals and bribes): no offers, refuses everything.
+  chooseNegotiationOffers() { return []; },
+  chooseOfferResponse() { return { action: 'refuse' }; },
   chooseEmperorAllyRevival() { return 0; },
   // Keeps every card.
   chooseDiscards() {
@@ -501,6 +505,14 @@ async function runBiddingPhase(state, decisionProvider) {
   }
   biddingEngine.startBiddingPhase(state);
   delete state.meta.blackMarketSold;
+  // Negotiation window: start of Bidding (the row is dealt, so bid promises can name a card).
+  await runNegotiationWindow(state, decisionProvider, { kind: 'bidding', cards: state.bidding.cardsUpForBid.length });
+  // A faction that promised not to bid passes in the Richese auctions too.
+  const bidGuard = Object.create(decisionProvider);
+  const noBid = f => negotiation.bidForbiddenBy(state, f, -1)?.type === 'noBid';
+  bidGuard.chooseOnceAroundBid = (st, f, info) => (noBid(f) ? null : decisionProvider.chooseOnceAroundBid?.(st, f, info));
+  bidGuard.chooseOnceAroundFinal = (st, f, info) => (noBid(f) ? null : decisionProvider.chooseOnceAroundFinal?.(st, f, info));
+  bidGuard.chooseSilentBid = (st, f, info) => (noBid(f) ? 0 : decisionProvider.chooseSilentBid?.(st, f, info));
   // Richese: announce this round's cache auction (card, first or last, method).
   let cacheChoice = null;
   const cacheResults = [];
@@ -509,7 +521,7 @@ async function runBiddingPhase(state, decisionProvider) {
     const c = (decisionProvider.chooseCacheAuction ? await decisionProvider.chooseCacheAuction(state, 'richese', { cache }) : null) ?? {};
     cacheChoice = { cardId: cache.includes(c.cardId) ? c.cardId : cache[0], position: c.position === 'last' ? 'last' : 'first', method: c.method === 'silent' ? 'silent' : 'onceAround' };
     if (await karamaStops(state, decisionProvider, 'richese', 'cacheAuction')) cacheChoice = null; // no cache auction this round
-    if (cacheChoice?.position === 'first') cacheResults.push(await richese.runCacheAuction(state, decisionProvider, cacheChoice, e => observe(decisionProvider, e, state)));
+    if (cacheChoice?.position === 'first') cacheResults.push(await richese.runCacheAuction(state, bidGuard, cacheChoice, e => observe(decisionProvider, e, state)));
   }
   // Karama against the Ixian bury: they may not look at the cards and remove one this round.
   if (state.factions.ixians && state.decks.treacheryDeck.length && state.bidding.cardsUpForBid.length
@@ -553,6 +565,12 @@ async function runBiddingPhase(state, decisionProvider) {
       idx++;
       if (state.bidding.passedThisCard.includes(factionId)) continue;
       if (factionId === state.bidding.currentBidder) continue;
+      // A binding promise to pass on this card (or not to bid this round).
+      if (negotiation.bidForbiddenBy(state, factionId, cardIndex)) {
+        biddingEngine.passBid(state, factionId);
+        await observe(decisionProvider, { type: 'pass', factionId, promised: true }, state);
+        continue;
+      }
       // Karama: win this card now, paying nothing (project owner's reading of the card).
       if (cardEffects.holdsKarama(state, factionId) && decisionProvider.chooseKaramaBuy
           && await decisionProvider.chooseKaramaBuy(state, factionId, { cardId, currentBid: state.bidding.currentBid })) {
@@ -597,7 +615,7 @@ async function runBiddingPhase(state, decisionProvider) {
       : { type: 'auctionUnsold', returned: state.bidding.cardsUpForBid.length - cardIndex }, state);
   }
 
-  if (cacheChoice?.position === 'last') cacheResults.push(await richese.runCacheAuction(state, decisionProvider, cacheChoice, e => observe(decisionProvider, e, state)));
+  if (cacheChoice?.position === 'last') cacheResults.push(await richese.runCacheAuction(state, bidGuard, cacheChoice, e => observe(decisionProvider, e, state)));
   for (const r of cacheResults) results.push(r.winnerId ? { winner: r.winnerId, price: r.amount, cache: true, cardId: r.cardId } : { cache: true, removed: true, cardId: r.cardId });
   return results;
 }
@@ -745,6 +763,8 @@ async function runShipmentMovementPhase(state, decisionProvider) {
   // kept until that card is drawn.
   foreseeSpice(state); // unchanged since the Spice Blow: nothing is drawn in between
   const turnOrder = state.meta.turnOrder ?? Object.keys(state.factions);
+  // Negotiation window: start of Shipment and Movement.
+  await runNegotiationWindow(state, decisionProvider, { kind: 'shipment' });
 
   // Spacing Guild (advanced): may take its turn at any point in the order.
   let order = turnOrder;
@@ -968,10 +988,15 @@ function revealPlanElement(plan, element) {
 async function runNexusDiplomacy(state, decisionProvider) {
   const events = [];
   const order = state.meta.turnOrder ?? Object.keys(state.factions);
+  // Negotiation window: the Nexus, before alliances are made or broken.
+  await runNegotiationWindow(state, decisionProvider, { kind: 'nexus' });
+  const owes = f => negotiation.allianceOwed(state, f);
   for (const f of order) {
     if (!allianceEngine.isFactionAllied(state, f) || !decisionProvider.chooseBreakAlliance) continue;
     const ally = allianceEngine.allyOf(state, f);
-    if (await decisionProvider.chooseBreakAlliance(state, f, ally)) {
+    // A binding promise to ally with someone else means leaving this alliance.
+    const promised = owes(f) && owes(f) !== ally && !allianceEngine.isFactionAllied(state, owes(f));
+    if (promised || await decisionProvider.chooseBreakAlliance(state, f, ally)) {
       allianceEngine.breakAlliance(state, f);
       events.push({ type: 'allianceBroken', by: f, of: ally });
       await observe(decisionProvider, events[events.length - 1], state);
@@ -979,15 +1004,73 @@ async function runNexusDiplomacy(state, decisionProvider) {
   }
   for (const f of order) {
     if (allianceEngine.isFactionAllied(state, f) || !decisionProvider.chooseAllianceProposal) continue;
-    const target = await decisionProvider.chooseAllianceProposal(state, f);
+    // A binding promise to propose to a particular faction.
+    const owed = owes(f) && allianceEngine.canFormAlliance(state, f, owes(f)).ok ? owes(f) : null;
+    const target = owed ?? await decisionProvider.chooseAllianceProposal(state, f);
     if (!target || !allianceEngine.canFormAlliance(state, f, target).ok) continue;
-    const accepted = await decisionProvider.chooseAllianceResponse(state, target, f);
+    // ...and to accept a proposal from that faction.
+    const accepted = owes(target) === f || await decisionProvider.chooseAllianceResponse(state, target, f);
     const event = { type: accepted ? 'allianceFormed' : 'allianceRejected', proposer: f, target };
     if (accepted) allianceEngine.formAlliance(state, f, target);
     events.push(event);
     await observe(decisionProvider, event, state);
   }
+  // Alliance promises are settled by this Nexus: honoured whether or not the other side agreed.
+  for (const f of order) if (owes(f)) negotiation.closeAlliancePromises(state, f, 'kept');
   return events;
+}
+
+// --- Negotiation windows ----------------------------------------------------------
+//
+// Every faction in turn order may make offers (each faction receives at most
+// one new offer per window and two per turn). The receiver accepts, refuses or
+// counters once; a counter can only be accepted or refused. Deals are binding
+// (see js/negotiation.js). Terms are public; secrets go only to the buyer
+// (events carrying them have privateTo set).
+async function runNegotiationWindow(state, decisionProvider, ctx) {
+  if (!decisionProvider.chooseNegotiationOffers || state.victory?.achieved) return [];
+  negotiation.initNegotiation(state);
+  if (choam.inflationStatus(state) === 'double') return []; // CHOAM Inflation on Double: no deals at all
+  negotiation.openWindow(state, ctx);
+  const deals = [];
+  const pub = o => ({ offerId: o.id, from: o.from, to: o.to, give: structuredClone(o.give), ask: structuredClone(o.ask), counterOf: o.counterOf, window: ctx.kind, text: negotiation.describeOffer(o) });
+  try {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      const proposals = (await decisionProvider.chooseNegotiationOffers(state, f, { ...ctx })) ?? [];
+      for (const p of proposals.slice(0, 3)) {
+        const made = negotiation.makeOffer(state, { from: f, to: p?.to, give: p?.give, ask: p?.ask });
+        if (!made.ok) continue;
+        let offer = made.offer;
+        await observe(decisionProvider, { type: 'offer', ...pub(offer) }, state);
+        let resp = (await decisionProvider.chooseOfferResponse?.(state, offer.to, offer)) ?? { action: 'refuse' };
+        if (resp.action === 'counter') {
+          const c = resp.counter && negotiation.canCounter(state, offer.id)
+            ? negotiation.makeOffer(state, { from: offer.to, to: offer.from, give: resp.counter.give, ask: resp.counter.ask, counterOf: offer.id }) : { ok: false };
+          if (c.ok) {
+            offer = c.offer;
+            await observe(decisionProvider, { type: 'offer', ...pub(offer) }, state);
+            resp = (await decisionProvider.chooseOfferResponse?.(state, offer.to, offer)) ?? { action: 'refuse' };
+            if (resp.action === 'counter') resp = { action: 'refuse' };
+          } else resp = { action: 'refuse' };
+        }
+        if (resp.action === 'accept') {
+          const r = negotiation.acceptOffer(state, offer.id);
+          if (r.ok) {
+            deals.push(r.deal);
+            await observe(decisionProvider, { type: 'deal', ...pub(offer), promises: r.deal.promises.map(x => ({ id: x.id, by: x.by, text: negotiation.describePromise(x) })) }, state);
+            for (const [who, list] of Object.entries(r.deal.revealed))
+              for (const k of list) await observe(decisionProvider, { type: 'secretLearned', privateTo: who, knowledge: structuredClone(k) }, state);
+          } else await observe(decisionProvider, { type: 'dealFailed', offerId: offer.id, from: offer.from, to: offer.to, reason: r.reason }, state);
+        } else {
+          negotiation.refuseOffer(state, offer.id);
+          await observe(decisionProvider, { type: 'offerRefused', offerId: offer.id, from: offer.from, to: offer.to }, state);
+        }
+      }
+    }
+  } finally {
+    negotiation.closeWindow(state);
+  }
+  return deals;
 }
 
 // Public knowledge of who holds which treachery card (revealed in battle and
@@ -1218,6 +1301,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const fighting = [aggressorId, defenderId];
     // Announce the battle before anything is decided, so the camera can go there first.
     await observe(decisionProvider, { type: 'battleStart', territoryId, aggressorId, defenderId }, state);
+    // Negotiation window: before battle plans (the fighters and anyone else).
+    await runNegotiationWindow(state, decisionProvider, { kind: 'battle', territoryId, fighters: [aggressorId, defenderId] });
 
     // 0. Truthtrance: a combatant may ask the opponent one factual question.
     for (const f of fighting) {
@@ -1370,6 +1455,8 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
       const holder = battleEngine.isTraitorAgainst(state, f, theirLeader) ? f
         : allyOf(f) === 'harkonnen' && battleEngine.isTraitorAgainst(state, 'harkonnen', theirLeader) ? 'harkonnen' : null;
       if (!holder) continue;
+      // A binding promise not to call a traitor on this faction.
+      if (negotiation.traitorCallForbiddenBy(state, holder, opponentOf(f))) continue;
       const reveal = decisionProvider.chooseRevealTraitor
         ? await decisionProvider.chooseRevealTraitor(state, holder, theirLeader, territoryId, opponentOf(f), f)
         : true;
@@ -1454,7 +1541,7 @@ async function runBattlePhase(state, decisionProvider, cardLookup) {
     const fdWinner = outcome.winnerFactionId;
     if (tl && fdWinner && fdWinner !== 'tleilaxu' && plans[fdWinner].leaderId) {
       const match = (tl.faceDancers ?? []).find(fd => !fd.revealed && fd.leaderId === plans[fdWinner].leaderId);
-      if (match && decisionProvider.chooseRevealFaceDancer
+      if (match && !negotiation.traitorCallForbiddenBy(state, 'tleilaxu', fdWinner) && decisionProvider.chooseRevealFaceDancer
           && await decisionProvider.chooseRevealFaceDancer(state, 'tleilaxu', { territoryId, leaderId: match.leaderId, winnerId: fdWinner })) {
         match.revealed = true;
         const wf = state.factions[fdWinner];
@@ -1668,6 +1755,9 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
     case 'battle': result = await runBattlePhase(state, decisionProvider, cardLookup); break;
     case 'spiceCollection': result = runSpiceCollectionPhase(state); break;
     case 'mentatPause': {
+      // Bribe spice in front of the shields joins each faction's normal spice.
+      const collected = negotiation.collectHeldSpice(state);
+      if (Object.keys(collected).length) await observe(decisionProvider, { type: 'bribesCollected', collected }, state);
       await faceDancerSwap(state, decisionProvider);
       // CHOAM's Trip to Gamont: one force of another faction goes home, before the victory check.
       if (state.factions.choam) {
@@ -1684,6 +1774,11 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
           const side = await decisionProvider.chooseInflation(state, 'choam');
           if (side && !(await karamaStops(state, decisionProvider, 'choam', 'inflation')) && choam.placeInflation(state, side)) await observe(decisionProvider, { type: 'inflation', status: side, placed: true }, state);
         }
+      }
+      if (state.negotiation) {
+        const ending = state.negotiation.promises.filter(p => p.status === 'active' && state.meta.turn >= p.untilTurn);
+        negotiation.expirePromises(state);
+        for (const p of ending) await observe(decisionProvider, { type: 'promiseEnded', promiseId: p.id, by: p.by, to: p.to, text: negotiation.describePromise(p), status: p.status }, state);
       }
       break;
     }
@@ -1780,6 +1875,7 @@ export {
   runTraitorSelection,
   runSetupDecisions,
   runNexusDiplomacy,
+  runNegotiationWindow,
   runFullTurn,
   findBattleTerritories,
   revealPlanElement
