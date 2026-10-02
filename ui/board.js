@@ -26,7 +26,7 @@ const el = (tag, attrs = {}, parent) => {
 // Painted storm wedge and spice marker (null: the drawn stand-ins until the art arrives).
 // The storm art is painted for a wedge with its point at the board's centre and its
 // arc at the rim, blowing towards its left side (the way the storm travels).
-const STORM_ART = null;
+const STORM_ART = new URL('../assets/tokens/storm.webp?v=1', import.meta.url).href;
 const SPICE_ART = null;
 // Storm danger marker art (null: a drawn stand-in until the painted token arrives).
 const DANGER_ART = new URL('../assets/tokens/storm-danger.png?v=1', import.meta.url).href;
