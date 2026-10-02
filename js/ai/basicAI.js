@@ -30,6 +30,8 @@ import * as movementEngine from '../movementEngine.js';
 import * as revivalEngine from '../revivalEngine.js';
 import * as battleEngine from '../battleEngine.js';
 import * as allianceEngine from '../allianceEngine.js';
+import { createNegotiator } from './negotiator.js';
+import { createDiplomacy } from './diplomacy.js';
 
 // Card types that fill each slot come from the battle engine (base game plus
 // the Ixians & Tleilaxu cards), so new cards are handled everywhere at once.
@@ -161,8 +163,13 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
 
   // --- Decisions --------------------------------------------------------
 
+  // Deals and bribes (js/negotiation.js): priced in spice-equivalent points.
+  const negotiator = createNegotiator({ leadersData, rng, diplomacy: createDiplomacy({ rng }) });
+
   return {
     name: 'Basic AI',
+    chooseNegotiationOffers: (state, f, ctx) => negotiator.chooseNegotiationOffers(state, f, ctx),
+    chooseOfferResponse: (state, f, offer) => negotiator.chooseOfferResponse(state, f, offer),
 
     chooseStormDial(state, factionId, isFirstStorm) {
       return isFirstStorm ? randInt(0, 20) : randInt(1, 3);
