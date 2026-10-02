@@ -8,6 +8,7 @@
 // public board, and the current high bidder.
 
 import { random } from '../random.js';
+import { privatelyKnownCards } from '../negotiation.js';
 
 import { WEAPONS, DEFENSES } from '../battleEngine.js';
 
@@ -38,7 +39,7 @@ export function createBiddingBrain({ cardLookup, rng = random }) {
 
   // Everything the face-down card could be.
   function unknownPool(state, me) {
-    const known = new Set([...state.factions[me].treacheryHand, ...state.decks.treacheryDiscard, ...Object.keys(state.meta.knownCards ?? {})]);
+    const known = new Set([...state.factions[me].treacheryHand, ...state.decks.treacheryDiscard, ...Object.keys(state.meta.knownCards ?? {}), ...Object.keys(privatelyKnownCards(state, me))]);
     return Object.keys(cardLookup).filter(id => !known.has(id));
   }
 
