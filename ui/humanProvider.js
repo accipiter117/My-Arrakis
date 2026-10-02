@@ -20,6 +20,7 @@ import * as biddingEngine from '../js/biddingEngine.js';
 import * as revivalEngine from '../js/revivalEngine.js';
 import * as movementEngine from '../js/movementEngine.js';
 import * as battleEngine from '../js/battleEngine.js';
+import { createNegotiationPanels } from './negotiationPanel.js';
 
 const { WEAPONS, DEFENSES } = battleEngine;
 const CATEGORY_NAMES = {
@@ -35,7 +36,7 @@ const options = (pairs, selected) => pairs.map(([v, label]) =>
   `<option value="${esc(v)}"${String(v) === String(selected) ? ' selected' : ''}>${esc(label)}</option>`).join('');
 const range = (min, max) => Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
 
-export function createHumanProvider({ panel, leadersData, cardLookup, territoriesData, factionNames, onWaiting, getBattleScene = () => null }) {
+export function createHumanProvider({ panel, leadersData, cardLookup, territoriesData, factionNames, onWaiting, getBattleScene = () => null, onNegotiateArmed = () => {} }) {
   const leader = {};
   for (const list of Object.values(leadersData)) {
     if (!Array.isArray(list)) continue;
@@ -88,8 +89,27 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
     el.hidden = !message;
   };
 
+  // Negotiation: the Negotiate button arms a request; the next window opens the offer builder.
+  const negotiation = createNegotiationPanels({ ask, esc, options, factionName, territoryName, territoriesData });
+  let negotiateArmed = false;
+  const setArmed = v => { negotiateArmed = Boolean(v); onNegotiateArmed(negotiateArmed); };
+
   return {
     name: 'You',
+
+    setNegotiateArmed: setArmed,
+    isNegotiateArmed: () => negotiateArmed,
+
+    async chooseNegotiationOffers(state, me, ctx) {
+      if (!negotiateArmed) return [];
+      setArmed(false);
+      const offer = await negotiation.buildOffer(state, me);
+      return offer ? [offer] : [];
+    },
+
+    chooseOfferResponse(state, me, offer) {
+      return negotiation.respond(state, me, offer);
+    },
 
     chooseStormDial(state, factionId, isFirst) {
       const [min, max] = isFirst ? [0, 20] : [1, 3];
