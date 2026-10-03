@@ -1012,3 +1012,13 @@ body.has-console .event-layer.event-layer--battle { top: 22%; }
 .deal-side select { max-width: 100%; }
 .deal-summary { margin: 0.2rem 0 0.5rem; font-size: 14px; color: var(--sand); }
 .deal-summary:empty { display: none; }
+
+/* Tech Token info card (tap a token in the tray) */
+.tech-info { position: absolute; top: 0.45rem; left: 3.6rem; right: 3.6rem; z-index: 30; padding: 0.55rem 0.7rem; background: rgba(20, 13, 8, 0.97);
+  border: 1px solid var(--bronze-bright, #d4a94f); box-shadow: 0 8px 22px rgba(0,0,0,.6); font-size: 12.5px; line-height: 1.4; color: var(--sand, #f1dfbf); }
+.tech-info__head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem; }
+.tech-info__head img { width: 40px; height: 40px; border-radius: 50%; }
+.tech-info__head strong { display: block; font: 700 14px var(--font-display, serif); }
+.tech-info__head small { color: var(--sand-dim, #c8b594); }
+.tech-info__x { margin-left: auto; width: 36px; height: 36px; border: 0; background: none; color: var(--sand, #f1dfbf); font-size: 22px; }
+.tech-info p { margin: 0.25rem 0; }
