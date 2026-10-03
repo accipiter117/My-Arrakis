@@ -686,7 +686,34 @@ function updateConsoleMute() {
 }
 new MutationObserver(updateConsoleMute).observe($('turn-banner'), { attributes: true, attributeFilter: ['hidden'] });
 new MutationObserver(updateConsoleMute).observe($('event-layer'), { attributes: true, attributeFilter: ['hidden'] });
-$('tech-tray').addEventListener('click', () => openSheet('factions'));
+// Tap a Tech Token for what it does and who holds it.
+const TECH_INFO = {
+  axlotl: { when: 'every Revival phase in which a faction revives forces or a leader', not: 'the Tleilaxu', what: 'the Axlotl tanks: the power to grow life' },
+  heighliner: { when: 'every Shipment and Movement phase in which a faction ships forces from off-planet', not: 'the Spacing Guild', what: 'the great Guild ships: control of travel' },
+  spiceProd: { when: 'every CHOAM Charity phase in which a faction claims charity', not: 'the Bene Gesserit', what: 'spice production: control of the harvest' }
+};
+$('tech-tray').addEventListener('click', ev => {
+  const slot = ev.target.closest('[data-token]');
+  if (!slot) return;
+  ev.stopPropagation();
+  showTechInfo(slot.dataset.token, slot);
+});
+function showTechInfo(t, slot) {
+  document.querySelector('.tech-info')?.remove();
+  const tt = gameState?.techTokens; if (!tt) return;
+  const f = tt[t].owner, n = f ? tokensOwnedBy(gameState, f).length : 0, info = TECH_INFO[t];
+  const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'Nobody yet';
+  const box = document.createElement('div');
+  box.className = 'tech-info';
+  box.innerHTML = `<div class="tech-info__head"><img src="assets/tokens/tech-${t}.png?v=2" alt=""><div><strong>${TOKEN_NAMES[t]}</strong><small>${info.what}</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
+    <p><b>Held by:</b> ${who}${f && n > 1 ? ` (holding ${n} of the 3)` : ''}</p>
+    <p><b>Income:</b> in ${info.when}, its holder collects spice from the Bank: 1 for each Tech Token they hold${f ? `, so ${n} now` : ''}. It doesn't pay if ${info.not} are the only ones doing it.</p>
+    <p><b>Changing hands:</b> beat its holder in a battle and you take one of their tokens (your choice).</p>
+    <p><b>Victory:</b> one faction holding all three counts as holding one extra stronghold.</p>`;
+  $('tech-tray').parentElement.appendChild(box);
+  box.querySelector('.tech-info__x').onclick = () => box.remove();
+  setTimeout(() => document.addEventListener('click', function off(e) { if (!box.contains(e.target)) { box.remove(); document.removeEventListener('click', off); } }), 0);
+}
 
 function ensureBoard(data) {
   if (board) return;
