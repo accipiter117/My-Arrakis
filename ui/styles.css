@@ -865,7 +865,7 @@ body.has-console #sheet-truth { max-height: max(calc(var(--below-board) - var(--
 body.has-console.console-muted .turn-banner { top: 0.45rem; max-width: calc(100% - 7.5rem); }
 
 /* Bene Gesserit advisors on the board */
-.counter--advisor image { opacity: 0.55; filter: grayscale(0.6); }
+.counter--advisor image { opacity: 1; filter: none; }
 .counter__tag { font: 700 9px var(--font-data, monospace); fill: #f1dfbf; text-anchor: middle; paint-order: stroke; stroke: #000; stroke-width: 2px; }
 
 /* Family Atomics: the blasted Shield Wall and the storm danger markers */
@@ -1022,3 +1022,9 @@ body.has-console .event-layer.event-layer--battle { top: 22%; }
 .tech-info__head small { color: var(--sand-dim, #c8b594); }
 .tech-info__x { margin-left: auto; width: 36px; height: 36px; border: 0; background: none; color: var(--sand, #f1dfbf); font-size: 22px; }
 .tech-info p { margin: 0.25rem 0; }
+
+/* Title art behind the menu's title block */
+.title-block { position: relative; margin: -0.6rem -0.9rem 0.8rem; padding: 6.5rem 1rem 1rem; border-bottom: 1px solid #3a2b1c;
+  background: linear-gradient(180deg, rgba(14, 9, 6, 0) 35%, rgba(14, 9, 6, 0.92) 100%), url(../assets/title.jpg) center 30% / cover no-repeat; }
+.title-block__name, .title-block__epigraph { text-shadow: 0 2px 8px #000, 0 0 2px #000; }
+.tech-slot--inflation { border-width: 3px; }
