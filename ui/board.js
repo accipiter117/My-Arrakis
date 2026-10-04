@@ -27,6 +27,7 @@ const el = (tag, attrs = {}, parent) => {
 // The storm art is painted for a wedge with its point at the board's centre and its
 // arc at the rim, blowing towards its left side (the way the storm travels).
 const STORM_ART = new URL('../assets/tokens/storm.webp?v=1', import.meta.url).href;
+const ADVISOR_ART = new URL('../assets/counters/gesserit-advisor.webp?v=1', import.meta.url).href;
 const SPICE_ART = new URL('../assets/tokens/spice-marker.webp?v=1', import.meta.url).href;
 // Storm danger marker art (null: a drawn stand-in until the painted token arrives).
 const DANGER_ART = new URL('../assets/tokens/storm-danger.png?v=1', import.meta.url).href;
@@ -354,8 +355,9 @@ export function createBoard({ container, geometry, territoriesData, factionColor
           drawCounter(g, item.f, item.n);
           // Bene Gesserit advisors: faded, with an "advisors" tag.
           if (item.f === 'gesserit' && state.factions.gesserit?.forces.advisorTerritories?.includes(id)) {
+            // The advisor side of the counter.
             g.classList.add('counter--advisor');
-            const tag = el('text', { class: 'counter__tag', y: 30 }, g); tag.textContent = 'advisors';
+            g.querySelector('.token__counter')?.setAttribute('href', ADVISOR_ART);
           }
           if (item.s) el('circle', { r: 6, cx: 17, cy: -17, class: 'token__star' }, g);
         } else {
