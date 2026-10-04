@@ -1261,6 +1261,11 @@ $('select-ixtl').addEventListener('change', e => localStorage.setItem('my-arraki
 if (!localStorage.getItem('my-arrakis-tech-reset-1')) { localStorage.setItem('my-arrakis-tech', 'on'); localStorage.setItem('my-arrakis-tech-reset-1', '1'); }
 $('select-tech').value = localStorage.getItem('my-arrakis-tech') ?? 'on';
 $('select-tech').addEventListener('change', e => localStorage.setItem('my-arrakis-tech', e.target.value));
+// Bottom bar button style: brass and enamel (default), carved stone or plain. Applies at once.
+const applyButtons = v => { document.body.classList.remove('buttons-brass', 'buttons-stone'); if (v !== 'plain') document.body.classList.add(`buttons-${v}`); };
+$('select-buttons').value = localStorage.getItem('my-arrakis-buttons') ?? 'brass';
+applyButtons($('select-buttons').value);
+$('select-buttons').addEventListener('change', e => { localStorage.setItem('my-arrakis-buttons', e.target.value); applyButtons(e.target.value); });
 $('lineup-grid').addEventListener('click', e => {
   const b = e.target.closest('[data-lineup]');
   if (!b) return;
