@@ -693,11 +693,26 @@ const TECH_INFO = {
   spiceProd: { when: 'every CHOAM Charity phase in which a faction claims charity', not: 'the Bene Gesserit', what: 'spice production: control of the harvest' }
 };
 $('tech-tray').addEventListener('click', ev => {
+  const inf = ev.target.closest('[data-inflation]');
+  if (inf) { ev.stopPropagation(); showInflationInfo(inf.dataset.inflation); return; }
   const slot = ev.target.closest('[data-token]');
   if (!slot) return;
   ev.stopPropagation();
   showTechInfo(slot.dataset.token, slot);
 });
+function showInflationInfo(side) {
+  document.querySelector('.tech-info')?.remove();
+  const box = document.createElement('div');
+  box.className = 'tech-info';
+  box.innerHTML = `<div class="tech-info__head"><img src="assets/tokens/inflation-${side}.webp?v=1" alt=""><div><strong>CHOAM Inflation: ${side === 'double' ? 'Double' : 'Cancel'}</strong><small>placed by CHOAM at the Mentat Pause</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
+    ${side === 'double'
+      ? '<p><b>Next Charity:</b> doubled. CHOAM collects 4 spice per faction from the Bank and pays everyone\'s charity at double rate.</p><p><b>Also:</b> while Double is showing, no deals or bribes can be made.</p>'
+      : '<p><b>Next Charity:</b> cancelled. No one collects charity, CHOAM included.</p>'}
+    <p><b>Then:</b> it flips to the other side at the next Mentat Pause, and is removed after that.</p>`;
+  $('tech-tray').parentElement.appendChild(box);
+  box.querySelector('.tech-info__x').onclick = () => box.remove();
+  setTimeout(() => document.addEventListener('click', function off(e) { if (!box.contains(e.target)) { box.remove(); document.removeEventListener('click', off); } }), 0);
+}
 function showTechInfo(t, slot) {
   document.querySelector('.tech-info')?.remove();
   const tt = gameState?.techTokens; if (!tt) return;
@@ -928,8 +943,11 @@ function renderGuide() {
 function renderTechTray() {
   const tray = $('tech-tray');
   const tt = gameState?.techTokens;
-  tray.hidden = !tt;
-  if (!tt) return;
+  const inf = gameState?.factions.choam ? gameState.factions.choam.specialFactionState?.inflation?.status : null;
+  const showInf = inf === 'double' || inf === 'cancel';
+  tray.hidden = !tt && !showInf;
+  const infSlot = showInf ? `<button class="tech-slot tech-slot--inflation" data-inflation="${inf}" style="--slot-colour:${inf === 'double' ? '#3f8f5a' : '#a33a2a'}" aria-label="CHOAM Inflation: ${inf}"><img src="assets/tokens/inflation-${inf}.webp?v=1" alt=""></button>` : '';
+  if (!tt) { tray.innerHTML = infSlot; return; }
   const counts = {};
   for (const t of TECH_TOKENS) if (tt[t].owner) counts[tt[t].owner] = (counts[tt[t].owner] ?? 0) + 1;
   tray.innerHTML = TECH_TOKENS.map(t => {
@@ -938,7 +956,7 @@ function renderTechTray() {
     const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'nobody';
     return `<button class="tech-slot${cls}" data-token="${t}" style="--slot-colour:${f ? FACTION_COLORS[f] : '#555'}" title="${TOKEN_NAMES[t]}: ${who}" aria-label="${TOKEN_NAMES[t]}, held by ${who}">
       <img src="assets/tokens/tech-${t}.png?v=2" alt="">${f ? `<img class="tech-slot__owner" src="assets/counters/${f}.png" alt="">` : ''}</button>`;
-  }).join('');
+  }).join('') + infSlot;
 }
 
 function render() {
