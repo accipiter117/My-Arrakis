@@ -1059,6 +1059,12 @@ function renderPhaseTrack() {
     if (idx === currentIdx) { step.classList.add('phase-track__step--active'); activeEl = step; }
     else if (idx < currentIdx) step.classList.add('phase-track__step--done');
     step.textContent = PHASE_LABELS[phase] ?? phase;
+    step.title = PHASE_LABELS[phase] ?? phase;
+    // Painted phase icon (shown when a phase icon style is chosen in the menu).
+    const icon = phase === 'movement' ? 'shipment' : phase;
+    // (absolute addresses: a url() inside a CSS variable resolves against the stylesheet)
+    step.style.setProperty('--icon-brass', `url("${new URL(`assets/phases/brass-${icon}.webp?v=1`, location.href).href}")`);
+    step.style.setProperty('--icon-stone', `url("${new URL(`assets/phases/stone-${icon}.webp?v=1`, location.href).href}")`);
     track.appendChild(step);
   }
   // Keep the current phase in view on a narrow screen.
@@ -1266,6 +1272,11 @@ const applyButtons = v => { document.body.classList.remove('buttons-brass', 'but
 $('select-buttons').value = localStorage.getItem('my-arrakis-buttons') ?? 'brass';
 applyButtons($('select-buttons').value);
 $('select-buttons').addEventListener('change', e => { localStorage.setItem('my-arrakis-buttons', e.target.value); applyButtons(e.target.value); });
+// Phase strip style: brass medallions (default), carved stone discs, or the plain bar.
+const applyPhases = v => { document.body.classList.remove('phases-brass', 'phases-stone'); if (v !== 'plain') document.body.classList.add(`phases-${v}`); };
+$('select-phases').value = localStorage.getItem('my-arrakis-phases') ?? 'brass';
+applyPhases($('select-phases').value);
+$('select-phases').addEventListener('change', e => { localStorage.setItem('my-arrakis-phases', e.target.value); applyPhases(e.target.value); renderPhaseTrack(); });
 $('lineup-grid').addEventListener('click', e => {
   const b = e.target.closest('[data-lineup]');
   if (!b) return;
