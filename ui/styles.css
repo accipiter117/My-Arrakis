@@ -1069,3 +1069,11 @@ body.buttons-brass .dock__btn, body.buttons-stone .dock__btn { color: #241507 !i
 .victory__list img { width: 34px; height: 34px; border-radius: 50%; }
 .victory__list strong { display: block; font-size: 13.5px; } .victory__list span { font-size: 12px; color: var(--sand-dim, #c8b594); }
 .victory__actions { display: flex; gap: 0.5rem; } .victory__actions .btn { flex: 1; min-height: 46px; }
+
+/* Painted phase icons in the strip under the top bar */
+body.phases-brass .phase-track, body.phases-stone .phase-track { height: 32px; gap: 2px; padding: 3px 4px; align-items: center; justify-content: space-between; overflow: hidden; }
+body.phases-brass .phase-track__step, body.phases-stone .phase-track__step { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; background: center / contain no-repeat; opacity: 0.35; filter: grayscale(0.5); transition: transform 0.25s, opacity 0.25s; }
+body.phases-brass .phase-track__step { background-image: var(--icon-brass); }
+body.phases-stone .phase-track__step { background-image: var(--icon-stone); }
+body.phases-brass .phase-track__step--done, body.phases-stone .phase-track__step--done { opacity: 0.6; filter: grayscale(0.85) brightness(0.75); background-color: transparent; }
+body.phases-brass .phase-track__step--active, body.phases-stone .phase-track__step--active { opacity: 1; filter: none; transform: scale(1.12); box-shadow: 0 0 10px 2px var(--spice-glow, rgba(240, 141, 62, 0.7)); }
