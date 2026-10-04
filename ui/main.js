@@ -538,7 +538,53 @@ function checkVictory() {
     addLog('victory', gameState.meta.turn, `Game over: ${winners} win (${gameState.victory.method}).${humanFactionId ? (youWon ? ' You won.' : ' You lost.') : ''}`);
   }
   saveGame();
-  openSheet('log');
+  showVictoryScreen();
+}
+
+// The victory screen: the winner and how they won over the victory art, with a short
+// summary of the game below (turns played, strongholds held, battles won).
+const METHOD_TEXT = {
+  'stronghold-solo': 'held three strongholds alone at the Mentat Pause',
+  'stronghold-alliance': 'held four strongholds as allies at the Mentat Pause',
+  'fremen-special': 'kept the sietches safe from their rivals to the final turn (Fremen special victory)',
+  'gesserit-prediction': 'saw their secret prediction come true (Bene Gesserit special victory)',
+  'guild-special': 'kept the planet from falling to anyone (Guild special victory)',
+  stalemate: 'nobody won by the final turn'
+};
+function showVictoryScreen() {
+  document.getElementById('victory')?.remove();
+  const v = gameState.victory, winners = v.winningFactions ?? [];
+  const draw = v.method === 'stalemate' || !winners.length;
+  const youWon = humanFactionId && winners.includes(humanFactionId);
+  let stats = null;
+  try { stats = summarise(recorder.data, gameState, cardLookup); } catch { stats = null; }
+  const strongholdIds = Object.entries(gameState.board.territories).filter(([, t]) => t.type === 'stronghold').map(([id]) => id);
+  const held = f => strongholdIds.filter(id => (gameState.factions[f]?.forces.onBoard[id] ?? 0) > 0).map(territoryNameOf);
+  const line = f => {
+    const b = stats?.battles?.[f];
+    const h = held(f);
+    return `<li><img src="assets/counters/${f}.png" alt=""><div><strong>${FACTION_NAMES[f]}${f === humanFactionId ? ' (you)' : ''}</strong>
+      <span>${h.length ? `Holding ${h.join(', ')}` : 'No strongholds held'}${b ? ` · ${b.won} of ${b.fought} battles won` : ''}</span></div></li>`;
+  };
+  const others = humanFactionId && !winners.includes(humanFactionId) ? [humanFactionId] : [];
+  const el = document.createElement('section');
+  el.id = 'victory'; el.className = 'victory';
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', draw ? 'The game is a draw' : 'Victory');
+  el.innerHTML = `<div class="victory__top">
+      <p class="victory__eyebrow">${draw ? 'The sands are undecided' : youWon ? 'You have won' : humanFactionId ? 'You have been defeated' : 'Game over'}</p>
+      <h2 class="victory__title">${draw ? 'Stalemate' : 'Victory'}</h2>
+      ${draw ? '' : `<div class="victory__emblems">${winners.map(f => `<img src="assets/counters/${f}.png" alt="${FACTION_NAMES[f]}">`).join('')}</div>
+      <p class="victory__who">${winners.map(f => FACTION_NAMES[f]).join(' & ')}</p>`}
+      <p class="victory__how">${METHOD_TEXT[v.method] ?? v.method}</p>
+    </div>
+    <div class="victory__bottom">
+      <p class="victory__turns">${gameState.meta.turn} turn${gameState.meta.turn === 1 ? '' : 's'} played</p>
+      <ul class="victory__list">${[...winners, ...others].map(line).join('')}</ul>
+      <div class="victory__actions"><button class="btn" data-act="board">View the board</button><button class="btn btn--primary" data-act="new">New game</button></div>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('[data-act="board"]').onclick = () => el.remove();
+  el.querySelector('[data-act="new"]').onclick = () => { el.remove(); openSheet('menu'); };
 }
 
 function setBusy(value) {
