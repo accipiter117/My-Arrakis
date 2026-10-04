@@ -9,13 +9,17 @@
 // presentation has finished. Speed 0 skips everything.
 
 import * as battleEngine from '../js/battleEngine.js';
+import { cardsGained } from './dealMessages.js';
+
+// Treachery card art (back and face are the same size, so a card flips without changing shape).
+const CARD_ART = { back: new URL('../assets/cards/back.webp?v=2', import.meta.url).href, face: new URL('../assets/cards/face.webp?v=1', import.meta.url).href };
 
 const CATEGORY_TEXT = { poisonWeapon: 'a poison weapon', projectileWeapon: 'a projectile weapon', specialWeapon: 'a Lasgun', poisonDefense: 'a poison defence', projectileDefense: 'a projectile defence', specialLeaderSubstitute: 'a Cheap Hero', worthless: 'a worthless card' };
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 export function createPresenter({ board, layer, banner = null, factionColors, names, getSpeed, renderDisplay, renderReal, getViewer = () => null, sfx = null, cardLookup = null,
-  techTray = null, onTechChange = () => {}, battleScene = null }) {
+  techTray = null, onTechChange = () => {}, battleScene = null, notify = null }) {
   const speed = () => getSpeed();
   const scaled = ms => ms * speed();
   const wait = ms => new Promise(resolve => setTimeout(resolve, scaled(ms)));
@@ -80,6 +84,13 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
   // --- The auction: one card that stays up while bids go round the table.
   let auction = null;
+  let handBeforeAuction = null;
+  const auctionBack = () => `<img src="${CARD_ART.back}" alt="Face-down card">`;
+  const auctionFace = id => `<div class="auction-face"><img src="${CARD_ART.face}" alt=""><span class="bs__card-name">${esc(names.card(id))}</span></div>`;
+  const auctionFlip = id => `<div class="bs__flipper auction-flip"><div class="bs__flip-inner">
+      <div class="bs__flip-side bs__flip-side--back"><img src="${CARD_ART.back}" alt=""></div>
+      <div class="bs__flip-side bs__flip-side--front"><img src="${CARD_ART.face}" alt=""><span class="bs__card-name">${esc(names.card(id))}</span></div>
+    </div></div>`;
   function auctionLine(html, cls = '') {
     if (!auction) return;
     const li = document.createElement('li');
@@ -230,18 +241,27 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(600), minW: 380, anchor: 0.12 });
     },
 
-    async auctionStart(e) {
+    async auctionStart(e, state) {
+      // Remember the viewer's hand, so a win can show exactly the card(s) that arrived.
+      const viewer = getViewer();
+      handBeforeAuction = viewer && state?.factions?.[viewer] ? [...(state.factions[viewer].treacheryHand ?? [])] : null;
       if (!speed()) return;
-      // Only Atreides may see the card before bidding (Prescience).
-      const seen = ['atreides', 'ixians'].includes(getViewer()) ? esc(names.card(e.cardId)) : 'Face down';
+      // Atreides and Ixians may see the card before bidding; everyone else sees its back.
+      const known = ['atreides', 'ixians'].includes(viewer);
+      const seen = known ? esc(names.card(e.cardId)) : 'Face down';
       layer.classList.add('event-layer--top'); // stays visible above your bid panel
       layer.innerHTML = `<div class="event-card event-card--auction" role="status">
         <div class="event-card__eyebrow">Auction · card ${e.index + 1} of ${e.total}</div>
-        <div class="event-card__title">${seen}</div>
-        <ol class="auction-bids"></ol></div>`;
+        <div class="auction-body">
+          <div class="auction-card" data-auction-card>${known ? auctionFace(e.cardId) : auctionBack()}</div>
+          <div class="auction-main">
+            <div class="event-card__title" data-auction-title>${seen}</div>
+            <ol class="auction-bids"></ol>
+          </div>
+        </div></div>`;
       layer.hidden = false;
       layer.onclick = null; // stays up for the whole auction
-      auction = { list: layer.querySelector('.auction-bids') };
+      auction = { list: layer.querySelector('.auction-bids'), card: layer.querySelector('[data-auction-card]'), title: layer.querySelector('[data-auction-title]') };
       await wait(600);
     },
     async bid(e) {
@@ -252,9 +272,15 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       auctionLine(`${chip(e.factionId)} passes`, 'is-pass');
       await wait(300);
     },
-    async auctionWon(e) {
+    async auctionWon(e, state) {
       auctionLine(`${chip(e.factionId)} wins for <strong>${e.price} spice</strong>${e.bonus ? ' and draws a free bonus card' : ''}`, 'is-won');
-      await wait(1800);
+      // Only the winner sees what they bought: reveal it when that's you (never an AI's card).
+      const viewer = getViewer();
+      const won = viewer && e.factionId === viewer && handBeforeAuction && state?.factions?.[viewer]
+        ? cardsGained(handBeforeAuction, state.factions[viewer].treacheryHand ?? []) : [];
+      handBeforeAuction = null;
+      if (won.length) await revealWon(won);
+      else await wait(1800);
       endAuction();
     },
     async auctionUnsold(e) {
@@ -601,7 +627,26 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     }
   };
 
+  // The card(s) you won turn over one after another (Harkonnen: the bonus card follows).
+  // At speed Off there is no animation, but the message still shows briefly.
+  async function revealWon(cards) {
+    const label = i => (i === 0 ? 'You won' : 'Bonus card');
+    if (!speed() || !auction?.card) {
+      cards.forEach((c, i) => notify?.(`${label(i)}: ${names.card(c)}`, 'won'));
+      return;
+    }
+    for (let i = 0; i < cards.length; i++) {
+      if (!auction) return;
+      auction.card.innerHTML = auctionFlip(cards[i]);
+      auction.title.textContent = `${label(i)}: ${names.card(cards[i])}`;
+      auction.title.classList.add('auction-won');
+      // Held long enough to read even at Fast speed.
+      await new Promise(r => setTimeout(r, Math.max(1500, scaled(i < cards.length - 1 ? 1700 : 2000))));
+    }
+  }
+
   function endAuction() {
+    handBeforeAuction = null;
     auction = null;
     layer.hidden = true;
     layer.innerHTML = '';
