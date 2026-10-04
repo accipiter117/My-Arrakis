@@ -27,6 +27,8 @@ import * as hmsModule from '../js/hms.js';
 import { assessVictoryWatch } from '../js/victoryWatch.js';
 import { FACTION_GUIDE, GUIDE_ORDER, ALLIANCE_BASICS } from './factionGuide.js';
 import { createPresenter } from './presenter.js';
+import { createToaster } from './toasts.js';
+import { dealMessage } from './dealMessages.js';
 import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
 import { getRandomState, setRandomState } from '../js/random.js';
@@ -327,6 +329,17 @@ function logNegotiation(e, turn) {
   if (e.type === 'bribesCollected') addLog('mentatPause', turn, `Bribe spice collected: ${Object.entries(e.collected).map(([f, n]) => `${nameOf(f)} ${n}`).join(', ')}.`);
   if (e.type === 'promiseEnded') addLog('mentatPause', turn, `${youOr(e.by)} kept the promise ${e.text}.`);
   if (e.type === 'pass' && e.promised && e.factionId === humanFactionId) addLog('bidding', turn, 'You passed, as you promised.');
+  // A short confirmation at the top of the map for offers you are part of (nothing when spectating).
+  const msg = dealMessage(e, humanFactionId, { faction: nameOf, territory: territoryNameOf,
+    knowledge: k => negotiation.describeKnowledge(k, dealNames, { card: cardNameOf, leader: leaderNameOf, spiceCard: spiceCardName }) });
+  if (msg) toast(msg, 'deal');
+}
+
+// Confirmation messages (deals, cards won): created on first use, over the map.
+let toaster = null;
+function toast(text, kind = '') {
+  toaster ??= createToaster(document.querySelector('.stage') ?? document.body);
+  toaster.show(text, kind);
 }
 
 function renderDealButton() {
@@ -799,7 +812,8 @@ function ensureBoard(data) {
     renderReal: renderBoard,
     getViewer: () => humanFactionId,
     sfx,
-    cardLookup
+    cardLookup,
+    notify: (text, kind) => toast(text, kind)
   });
   // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
   if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, sfx, get state() { return gameState; }, get provider() { return decisionProvider; } };
