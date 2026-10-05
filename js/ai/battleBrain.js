@@ -229,6 +229,8 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
       }
       if (!best) return null;
       const { starredUnitValue, ...plan } = best.plan;
+      // Stone Burner is decided by forces left undialled: dial none.
+      if (plan.weaponCardId === 'stoneBurner') Object.assign(plan, { forcesCommitted: 0, starredForcesCommitted: 0, spiceCommitted: 0, supportedStarredCount: 0, supportedOrdinaryCount: 0 });
       // What the AI believed when it chose (read by the match export; the engine ignores it).
       // Judged on fresh samples: the plan was picked as the best against the first
       // set, so scoring it on that same set flatters it (the optimiser's curse).
