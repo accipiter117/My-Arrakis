@@ -484,6 +484,9 @@ strong { color: var(--gold); }
 .territory--rock { fill: url(#pat-rock); }
 .territory--stronghold { fill: url(#pat-stronghold); stroke: #d4a94f; stroke-width: 2.2; }
 .territory--polarSink { fill: url(#grad-polar); }
+/* Painted map underneath: territories become clear outlines over the art. */
+.board--painted .territory--sand, .board--painted .territory--rock,
+.board--painted .territory--stronghold, .board--painted .territory--polarSink { fill: rgba(0, 0, 0, 0); }
 .territory--highlight { stroke: #fff2c8; stroke-width: 5; stroke-dasharray: 10 6; }
 .territory--selected { stroke: var(--spice); stroke-width: 6; filter: drop-shadow(0 0 6px var(--spice-glow)); }
 .territory:focus { outline: none; }

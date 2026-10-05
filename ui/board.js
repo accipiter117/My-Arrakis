@@ -31,6 +31,9 @@ const ADVISOR_ART = new URL('../assets/counters/gesserit-advisor.webp?v=1', impo
 const SPICE_ART = new URL('../assets/tokens/spice-marker.webp?v=1', import.meta.url).href;
 // Storm danger marker art (null: a drawn stand-in until the painted token arrives).
 const DANGER_ART = new URL('../assets/tokens/storm-danger.png?v=1', import.meta.url).href;
+// The painted map of Arrakis, cropped to its circle: drawn under the territory
+// borders, which then only outline (see .board--painted in styles.css).
+const MAP_ART = new URL('../assets/map/arrakis.webp?v=1', import.meta.url).href;
 
 export function createBoard({ container, geometry, territoriesData, factionColors, onTap, onZoom }) {
   const [cx, cy] = geometry.center;
@@ -76,6 +79,12 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       class: major ? 'board__tick board__tick--major' : 'board__tick' }, ticks);
   }
   el('circle', { cx, cy, r: radius + 3, class: 'board__rim' }, svg);
+  const mapClip = el('clipPath', { id: 'clip-map' }, defs);
+  el('circle', { cx, cy, r: radius + 1 }, mapClip);
+  svg.classList.add('board--painted');
+  const mapArt = el('image', { href: MAP_ART, x: cx - radius, y: cy - radius, width: radius * 2, height: radius * 2,
+    'clip-path': 'url(#clip-map)', class: 'board__art', 'pointer-events': 'none' }, svg);
+  mapArt.addEventListener('error', () => { svg.classList.remove('board--painted'); mapArt.remove(); }); // fall back to the drawn textures
   const territoryLayer = el('g', {}, svg);
   const sectorLayer = el('g', { class: 'board__sectors' }, svg);
   el('circle', { cx, cy, r: radius, fill: 'url(#grad-sunlight)', 'pointer-events': 'none' }, svg); // late light across the desert
