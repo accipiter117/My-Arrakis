@@ -230,7 +230,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
             const label = o.kind === 'hero' ? 'Cheap Hero' : names.leader(o.id);
             return o.kind === 'off'
               ? `<span class="bs__fan-item is-off" style="--x:${x}px;--y:${y}px"><img src="${img}" alt=""><span>${esc(o.why)}</span></span>`
-              : `<button data-i="${i}" class="bs__fan-item${pl.lead?.id === o.id ? ' is-on' : ''}" style="--x:${x}px;--y:${y}px" aria-label="${esc(label)}"><img src="${img}" alt=""><b>${o.kind === 'hero' ? 0 : leader[o.id]?.fightingValue ?? 0}</b><span>${esc(label)}</span></button>`;
+              : `<button data-i="${i}" class="bs__fan-item${pl.lead?.id === o.id ? ' is-on' : ''}${i % 2 ? ' bs__fan-item--up' : ''}" style="--x:${x}px;--y:${y}px" aria-label="${esc(label)}"><img src="${img}" alt=""><b>${o.kind === 'hero' ? 0 : leader[o.id]?.fightingValue ?? 0}</b><span>${esc(label)}</span></button>`;
           }).join('');
           mine.querySelector('[data-wheel]').appendChild(pop);
           pop.onclick = ev => { const b = ev.target.closest('[data-i]'); if (!b) return; ev.stopPropagation(); const o = opts[Number(b.dataset.i)];
