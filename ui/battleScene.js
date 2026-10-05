@@ -187,7 +187,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
 
     // Popovers (spice stepper, leader fan, card row, elite stepper).
     let pop = null;
-    const closePop = () => { pop?.remove(); pop = null; };
+    const closePop = () => { pop?.remove(); pop = null; mine.querySelector('[data-wheel]').classList.remove('bs__wheel--fan'); };
     const popover = (anchor, html) => {
       closePop();
       pop = document.createElement('div'); pop.className = 'bs__pop'; pop.innerHTML = html;
@@ -233,6 +233,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
               : `<button data-i="${i}" class="bs__fan-item${pl.lead?.id === o.id ? ' is-on' : ''}${i % 2 ? ' bs__fan-item--up' : ''}" style="--x:${x}px;--y:${y}px" aria-label="${esc(label)}"><img src="${img}" alt=""><b>${o.kind === 'hero' ? 0 : leader[o.id]?.fightingValue ?? 0}</b><span>${esc(label)}</span></button>`;
           }).join('');
           mine.querySelector('[data-wheel]').appendChild(pop);
+          mine.querySelector('[data-wheel]').classList.add('bs__wheel--fan'); // the fan sits above the card slots, so every leader can be tapped
           pop.onclick = ev => { const b = ev.target.closest('[data-i]'); if (!b) return; ev.stopPropagation(); const o = opts[Number(b.dataset.i)];
             if (o.kind === 'hero' && (pl.weapon === o.id || pl.defense === o.id)) return; pl.lead = o; closePop(); render(); };
           return;
@@ -254,7 +255,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
       const wheel = mine.querySelector('[data-wheel]');
       let startX = null, startForces = 0;
       wheel.style.touchAction = 'none';
-      wheel.addEventListener('pointerdown', ev => { startX = ev.clientX; startForces = pl.forces; wheel.setPointerCapture(ev.pointerId); });
+      wheel.addEventListener('pointerdown', ev => { if (ev.target.closest('.bs__arc')) return; /* a tap on the leader fan, not a swipe */ startX = ev.clientX; startForces = pl.forces; wheel.setPointerCapture(ev.pointerId); });
       wheel.addEventListener('pointermove', ev => {
         if (startX == null) return;
         const n = Math.max(0, Math.min(present, startForces + Math.round((ev.clientX - startX) / 24)));
