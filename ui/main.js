@@ -1054,7 +1054,7 @@ function renderStatus() {
   $('status-storm').textContent = `Storm ${gameState.board.stormPosition ?? '—'}`;
   const me = humanFactionId && gameState.factions[humanFactionId];
   spicePill.hidden = !me;
-  if (me) { spicePill.textContent = `◆ ${me.spice}`; spicePill.title = `${me.spice} spice`; }
+  if (me) { spicePill.innerHTML = `<img class="spice-pill__icon" src="assets/tokens/spice-marker.webp?v=1" alt=""> ${me.spice}`; spicePill.title = `${me.spice} spice`; }
   const ally = humanFactionId && gameState.alliances?.find(a => a.factions.includes(humanFactionId))?.factions.find(f => f !== humanFactionId);
   $('status-ally').hidden = !ally;
   if (ally) { $('status-ally').innerHTML = `<img src="assets/counters/${ally}.png" alt="">`; $('status-ally').setAttribute('aria-label', `Ally: ${FACTION_NAMES[ally]}. Tap for what they give you.`); }
