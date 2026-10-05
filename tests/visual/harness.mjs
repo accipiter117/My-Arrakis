@@ -124,6 +124,8 @@ export async function playScenario(page, shot) {
   }
 
   // 6. Victory.
+  // No fade-in for the photo: it can leave the text on its own layer, which renders slightly differently.
+  await page.addStyleTag({ content: '.victory { animation: none !important; }' });
   await page.evaluate(() => {
     const s = window.__arrakis.state;
     s.victory = { ...s.victory, achieved: true, method: 'stronghold-solo', winningFactions: ['atreides'] };
