@@ -1223,10 +1223,26 @@ $('console-feed').addEventListener('click', () => openSheet('log'));
 // On a tall screen the map is limited by the screen's width, leaving empty
 // space above and below. Pin the map to the top and use the space beneath as
 // a console where panels, cards and banners appear, so they never cover the map.
+//
+// Desktop layout (ui/desktop.css): a wide landscape window gets three columns with
+// the map in the centre. For now it only switches on with ?layout=desktop in the
+// address; ?layout=mobile forces the phone layout. Narrow windows always get the
+// phone layout, so dragging a window narrower falls back cleanly.
+const LAYOUT_CHOICE = new URLSearchParams(location.search).get('layout');
+const DESKTOP_BY_DEFAULT = false; // set true once the desktop layout is ready for everyone
+const DESKTOP_MIN = { width: 1100, height: 640 };
+function wantsDesktop() {
+  if (LAYOUT_CHOICE === 'mobile') return false;
+  if (LAYOUT_CHOICE !== 'desktop' && !DESKTOP_BY_DEFAULT) return false;
+  const w = window.innerWidth, h = window.innerHeight;
+  return w >= DESKTOP_MIN.width && h >= DESKTOP_MIN.height && w > h;
+}
 function layoutConsole() {
+  const desktop = wantsDesktop();
+  document.body.classList.toggle('layout-desktop', desktop);
   const stage = document.querySelector('.stage');
   const r = stage.getBoundingClientRect();
-  const on = r.height - r.width >= 150;
+  const on = !desktop && r.height - r.width >= 150;
   document.body.classList.toggle('has-console', on);
   document.documentElement.style.setProperty('--board-size', `${Math.floor(on ? r.width : Math.min(r.width, r.height))}px`);
   requestAnimationFrame(() => {

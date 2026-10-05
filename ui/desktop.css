@@ -1,0 +1,71 @@
+/* ui/desktop.css
+ *
+ * The desktop layout (wide landscape windows). Everything here is scoped under
+ * body.layout-desktop, which ui/main.js sets only when the window is wide enough
+ * (see layoutConsole). Phones never get that class, so nothing here touches them.
+ *
+ * Three columns under the top bar: factions and the log on the left, the map in
+ * the centre, your decisions and hand on the right.
+ */
+
+/* The side columns exist in the page for every layout but only show on desktop. */
+.rail { display: none; }
+
+body.layout-desktop {
+  --rail-left: 300px;
+  --rail-right: 380px;
+}
+
+body.layout-desktop .app {
+  max-width: none;
+  display: grid;
+  grid-template-columns: var(--rail-left) minmax(0, 1fr) var(--rail-right);
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "top    top   top"
+    "watch  watch watch"
+    "phases phases phases"
+    "left   stage right"
+    "left   stage dock";
+}
+body.layout-desktop .topbar { grid-area: top; }
+body.layout-desktop .watch { grid-area: watch; }
+body.layout-desktop .phase-track { grid-area: phases; }
+body.layout-desktop .stage { grid-area: stage; padding: 0.6rem; }
+body.layout-desktop .dock { grid-area: dock; border-left: 1px solid var(--bronze); }
+body.layout-desktop .ticker,
+body.layout-desktop .console-feed { display: none; }
+
+/* --- Side columns -------------------------------------------------------------- */
+
+body.layout-desktop .rail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  padding: 0.6rem;
+  overflow-y: auto;
+  background:
+    linear-gradient(180deg, rgba(212, 169, 79, 0.05), transparent 120px),
+    linear-gradient(180deg, #160f0a, #0e0906);
+}
+body.layout-desktop .rail--left { grid-area: left; border-right: 1px solid var(--bronze); }
+body.layout-desktop .rail--right { grid-area: right; border-left: 1px solid var(--bronze); }
+
+body.layout-desktop .rail__card {
+  flex: none;
+  padding: 0.7rem 0.8rem;
+  background: linear-gradient(180deg, rgba(212, 169, 79, 0.06), transparent 40px), var(--slab);
+  border: 1px solid #3a2b1c;
+  border-top-color: var(--bronze);
+}
+body.layout-desktop .rail__card--grow { flex: 1; min-height: 0; overflow-y: auto; }
+body.layout-desktop .rail__title {
+  margin: 0 0 0.5rem;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}

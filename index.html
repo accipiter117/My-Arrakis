@@ -10,7 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-10-05c">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-10-05d">
+  <link rel="stylesheet" href="./ui/desktop.css?v=2026-10-05d">
 </head>
 <body>
   <div class="app">
@@ -46,6 +47,16 @@
       <div id="event-layer" class="event-layer" hidden></div>
       <div id="turn-banner" class="turn-banner" hidden aria-live="polite"></div>
     </main>
+
+    <!-- Desktop side columns (body.layout-desktop only; hidden on phones). -->
+    <aside class="rail rail--left" id="rail-left" aria-label="Factions and log">
+      <section class="rail__card"><h2 class="rail__title">Factions</h2><p class="empty-note">Factions at a glance will appear here.</p></section>
+      <section class="rail__card rail__card--grow"><h2 class="rail__title">Log</h2><p class="empty-note">The live log will appear here.</p></section>
+    </aside>
+    <aside class="rail rail--right" id="rail-right" aria-label="Your decisions and hand">
+      <section class="rail__card"><h2 class="rail__title">Your decision</h2><p class="empty-note">Decisions will appear here.</p></section>
+      <section class="rail__card rail__card--grow"><h2 class="rail__title">Your hand</h2><p class="empty-note">Your hand will appear here.</p></section>
+    </aside>
 
     <button id="ticker" class="ticker" aria-label="Latest event, tap for the full log">Open the menu to start a game.</button>
 
@@ -152,7 +163,7 @@
         <p>Ornithopter flight: supplied for the game by its creator.</p>
         <p>Based on the board game Dune (Gale Force Nine, 2019). A personal fan project; map and art are original.</p>
       </details>
-      <p class="build-version">Version 2026-10-05c</p>
+      <p class="build-version">Version 2026-10-05d</p>
     </div>
   </section>
 
@@ -200,6 +211,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-10-05c"></script>
+  <script type="module" src="./ui/main.js?v=2026-10-05d"></script>
 </body>
 </html>
