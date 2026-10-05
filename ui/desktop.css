@@ -69,3 +69,60 @@ body.layout-desktop .rail__title {
   text-transform: uppercase;
   color: var(--gold);
 }
+
+/* --- Factions at a glance (ui/rails.js) ----------------------------------------- */
+
+/* The hover card lives on <body> for every layout, but only ever opens on desktop. */
+.faction-hover[hidden] { display: none; }
+
+body.layout-desktop .frows__head,
+body.layout-desktop .frow { display: grid; grid-template-columns: 24px minmax(0, 1fr) 32px 32px 32px; align-items: center; column-gap: 5px; }
+body.layout-desktop .rail--left .rail__card { padding: 0.65rem 0.55rem; }
+body.layout-desktop .frows__head { padding: 0 calc(0.4rem + 1px) 0.3rem calc(0.4rem + 3px); font: 600 9px var(--font-data); letter-spacing: 0.1em; text-transform: uppercase; color: var(--sand-dim); text-align: right; }
+body.layout-desktop .frows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+body.layout-desktop .frow {
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid #2e2217;
+  border-left: 3px solid var(--fc);
+  cursor: default;
+}
+body.layout-desktop .frow:hover,
+body.layout-desktop .frow:focus-visible { background: rgba(212, 169, 79, 0.1); border-color: var(--bronze); border-left-color: var(--fc); outline: none; }
+body.layout-desktop .frow--you { background: rgba(212, 169, 79, 0.08); }
+body.layout-desktop .frow__counter { width: 24px; height: 24px; display: block; }
+body.layout-desktop .frow__name { min-width: 0; font-weight: 600; font-size: 12px; color: var(--sand); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.layout-desktop .frow__name em { font-style: normal; font-weight: 400; color: var(--gold); }
+body.layout-desktop .frow__name small { display: flex; align-items: center; gap: 2px; min-height: 0; font-weight: 400; font-size: 10.5px; color: var(--sand-dim); overflow: hidden; text-overflow: ellipsis; }
+body.layout-desktop .frow__name small:empty { display: none; }
+body.layout-desktop .frow__name small img { width: 14px; height: 14px; }
+body.layout-desktop .frow__stat { font: 700 12.5px var(--font-data); color: var(--sand); text-align: right; }
+
+body.layout-desktop .faction-hover {
+  position: fixed;
+  z-index: 45;
+  width: 270px;
+  padding: 0.65rem 0.75rem 0.55rem;
+  background: linear-gradient(180deg, rgba(212, 169, 79, 0.08), transparent 50px), var(--slab);
+  border: 1px solid var(--bronze-bright);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  font-size: 12px;
+}
+body.layout-desktop .faction-hover__head { display: flex; align-items: center; gap: 0.55rem; padding-bottom: 0.45rem; margin-bottom: 0.45rem; border-bottom: 1px solid #3a2b1c; }
+body.layout-desktop .faction-hover__head img { width: 36px; height: 36px; }
+body.layout-desktop .faction-hover__head strong { display: block; font-family: var(--font-display); font-size: 14px; letter-spacing: 0.06em; color: var(--sand); }
+body.layout-desktop .faction-hover__head small { color: var(--sand-dim); }
+body.layout-desktop .faction-hover dl { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 0.7rem; margin: 0; }
+body.layout-desktop .faction-hover dt { font: 600 9.5px var(--font-data); letter-spacing: 0.08em; text-transform: uppercase; color: var(--sand-dim); padding-top: 2px; }
+body.layout-desktop .faction-hover dd { margin: 0; color: var(--sand); }
+
+/* --- The live log ----------------------------------------------------------------- */
+
+body.layout-desktop .rail-log { list-style: none; margin: 0; padding: 0; font-size: 12px; line-height: 1.4; color: var(--sand-soft); }
+body.layout-desktop .rail-log li { padding: 0.35rem 0; border-bottom: 1px solid #2a1f15; }
+body.layout-desktop .rail-log li.is-latest { color: var(--sand); }
+body.layout-desktop .rail-log .log-phase { font-family: var(--font-data); font-size: 9.5px; }
+body.layout-desktop .rail-log__turn { font: 600 9.5px var(--font-data); color: var(--sand-dim); }

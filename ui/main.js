@@ -31,6 +31,7 @@ import { createToaster } from './toasts.js';
 import { dealMessage } from './dealMessages.js';
 import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
+import { createRails } from './rails.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu', 'choam', 'richese'];
@@ -85,6 +86,14 @@ const PHASE_LABELS = {
 };
 
 const $ = id => document.getElementById(id);
+
+// The desktop layout's left column: factions at a glance and the live log (ui/rails.js).
+const rails = createRails({
+  factionsEl: document.getElementById('rail-factions'), logEl: document.getElementById('rail-log'),
+  getState: () => gameState, getHuman: () => humanFactionId, order: ALL_FACTIONS, display: FACTION_DISPLAY,
+  territoryName: id => territoryNameOf(id), leaderName: id => leaderNameOf(id), cardName: id => cardNameOf(id),
+  tokenNames: TOKEN_NAMES, tokensOwnedBy, phaseLabels: PHASE_LABELS
+});
 
 let gameState = null;
 let territoriesData = null;
@@ -1020,6 +1029,7 @@ function renderTechTray() {
 }
 
 function render() {
+  rails.render(logEntries);
   renderTechTray();
   renderWatch();
   renderBoard();
@@ -1181,6 +1191,7 @@ function renderLog() {
   log.innerHTML = logEntries.slice().reverse()
     .map(e => `<li><span class="log-phase">${PHASE_LABELS[e.phase] ?? e.phase}</span>T${e.turn}: ${escapeHTML(e.text)}</li>`)
     .join('');
+  rails.renderLog(logEntries);
   const last = logEntries[logEntries.length - 1];
   ticker.innerHTML = `<span class="ticker__phase">${escapeHTML(PHASE_LABELS[last.phase] ?? last.phase)}</span>${escapeHTML(last.text)}`;
 }
@@ -1239,7 +1250,9 @@ function wantsDesktop() {
 }
 function layoutConsole() {
   const desktop = wantsDesktop();
+  const switched = desktop !== document.body.classList.contains('layout-desktop');
   document.body.classList.toggle('layout-desktop', desktop);
+  if (switched) rails.render(logEntries); // the side columns are only kept up to date while they show
   const stage = document.querySelector('.stage');
   const r = stage.getBoundingClientRect();
   const on = !desktop && r.height - r.width >= 150;
