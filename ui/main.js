@@ -816,7 +816,7 @@ function ensureBoard(data) {
     notify: (text, kind) => toast(text, kind)
   });
   // Debug mode (brief section 36), only with ?debug=1: expose internals for testing.
-  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, sfx, get state() { return gameState; }, get provider() { return decisionProvider; } };
+  if (new URLSearchParams(location.search).has('debug')) window.__arrakis = { board, presenter, music, sfx, get state() { return gameState; }, get provider() { return decisionProvider; }, showVictory: () => showVictoryScreen() };
 }
 
 function tapTerritory(id) {
