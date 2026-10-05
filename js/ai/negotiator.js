@@ -19,6 +19,12 @@ import { random } from '../random.js';
 // Must come out at least this far ahead. Raised from 1: in test games the AIs
 // accepted almost every deal between themselves.
 const MARGIN = 2.5;
+// A deal never moves spice both ways: settle the difference on one side.
+function netSpice(side) {
+  const g = side.give.spice ?? 0, a = side.ask.spice ?? 0, m = Math.min(g, a);
+  if (m > 0) { side.give = { ...side.give, spice: g - m }; side.ask = { ...side.ask, spice: a - m }; }
+  return side;
+}
 const COUNTER_RANGE = 4;   // counter when within this of acceptable
 const PITCH_CHANCE = 0.35; // chance to look for a deal at each window
 
@@ -139,7 +145,7 @@ export function createNegotiator({ leadersData = {}, rng = random, diplomacy = n
       if (extra > 0 && extra <= have) {
         // Mirror the offer from my side: I give what they asked, they give what they offered plus spice.
         return { action: 'counter', reason: `short by ${(MARGIN - net).toFixed(1)}`,
-          counter: { give: plain(offer.ask), ask: { ...plain(offer.give), spice: (offer.give.spice ?? 0) + extra } } };
+          counter: netSpice({ give: plain(offer.ask), ask: { ...plain(offer.give), spice: (offer.give.spice ?? 0) + extra } }) };
       }
     }
     return { action: 'refuse', reason: `worth ${net.toFixed(1)}` };
