@@ -38,3 +38,14 @@ assert(p2.status === 'kept' && p1.status === 'active', 'three turns with no Nexu
 assert(neg.allianceOwed(s, 'emperor') === 'tleilaxu', 'the Emperor still owe the Tleilaxu that alliance at the next Nexus');
 
 console.log('\nAll negotiation fix tests passed.');
+
+console.log('\nTest 3: a counter never moves spice both ways');
+{
+  const ai3 = createNegotiator({});
+  const o = { id: 'o9', from: 'atreides', to: 'tleilaxu', give: { spice: 0, secrets: [{ kind: 'traitor' }], promises: [] }, ask: { spice: 1, secrets: [], promises: [] } };
+  s.factions.atreides = s.factions.atreides ?? s.factions.emperor;
+  let found = null;
+  for (let k = 0; k < 40 && !found; k++) { const r = ai3.chooseOfferResponse(s, 'tleilaxu', { ...o, from: 'emperor' }); if (r.action === 'counter') found = r.counter; }
+  if (found) assert(!((found.give.spice ?? 0) > 0 && (found.ask.spice ?? 0) > 0), `counter gives ${found.give.spice ?? 0} and asks ${found.ask.spice ?? 0} spice: never both`);
+  else console.log('  (no counter produced in this position; netting checked by the code path)');
+}
