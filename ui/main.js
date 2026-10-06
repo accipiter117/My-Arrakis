@@ -12,6 +12,7 @@ import { TECH_TOKENS, TOKEN_NAMES, TOKEN_PHASE, tokensOwnedBy } from '../js/tech
 import { initializeGame } from '../js/setupEngine.js';
 import * as turnEngine from '../js/turnEngine.js';
 import * as phaseEngine from '../js/phaseEngine.js';
+import * as stormEngine from '../js/stormEngine.js';
 import { createBasicAI } from '../js/ai/basicAI.js';
 import { createStrategicAI } from '../js/ai/strategicAI.js';
 import { createAI, DIFFICULTIES } from '../js/ai/difficulty.js';
@@ -32,6 +33,7 @@ import { dealMessage } from './dealMessages.js';
 import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
 import { createRails } from './rails.js';
+import { createDesktopExtras, SHORTCUTS } from './desktopExtras.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
 const ALL_FACTIONS = ['atreides', 'harkonnen', 'emperor', 'fremen', 'guild', 'gesserit', 'ixians', 'tleilaxu', 'choam', 'richese'];
@@ -92,7 +94,8 @@ const rails = createRails({
   factionsEl: document.getElementById('rail-factions'), logEl: document.getElementById('rail-log'),
   getState: () => gameState, getHuman: () => humanFactionId, order: ALL_FACTIONS, display: FACTION_DISPLAY,
   territoryName: id => territoryNameOf(id), leaderName: id => leaderNameOf(id), cardName: id => cardNameOf(id),
-  tokenNames: TOKEN_NAMES, tokensOwnedBy, phaseLabels: PHASE_LABELS
+  tokenNames: TOKEN_NAMES, tokensOwnedBy, phaseLabels: PHASE_LABELS,
+  onFactionFocus: f => board?.focusFaction(f && gameState ? Object.keys(gameState.factions[f].forces.onBoard).filter(id => gameState.factions[f].forces.onBoard[id] > 0) : [], f ? FACTION_COLORS[f] : null)
 });
 
 let gameState = null;
@@ -941,21 +944,29 @@ function renderBoard() {
   board?.render(gameState, { selected: selectedTerritory, highlight: highlightIds, foreseen: foreseenSpice(), viewer: humanFactionId ?? null });
 }
 
+// A territory at a glance: name, type, spice, who is there, borders. Shared by the tap
+// card and the desktop hover card (ui/desktopExtras.js), which adds the storm line.
+function territorySummaryHTML(id, { storm = false } = {}) {
+  const t = territoriesData.territories[id];
+  const type = { sand: 'Sand', rock: 'Rock', stronghold: 'Stronghold', polarSink: 'Polar Sink, safe haven' }[t.type] ?? t.type;
+  const spice = gameState ? gameState.board.spiceBlowMarkers.filter(m => m.territoryId === id).reduce((a, m) => a + m.amount, 0) : 0;
+  const occupants = gameState ? Object.entries(gameState.factions)
+    .filter(([, f]) => (f.forces.onBoard[id] ?? 0) > 0)
+    .map(([fid, f]) => `<li><span class="faction-chip" style="background:var(${FACTION_DISPLAY[fid].colorVar})"></span>${nameOf(fid)} ${f.forces.onBoard[id]}${f.forces.starredOnBoard?.[id] ? ` (${f.forces.starredOnBoard[id]}★)` : ''}</li>`) : [];
+  const neighbours = (t.adjacentDraft ?? []).map(territoryNameOf).sort().join(', ');
+  const stormLine = storm && gameState && gameState.board.territories[id] && t.type !== 'polarSink'
+    ? `<div class="storm-line">${stormEngine.stormExposed(gameState, id, gameState.board.territories[id]) ? 'Open to the storm' : 'Sheltered from the storm'}${gameState.board.stormPosition != null ? ` · storm at sector ${gameState.board.stormPosition}` : ''}</div>` : '';
+  return `<strong>${t.name}</strong> · ${type}${spice ? ` · <strong>${spice} spice</strong>` : ''}
+    ${occupants.length ? `<ul>${occupants.join('')}</ul>` : '<div>Unoccupied</div>'}
+    ${stormLine}<div class="borders">Borders: ${neighbours}</div>`;
+}
+
 function renderTerritoryInfo() {
   const card = $('territory-info');
   // Keep the map clear while a decision panel covers the bottom of the screen.
   if (!selectedTerritory || !territoriesData || !$('decision-panel').hidden) { card.hidden = true; return; }
-  const t = territoriesData.territories[selectedTerritory];
-  const type = { sand: 'Sand', rock: 'Rock', stronghold: 'Stronghold', polarSink: 'Polar Sink, safe haven' }[t.type] ?? t.type;
-  const spice = gameState ? gameState.board.spiceBlowMarkers.filter(m => m.territoryId === selectedTerritory).reduce((a, m) => a + m.amount, 0) : 0;
-  const occupants = gameState ? Object.entries(gameState.factions)
-    .filter(([, f]) => (f.forces.onBoard[selectedTerritory] ?? 0) > 0)
-    .map(([id, f]) => `<li><span class="faction-chip" style="background:var(${FACTION_DISPLAY[id].colorVar})"></span>${nameOf(id)} ${f.forces.onBoard[selectedTerritory]}${f.forces.starredOnBoard?.[selectedTerritory] ? ` (${f.forces.starredOnBoard[selectedTerritory]}★)` : ''}</li>`) : [];
-  const neighbours = (t.adjacentDraft ?? []).map(territoryNameOf).sort().join(', ');
   card.innerHTML = `<button class="icon-btn" aria-label="Close" data-card-close>✕</button>
-    <strong>${t.name}</strong> · ${type}${spice ? ` · <strong>${spice} spice</strong>` : ''}
-    ${occupants.length ? `<ul>${occupants.join('')}</ul>` : '<div>Unoccupied</div>'}
-    <div class="borders">Borders: ${neighbours}</div>`;
+    ${territorySummaryHTML(selectedTerritory)}`;
   card.querySelector('[data-card-close]').onclick = () => { selectedTerritory = null; renderBoard(); renderTerritoryInfo(); };
   card.hidden = false;
 }
@@ -1286,6 +1297,9 @@ if (window.ResizeObserver) new ResizeObserver(() => layoutConsole()).observe(doc
 window.addEventListener('orientationchange', () => setTimeout(layoutConsole, 200));
 layoutConsole();
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheets(); });
+// Desktop: territory hover cards, tooltips and keyboard shortcuts (listed in the menu).
+createDesktopExtras({ boardEl: $('board'), summaryHTML: id => territorySummaryHTML(id, { storm: true }), hasGame: () => Boolean(gameState) && !gameState.victory.achieved });
+$('shortcut-list').innerHTML = SHORTCUTS.map(([k, what]) => `<dt><kbd>${k}</kbd></dt><dd>${what}</dd>`).join('');
 
 $('btn-new-game').addEventListener('click', () => { closeSheets(); startNewGame(); });
 $('btn-continue').addEventListener('click', () => { closeSheets(); resumeGame(readSave()); });

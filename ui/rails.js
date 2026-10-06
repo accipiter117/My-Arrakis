@@ -10,7 +10,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const sum = o => Object.values(o ?? {}).reduce((a, b) => a + b, 0);
 const isDesktop = () => document.body.classList.contains('layout-desktop');
 
-export function createRails({ factionsEl, logEl, getState, getHuman, order, display, territoryName, leaderName, cardName, tokenNames, tokensOwnedBy, phaseLabels }) {
+export function createRails({ factionsEl, logEl, getState, getHuman, order, display, territoryName, leaderName, cardName, tokenNames, tokensOwnedBy, phaseLabels, onFactionFocus = () => {} }) {
   const hover = document.createElement('div');
   hover.className = 'faction-hover';
   hover.hidden = true;
@@ -72,6 +72,7 @@ export function createRails({ factionsEl, logEl, getState, getHuman, order, disp
   function showHover(f) {
     const state = getState(), btn = factionsEl.querySelector(`[data-faction="${f}"]`);
     if (!state?.factions[f] || !btn) { hideHover(); return; }
+    if (hoverFaction !== f) onFactionFocus(f); // outline its forces on the map
     hoverFaction = f;
     hover.id = 'faction-hover';
     hover.innerHTML = hoverHTML(state, f);
@@ -81,7 +82,7 @@ export function createRails({ factionsEl, logEl, getState, getHuman, order, disp
     hover.style.left = `${Math.round(r.right + 10)}px`;
     hover.style.top = `${Math.round(Math.max(8, Math.min(r.top - 6, window.innerHeight - hover.offsetHeight - 8)))}px`;
   }
-  function hideHover() { hoverFaction = null; hover.hidden = true; }
+  function hideHover() { if (hoverFaction) onFactionFocus(null); hoverFaction = null; hover.hidden = true; }
 
   factionsEl.addEventListener('mouseover', e => { const b = e.target.closest('[data-faction]'); if (b && isDesktop()) showHover(b.dataset.faction); });
   factionsEl.addEventListener('mouseleave', hideHover);

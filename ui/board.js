@@ -585,8 +585,15 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     return { x: s.x, y: s.y };
   }
 
+  // Desktop: outline every territory a faction holds (hovering its row in the factions list).
+  function focusFaction(ids = [], colour = null) {
+    for (const [id, path] of Object.entries(paths)) path.classList.toggle('territory--faction', ids.includes(id));
+    if (colour) svg.style.setProperty('--focus-colour', colour); else svg.style.removeProperty('--focus-colour');
+  }
+
   return {
     render,
+    focusFaction,
     labelPoint,
     screenPointOf,
     pathBetween,

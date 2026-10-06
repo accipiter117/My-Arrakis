@@ -216,3 +216,40 @@ body.layout-desktop .bs__side--mine .bs__hand:hover { filter: brightness(1.18) d
 body.layout-desktop .bs__btn:hover, body.layout-desktop .bs__pick:not([disabled]):hover { filter: brightness(1.25); }
 body.layout-desktop .bs__arc .bs__fan-item:hover img { box-shadow: 0 0 0 2px var(--bronze-bright), 0 0 12px rgba(212, 169, 79, 0.7); }
 body.layout-desktop .event-layer--battle .bs__wheel { cursor: ns-resize; }
+
+/* --- Step 7: hover cards, faction highlight, shortcuts, focus outlines ---------------------- */
+
+.desk-only, .territory-hover[hidden] { display: none; } /* phones never show these */
+body.layout-desktop .desk-only { display: block; }
+
+body.layout-desktop .territory-hover {
+  position: fixed;
+  z-index: 44;
+  width: 250px;
+  padding: 0.55rem 0.7rem;
+  background: rgba(22, 15, 10, 0.95);
+  border: 1px solid var(--bronze-bright);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+  font-size: 12px;
+  color: var(--sand-soft);
+}
+body.layout-desktop .territory-hover strong { color: var(--gold); font-family: var(--font-display); letter-spacing: 0.05em; }
+body.layout-desktop .territory-hover ul { list-style: none; margin: 0.35rem 0; padding: 0; font-family: var(--font-data); font-size: 11px; color: var(--sand); }
+body.layout-desktop .territory-hover .storm-line { margin: 0.3rem 0 0.2rem; font-size: 11px; color: var(--sand); }
+body.layout-desktop .territory-hover .borders { color: var(--sand-dim); font-size: 10.5px; }
+
+/* Hovering a faction's row outlines everywhere it has forces. */
+body.layout-desktop .territory.territory--faction { stroke: var(--focus-colour, #fff); stroke-width: 5; filter: drop-shadow(0 0 7px var(--focus-colour, #fff)); }
+
+body.layout-desktop .shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.8rem; margin: 0.5rem 0 0.2rem; }
+body.layout-desktop .shortcuts dt { text-align: right; }
+body.layout-desktop .shortcuts dd { margin: 0; color: var(--sand-soft); }
+body.layout-desktop kbd { font: 600 11px var(--font-data); padding: 0.05rem 0.4rem; border: 1px solid var(--bronze); border-bottom-width: 2px; border-radius: 3px; background: var(--slab-3); color: var(--sand); }
+
+/* Keyboard users can always see where they are. */
+body.layout-desktop button:focus-visible,
+body.layout-desktop select:focus-visible,
+body.layout-desktop input:focus-visible,
+body.layout-desktop summary:focus-visible,
+body.layout-desktop a:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }

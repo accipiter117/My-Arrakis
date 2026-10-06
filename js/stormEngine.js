@@ -217,6 +217,7 @@ export {
   advanceStormPosition,
   sectorsSwept,
   applyStormDamage,
+  stormExposed,
   isTerritoryPartiallyInStorm,
   determineFirstPlayer
 };
