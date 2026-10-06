@@ -200,14 +200,20 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
       const leaderSelect = leaderEligible
         ? `<label class="field"><span>Revive a leader</span><select name="leader">${options(
             [['', 'None'], ...me.leaders.killed.map(id => [id, `${leaderLabel(id)}, costs ${leader[id]?.fightingValue ?? 0} spice`])], '')}</select></label>` : '';
-      const starredSelect = starredTanks > 0
-        ? `<label class="field"><span>Of which starred</span><select name="starred">${options(range(0, 1).map(n => [n, n]), 0)}</select></label>` : '';
       const revivalTerms = revivalEngine.revivalTerms(state, factionId);
       const revivalCap = revivalTerms.cap;
+      // Only ordinary forces plus at most one starred force come back each turn, so the
+      // choices stop there, and the starred count follows the total (never an illegal default).
+      const ordinaryTanks = tanks - starredTanks;
+      const maxForces = Math.min(revivalCap, ordinaryTanks + Math.min(1, starredTanks));
+      const starredNeeded = n => Math.min(1, Math.max(0, n - ordinaryTanks));
+      const defaultForces = Math.min(free, maxForces);
+      const starredSelect = starredTanks > 0
+        ? `<label class="field"><span>Of which starred</span><select name="starred">${options(range(0, 1).map(n => [n, n]), starredNeeded(defaultForces))}</select></label>` : '';
       return ask('Revival',
         `<dl class="facts"><dt>In the tanks</dt><dd>${tanks}</dd><dt>Free this turn</dt><dd>${free}</dd><dt>Your spice</dt><dd>${me.spice}</dd></dl>
          <p>${revivalCap === Infinity ? 'No limit on revival.' : `Up to ${revivalCap} forces a turn.`} Beyond your free allowance, each costs 2 spice${revivalTerms.halfPrice ? ', at half price' : ''}${revivalTerms.payee === 'tleilaxu' ? ', paid to the Tleilaxu' : ''}.</p>
-         <label class="field"><span>Forces</span><select name="forces">${options(range(0, Math.min(revivalCap, tanks)).map(n => [n, n]), Math.min(free, tanks))}</select></label>
+         <label class="field"><span>Forces</span><select name="forces">${options(range(0, maxForces).map(n => [n, n]), defaultForces)}</select></label>
          ${starredSelect}${leaderSelect}${gholaSelect}
          <p class="decision__cost"></p><p class="decision__error" hidden></p>
          <div class="decision__actions"><button class="btn btn--primary" data-default-action>Confirm revival</button></div>`,
@@ -223,6 +229,11 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
             btn.disabled = !result.ok;
           };
           p.querySelectorAll('select').forEach(s => s.onchange = check);
+          field(p, 'forces').onchange = () => { // keep the starred count legal as the total changes
+            const st = field(p, 'starred');
+            if (st && Number(st.value) < starredNeeded(num(p, 'forces'))) st.value = String(starredNeeded(num(p, 'forces')));
+            check();
+          };
           check();
           btn.onclick = () => {
             const leaderId = field(p, 'leader')?.value || null;
