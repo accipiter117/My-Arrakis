@@ -156,3 +156,43 @@ body.layout-desktop .decision-panel .decision__actions { position: sticky; botto
 
 body.layout-desktop #rail-hand .hand-card:hover .hand-card__info { display: block; }
 body.layout-desktop #rail-hand .hand-card__face:hover { background: rgba(212, 169, 79, 0.08); }
+
+/* --- Sheets become centred dialogs ------------------------------------------------------ */
+
+body.layout-desktop .sheet {
+  top: 50%;
+  left: 50%;
+  bottom: auto;
+  right: auto;
+  width: min(560px, calc(100vw - 4rem));
+  max-width: none;
+  max-height: min(84vh, 900px);
+  transform: translate(-50%, -50%);
+  padding-bottom: 0;
+  border: 1px solid var(--bronze-bright);
+  box-shadow: 0 0 0 1px rgba(212, 169, 79, 0.25), 0 24px 60px rgba(0, 0, 0, 0.85);
+  clip-path: polygon(16px 0, calc(100% - 16px) 0, 100% 16px, 100% calc(100% - 16px), calc(100% - 16px) 100%, 16px 100%, 0 calc(100% - 16px), 0 16px);
+  animation: desk-dialog-in 0.18s ease-out;
+}
+@keyframes desk-dialog-in { from { transform: translate(-50%, calc(-50% + 12px)); opacity: 0; } to { transform: translate(-50%, -50%); opacity: 1; } }
+body.layout-desktop .sheet .sheet__body { padding: 0.9rem 1.1rem 1.1rem; }
+body.layout-desktop #sheet-factions { width: min(760px, calc(100vw - 4rem)); }
+body.layout-desktop #sheet-guide { width: min(820px, calc(100vw - 4rem)); }
+body.layout-desktop #sheet-truth { width: min(460px, calc(100vw - 4rem)); }
+body.layout-desktop .scrim { background: rgba(6, 3, 1, 0.62); backdrop-filter: blur(2px); }
+
+/* The menu: a centred dialog over the landscape title art, which covers the whole window. */
+body.layout-desktop[data-sheet="menu"] .scrim {
+  z-index: 41; /* above the top bar */
+  backdrop-filter: none;
+  background:
+    radial-gradient(ellipse 42% 60% at 50% 50%, rgba(8, 5, 3, 0.55), transparent 75%),
+    linear-gradient(180deg, rgba(8, 5, 3, 0.15), rgba(8, 5, 3, 0.45)),
+    url(../assets/title-wide.jpg) center / cover no-repeat, #0b0705;
+}
+body.layout-desktop #sheet-menu { z-index: 42 !important; width: min(520px, calc(100vw - 4rem)); background: rgba(22, 15, 10, 0.94); }
+body.layout-desktop #sheet-menu .title-block { padding-top: 1.4rem; background: none; border-bottom-color: rgba(212, 169, 79, 0.35); }
+body.layout-desktop #sheet-menu .title-block__name { font-size: 34px; }
+/* Form controls: phones keep 16px (stops iOS zooming in); desktop matches the surrounding text. */
+body.layout-desktop .sheet select, body.layout-desktop .sheet input:not([type=range]),
+body.layout-desktop .decision select, body.layout-desktop .decision input { font-size: 13px; }

@@ -1215,12 +1215,14 @@ function openSheet(name) {
   if (!sheet) return;
   sheet.hidden = false;
   $('scrim').hidden = false;
+  document.body.dataset.sheet = name; // lets the desktop layout dress the backdrop (the title art behind the menu)
   document.querySelectorAll('.dock__btn[data-sheet]').forEach(b => b.classList.toggle('dock__btn--active', b.dataset.sheet === name));
 }
 
 function closeSheets() {
   document.querySelectorAll('.sheet').forEach(s => { s.hidden = true; });
   $('scrim').hidden = true;
+  delete document.body.dataset.sheet;
   document.querySelectorAll('.dock__btn[data-sheet]').forEach(b => b.classList.remove('dock__btn--active'));
 }
 
