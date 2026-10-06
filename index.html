@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./ui/styles.css?v=2026-10-05g">
-  <link rel="stylesheet" href="./ui/desktop.css?v=2026-10-05g">
+  <link rel="stylesheet" href="./ui/styles.css?v=2026-10-06a">
+  <link rel="stylesheet" href="./ui/desktop.css?v=2026-10-06a">
 </head>
 <body>
   <div class="app">
@@ -54,8 +54,9 @@
       <section class="rail__card rail__card--grow"><h2 class="rail__title">Log</h2><ol id="rail-log" class="rail-log"><li class="empty-note">Nothing has happened yet.</li></ol></section>
     </aside>
     <aside class="rail rail--right" id="rail-right" aria-label="Your decisions and hand">
-      <section class="rail__card"><h2 class="rail__title">Your decision</h2><p class="empty-note">Decisions will appear here.</p></section>
-      <section class="rail__card rail__card--grow"><h2 class="rail__title">Your hand</h2><p class="empty-note">Your hand will appear here.</p></section>
+      <!-- On desktop the decision panel (#decision-panel) is moved in here; see layoutConsole in ui/main.js. -->
+      <section class="rail__card rail__card--decision" id="rail-decision"><div class="rail__idle"><h2 class="rail__title">Your decision</h2><p class="empty-note">Nothing to decide right now.</p></div></section>
+      <section class="rail__card rail__card--grow"><h2 class="rail__title" id="rail-hand-title">Your hand</h2><div id="rail-hand"><p class="empty-note">No game yet.</p></div></section>
     </aside>
 
     <button id="ticker" class="ticker" aria-label="Latest event, tap for the full log">Open the menu to start a game.</button>
@@ -163,7 +164,7 @@
         <p>Ornithopter flight: supplied for the game by its creator.</p>
         <p>Based on the board game Dune (Gale Force Nine, 2019). A personal fan project; map and art are original.</p>
       </details>
-      <p class="build-version">Version 2026-10-05g</p>
+      <p class="build-version">Version 2026-10-06a</p>
     </div>
   </section>
 
@@ -211,6 +212,6 @@
 
   <section id="decision-panel" class="decision-panel" role="dialog" aria-live="polite" hidden></section>
 
-  <script type="module" src="./ui/main.js?v=2026-10-05g"></script>
+  <script type="module" src="./ui/main.js?v=2026-10-06a"></script>
 </body>
 </html>

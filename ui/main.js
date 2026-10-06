@@ -1101,7 +1101,7 @@ function renderHand() {
   renderDealButton();
   $('topbar-hand').hidden = !me;
   $('status-storm').hidden = Boolean(me); // the storm shows on the map; the Hand needs the space
-  if (!me) return;
+  if (!me) { $('rail-hand').innerHTML = `<p class="empty-note">${gameState ? 'Spectating: no hand of your own.' : 'No game yet.'}</p>`; return; }
   const cards = me.treacheryHand.length
     ? me.treacheryHand.map(id => {
         const help = cardHelp(id);
@@ -1119,7 +1119,11 @@ function renderHand() {
   const traitors = (me.traitorHand ?? []).map(id => `${leaderNameOf(id)} (${nameOf(leadersById[id]?.faction)})`).join(', ') || 'None';
   const leaders = me.leaders.available.map(id => `${leaderNameOf(id)} ${leadersById[id]?.fightingValue ?? ''}`).join(', ') || 'None';
   $('hand-heading').textContent = `Your hand · ${FACTION_NAMES[humanFactionId]}`;
-  $('hand-body').innerHTML = `
+  $('hand-body').innerHTML = handHTML(me, cards, foresight, traitors, leaders);
+  if (document.body.classList.contains('layout-desktop')) $('rail-hand').innerHTML = $('hand-body').innerHTML; // the desktop's always-visible copy
+}
+function handHTML(me, cards, foresight, traitors, leaders) {
+  return `
     ${foresight}
     <ul class="hand-list">${cards}</ul>
     <p class="hand-meta"><em>Tap a card to see what it does.</em></p>
@@ -1252,7 +1256,13 @@ function layoutConsole() {
   const desktop = wantsDesktop();
   const switched = desktop !== document.body.classList.contains('layout-desktop');
   document.body.classList.toggle('layout-desktop', desktop);
-  if (switched) rails.render(logEntries); // the side columns are only kept up to date while they show
+  if (switched) {
+    // One decision panel, two homes: docked in the right column on desktop, a bottom sheet on phones.
+    const panel = $('decision-panel');
+    if (desktop) $('rail-decision').appendChild(panel); else document.querySelector('script[type="module"]').before(panel);
+    rails.render(logEntries); // the side columns are only kept up to date while they show
+    renderHand();
+  }
   const stage = document.querySelector('.stage');
   const r = stage.getBoundingClientRect();
   const on = !desktop && r.height - r.width >= 150;
@@ -1290,7 +1300,7 @@ $('truth-kind').addEventListener('change', fillTruthDetail);
 $('truth-ask').addEventListener('click', askTruthtrance);
 document.querySelectorAll('[data-open-guide]').forEach(b => b.addEventListener('click', () => { renderGuide(); openSheet('guide'); }));
 // Hand: tap a card for what it does; discard cards whose effects aren't built yet.
-$('hand-body').addEventListener('click', e => {
+function onHandClick(e) {
   const face = e.target.closest('[data-card]');
   if (face) { const info = face.nextElementSibling; info.hidden = !info.hidden; return; }
   const discard = e.target.closest('[data-discard]');
@@ -1301,7 +1311,9 @@ $('hand-body').addEventListener('click', e => {
     addLog(phaseEngine.currentPhase(gameState), gameState.meta.turn, `You played Amal: every faction discards half its spice (${Object.entries(r.losses).map(([f, n]) => `${nameOf(f)} ${n}`).join(', ')}).`);
     saveGame(); render();
   }
-});
+}
+$('hand-body').addEventListener('click', onHandClick);
+$('rail-hand').addEventListener('click', onHandClick);
 $('zoom-in').addEventListener('click', () => board?.zoomBy(1.5));
 $('select-speed').value = String(speed);
 $('select-ixtl').value = localStorage.getItem('my-arrakis-ixtl') ?? 'on';

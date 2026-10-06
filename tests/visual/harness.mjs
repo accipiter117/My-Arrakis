@@ -105,9 +105,12 @@ export async function playScenario(page, shot) {
   await setSpeed(page, '1');
   await play(page, s => s.panelTitle?.startsWith('Treachery card'));
   await shot('bid');
-  await page.click('#decision-panel .decision__toggle');
+  // On phones the panel shrinks to show the auction card; on desktop it never covers it.
+  const toggle = page.locator('#decision-panel .decision__toggle');
+  const phoneToggle = await toggle.isVisible();
+  if (phoneToggle) await toggle.click();
   await shot('auction');
-  await page.click('#decision-panel .decision__toggle');
+  if (phoneToggle) await toggle.click();
 
   // 5. A battle of your own (ship into Carthag): planning, then the reveal.
   await setSpeed(page, '0');

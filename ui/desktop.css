@@ -126,3 +126,33 @@ body.layout-desktop .rail-log li { padding: 0.35rem 0; border-bottom: 1px solid 
 body.layout-desktop .rail-log li.is-latest { color: var(--sand); }
 body.layout-desktop .rail-log .log-phase { font-family: var(--font-data); font-size: 9.5px; }
 body.layout-desktop .rail-log__turn { font: 600 9.5px var(--font-data); color: var(--sand-dim); }
+
+/* --- Right column: the decision panel docked as a card (moved here by layoutConsole) --- */
+
+body.layout-desktop .rail--right { gap: 0.6rem; }
+body.layout-desktop .rail__card--decision { flex: 0 1 auto; min-height: 0; overflow-y: auto; }
+body.layout-desktop .rail__card--decision:has(> .decision-panel:not([hidden])) { border-color: var(--bronze); border-top-color: var(--spice); box-shadow: 0 0 0 1px rgba(232, 122, 44, 0.25), 0 0 18px rgba(232, 122, 44, 0.12); }
+body.layout-desktop .rail__card--decision:has(> .decision-panel:not([hidden])) .rail__idle { display: none; }
+body.layout-desktop .rail__card--grow { min-height: 140px; }
+
+body.layout-desktop .decision-panel {
+  position: static;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  background: none;
+  border: none;
+  box-shadow: none;
+  clip-path: none;
+  animation: none;
+}
+body.layout-desktop .decision__toggle { display: none; } /* the map is never covered on desktop */
+body.layout-desktop .decision__title { font-size: 14px; color: var(--spice); }
+body.layout-desktop .decision-panel .decision__actions { position: sticky; bottom: -0.7rem; margin-bottom: -0.7rem; padding: 0.5rem 0 0.7rem; }
+
+/* --- Your hand, always visible; card help on hover ------------------------------------- */
+
+body.layout-desktop #rail-hand .hand-card:hover .hand-card__info { display: block; }
+body.layout-desktop #rail-hand .hand-card__face:hover { background: rgba(212, 169, 79, 0.08); }
