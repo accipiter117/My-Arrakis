@@ -596,8 +596,8 @@ function showVictoryScreen() {
   el.id = 'victory'; el.className = 'victory';
   el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', draw ? 'The game is a draw' : 'Victory');
   el.innerHTML = `<div class="victory__top">
-      <p class="victory__eyebrow">${draw ? 'The sands are undecided' : youWon ? 'You have won' : humanFactionId ? 'You have been defeated' : 'Game over'}</p>
-      <h2 class="victory__title">${draw ? 'Stalemate' : 'Victory'}</h2>
+      <p class="victory__eyebrow">${draw ? 'The sands are undecided' : youWon ? 'You have won' : humanFactionId ? 'The spice flows to another' : 'Game over'}</p>
+      <h2 class="victory__title">${draw ? 'Stalemate' : humanFactionId && !youWon ? 'Defeat' : 'Victory'}</h2>
       ${draw ? '' : `<div class="victory__emblems">${winners.map(f => `<img src="assets/counters/${f}.png" alt="${FACTION_NAMES[f]}">`).join('')}</div>
       <p class="victory__who">${winners.map(f => FACTION_NAMES[f]).join(' & ')}</p>`}
       <p class="victory__how">${METHOD_TEXT[v.method] ?? v.method}</p>
@@ -1255,15 +1255,17 @@ $('console-feed').addEventListener('click', () => openSheet('log'));
 // a console where panels, cards and banners appear, so they never cover the map.
 //
 // Desktop layout (ui/desktop.css): a wide landscape window gets three columns with
-// the map in the centre. For now it only switches on with ?layout=desktop in the
-// address; ?layout=mobile forces the phone layout. Narrow windows always get the
+// the map in the centre. It switches on by itself on computers (see wantsDesktop);
+// ?layout=desktop forces it where the window allows, ?layout=mobile forces the phone layout. Narrow windows always get the
 // phone layout, so dragging a window narrower falls back cleanly.
 const LAYOUT_CHOICE = new URLSearchParams(location.search).get('layout');
-const DESKTOP_BY_DEFAULT = false; // set true once the desktop layout is ready for everyone
 const DESKTOP_MIN = { width: 1100, height: 640 };
+// Computers get it by default: a wide landscape window with a mouse or trackpad. Touch-only
+// tablets keep the phone layout (the desktop one leans on hover); ?layout=desktop skips that check.
+const hasMouse = () => matchMedia('(any-pointer: fine)').matches;
 function wantsDesktop() {
   if (LAYOUT_CHOICE === 'mobile') return false;
-  if (LAYOUT_CHOICE !== 'desktop' && !DESKTOP_BY_DEFAULT) return false;
+  if (LAYOUT_CHOICE !== 'desktop' && !hasMouse()) return false;
   const w = window.innerWidth, h = window.innerHeight;
   return w >= DESKTOP_MIN.width && h >= DESKTOP_MIN.height && w > h;
 }
