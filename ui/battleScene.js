@@ -193,8 +193,10 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
       pop = document.createElement('div'); pop.className = 'bs__pop'; pop.innerHTML = html;
       root.appendChild(pop);
       const a = anchor.getBoundingClientRect(), r = root.getBoundingClientRect();
-      pop.style.left = `${Math.max(4, Math.min(r.width - pop.offsetWidth - 4, a.left - r.left + a.width / 2 - pop.offsetWidth / 2))}px`;
-      pop.style.top = `${Math.max(4, a.top - r.top - pop.offsetHeight - 6)}px`;
+      // The desktop layout scales the scene with CSS zoom: measure on screen, place in the scene's own pixels.
+      const ratio = r.width / root.offsetWidth, z = Math.abs(ratio - 1) < 0.01 ? 1 : ratio;
+      pop.style.left = `${Math.max(4, Math.min(r.width / z - pop.offsetWidth - 4, (a.left - r.left + a.width / 2) / z - pop.offsetWidth / 2))}px`;
+      pop.style.top = `${Math.max(4, (a.top - r.top) / z - pop.offsetHeight - 6)}px`;
       return pop;
     };
     const stepper = (anchor, label, get, set, lo, hi, helper) => {
@@ -261,6 +263,16 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
         const n = Math.max(0, Math.min(present, startForces + Math.round((ev.clientX - startX) / 24)));
         if (n !== pl.forces) { pl.forces = n; navigator.vibrate?.(6); wheel.querySelector('[data-wheel-img]').style.transform = `rotate(${(n - startForces) * 6}deg)`; render(); }
       });
+      // Mouse: the scroll wheel dials too (one step per notch, or per ~40px on a trackpad).
+      let wheelAcc = 0;
+      wheel.addEventListener('wheel', ev => {
+        ev.preventDefault();
+        wheelAcc += ev.deltaMode === 1 ? ev.deltaY * 40 : ev.deltaY;
+        if (Math.abs(wheelAcc) < 40) return;
+        const n = Math.max(0, Math.min(present, pl.forces + (wheelAcc < 0 ? 1 : -1)));
+        wheelAcc = 0;
+        if (n !== pl.forces) { pl.forces = n; render(); }
+      }, { passive: false });
       const end = () => { startX = null; wheel.querySelector('[data-wheel-img]').style.transform = ''; };
       wheel.addEventListener('pointerup', end); wheel.addEventListener('pointercancel', end);
       const cleanup = () => { closePop(); mine.classList.remove('bs__side--mine'); mine.querySelectorAll('.bs__btn, .bs__star').forEach(b => b.remove()); dock.innerHTML = ''; };

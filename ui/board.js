@@ -104,7 +104,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   // Pinch (two fingers) zooms, one finger drags once zoomed, the wheel
   // zooms on desktop. A pointer that moves more than a few pixels counts as
   // a drag, and suppresses the territory tap that would otherwise follow.
-  const FULL = 1000, MIN_W = 260;
+  const FULL = 1000, MIN_W = 260, MAX_PX_PER_UNIT = 1.25;
   const view = { x: 0, y: 0, w: FULL };
   let dragged = false;
   const pointers = new Map();
@@ -168,7 +168,14 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   function focusOn(points, { ms = 650, pad = 150, minW = 400, force = false, anchor = 0.5 } = {}) {
     if (!cameraOn || (manual && !force) || !points.length) return Promise.resolve();
     const xs = points.map(p => p[0]), ys = points.map(p => p[1]);
-    const w = clamp(Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + pad * 2, minW, FULL);
+    // Desktop layout only (phones, tablets and sideways phones keep their framing exactly):
+    // a landscape map area is shorter than it is wide, so widen the view to keep a square
+    // framing; and a big map needs less zoom, so never magnify past MAX_PX_PER_UNIT screen
+    // pixels per map unit.
+    const desktop = document.body.classList.contains('layout-desktop');
+    const wide = desktop ? Math.min(1, aspect()) : 1;
+    const floorW = desktop ? Math.max(minW / wide, svg.getBoundingClientRect().width / MAX_PX_PER_UNIT) : minW;
+    const w = clamp((Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) + pad * 2) / wide, floorW, FULL);
     const cx = (Math.max(...xs) + Math.min(...xs)) / 2, cy = (Math.max(...ys) + Math.min(...ys)) / 2;
     return glideTo({ cx, cy, w, anchor }, ms);
   }

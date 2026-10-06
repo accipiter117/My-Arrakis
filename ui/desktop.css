@@ -196,3 +196,23 @@ body.layout-desktop #sheet-menu .title-block__name { font-size: 34px; }
 /* Form controls: phones keep 16px (stops iOS zooming in); desktop matches the surrounding text. */
 body.layout-desktop .sheet select, body.layout-desktop .sheet input:not([type=range]),
 body.layout-desktop .decision select, body.layout-desktop .decision input { font-size: 13px; }
+
+/* --- Battle scene, event cards and auctions, sized for desktop ---------------------------- */
+/* The phone scene scaled up whole, so every part keeps its proportions (wheels ~180px on a
+   tall window). Steps down on shorter windows so the scene always fits over the map. */
+body.layout-desktop .event-layer--battle { align-items: center; }
+body.layout-desktop .bs { zoom: 1; }
+body.layout-desktop .event-card { zoom: 1.15; }
+@media (min-height: 760px) { body.layout-desktop .bs { zoom: 1.2; } body.layout-desktop .event-card { zoom: 1.25; } }
+@media (min-height: 860px) { body.layout-desktop .bs { zoom: 1.35; } body.layout-desktop .event-card { zoom: 1.35; } }
+/* The battle panel sits at the foot of the map; the camera keeps the battle's territory in view above it. */
+body.layout-desktop .event-layer.event-layer--battle { align-items: flex-end; padding-bottom: 0.6rem; }
+/* Hover: the pieces you can change in your own plan light up under the pointer. */
+body.layout-desktop .bs__side--mine .bs__wheel:hover,
+body.layout-desktop .bs__side--mine [data-leader]:hover,
+body.layout-desktop .bs__side--mine [data-spice]:hover,
+body.layout-desktop .bs__side--mine .bs__slot:hover,
+body.layout-desktop .bs__side--mine .bs__hand:hover { filter: brightness(1.18) drop-shadow(0 0 8px rgba(212, 169, 79, 0.65)); }
+body.layout-desktop .bs__btn:hover, body.layout-desktop .bs__pick:not([disabled]):hover { filter: brightness(1.25); }
+body.layout-desktop .bs__arc .bs__fan-item:hover img { box-shadow: 0 0 0 2px var(--bronze-bright), 0 0 12px rgba(212, 169, 79, 0.7); }
+body.layout-desktop .event-layer--battle .bs__wheel { cursor: ns-resize; }

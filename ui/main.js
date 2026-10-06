@@ -617,6 +617,8 @@ function setBusy(value) {
 function setWaiting(waiting) {
   const phase = $('status-phase');
   phase.classList.toggle('topbar__phase--waiting', waiting);
+  // Desktop: a choice made on the map (a battle plan) leaves the decision card empty, so say where it is.
+  $('rail-decision').querySelector('.empty-note').textContent = waiting ? 'Your move: make it on the map.' : 'Nothing to decide right now.';
   if (waiting) {
     phase.textContent = 'Your decision';
     closeSheets(); // the decision panel needs the screen
