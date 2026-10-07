@@ -38,3 +38,13 @@ assert(voiceProblem({ weapon: 'crysknife' }, { voice: play, hand, cat }) && !voi
 assert(!voiceProblem({}, { voice: play, hand: ['crysknife'], cat }), 'with no shield in hand, "must play" asks nothing');
 
 console.log('\nAll battle plan tests passed.');
+
+console.log('\nTest 3: Chemistry and Weirding Way can go in either slot');
+{
+  const chem = Object.keys(cards).find(id => cat(id) === 'chemistry'), weird = Object.keys(cards).find(id => cat(id) === 'weirdingWay');
+  assert(slotAllows(chem, 'weapon', { cat }) && slotAllows(chem, 'defense', { cat }), 'Chemistry is offered as a weapon and as a defence');
+  assert(slotAllows(weird, 'weapon', { cat }) && slotAllows(weird, 'defense', { cat }), 'Weirding Way is offered as a weapon and as a defence');
+  s.factions.atreides.treacheryHand = [chem, 'shield1'];
+  assert(!ok({ forces: 2, lead: { kind: 'leader', id: 'ladyJessica' }, weapon: chem }).ok, 'Chemistry as a weapon on its own is refused');
+  assert(ok({ forces: 2, lead: { kind: 'leader', id: 'ladyJessica' }, weapon: chem, defense: 'shield1' }).ok, 'and accepted alongside another defence');
+}
