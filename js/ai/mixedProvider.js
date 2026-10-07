@@ -49,7 +49,7 @@ export function createMixedProvider({ humanFactionId, human, ai }) {
     chooseFaceDancerToReplace: (state, f, ids) => pick(f).chooseFaceDancerToReplace(state, f, ids),
     chooseIncreaseRevivalLimit: (state, f, info) => pick(f).chooseIncreaseRevivalLimit(state, f, info),
     chooseHarvester: (state, f, blows) => pick(f).chooseHarvester(state, f, blows),
-    chooseAmal: (state, f) => pick(f).chooseAmal(state, f),
+    chooseAmal: (state, f, info) => pick(f).chooseAmal(state, f, info),
     chooseGuildTiming: (state, others) => pick('guild').chooseGuildTiming(state, others),
     chooseFremenPlacement: (state, f) => pick(f).chooseFremenPlacement(state, f),
     chooseTechTokenToTake: (state, f, options, from) => pick(f).chooseTechTokenToTake(state, f, options, from),
