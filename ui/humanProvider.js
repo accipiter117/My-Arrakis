@@ -37,6 +37,9 @@ const options = (pairs, selected) => pairs.map(([v, label]) =>
 const range = (min, max) => Array.from({ length: Math.max(0, max - min + 1) }, (_, i) => min + i);
 
 export function createHumanProvider({ panel, leadersData, cardLookup, territoriesData, factionNames, onWaiting, getBattleScene = () => null, onNegotiateArmed = () => {} }) {
+  let amalSkipTurn = null; // the turn you said "Not this turn" to Amal
+  const PHASE_NAMES = { storm: 'the Storm', spiceBlow: 'the Spice Blow', charity: 'CHOAM Charity', bidding: 'Bidding', revival: 'Revival',
+    shipment: 'Shipment', movement: 'Movement', battle: 'Battle', spiceCollection: 'Spice Collection', mentatPause: 'the Mentat Pause' };
   const leader = {};
   for (const list of Object.values(leadersData)) {
     if (!Array.isArray(list)) continue;
@@ -1006,7 +1009,21 @@ export function createHumanProvider({ panel, leadersData, cardLookup, territorie
         (p, done) => p.querySelector('[data-default-action]').onclick = () => done(field(p, 't').value || null));
     },
 
-    chooseAmal() { return false; }, // you play Amal from your Hand
+    // Amal: offered at the start of every phase while you hold it ("Not this turn" stops
+    // the reminders until next turn). It can also still be played from your Hand.
+    chooseAmal(state, factionId, { phase } = {}) {
+      if (amalSkipTurn === state.meta.turn) return false;
+      const richest = Object.entries(state.factions).filter(([f]) => f !== factionId).sort((a, b) => b[1].spice - a[1].spice)[0];
+      return ask('Play Amal?',
+        `<p>Start of ${esc(PHASE_NAMES[phase] ?? phase)}. Amal makes every faction, you included, discard half their spice.</p>
+         <p class="decision__note">You have ${state.factions[factionId].spice} spice${richest ? `; the richest rival, ${esc(factionName(richest[0]))}, has ${richest[1].spice}` : ''}.</p>
+         <div class="decision__actions"><button class="btn btn--primary" data-action="play">Play Amal</button><button class="btn" data-default-action>Not now</button><button class="btn" data-action="skip">Not this turn</button></div>`,
+        (p, done) => {
+          p.querySelector('[data-action="play"]').onclick = () => done(true);
+          p.querySelector('[data-default-action]').onclick = () => done(false);
+          p.querySelector('[data-action="skip"]').onclick = () => { amalSkipTurn = state.meta.turn; done(false); };
+        });
+    },
 
     choosePoisonToothUse(state, factionId, territoryId, opponentId, mine, theirs) {
       return ask('Use the Poison Tooth?',
