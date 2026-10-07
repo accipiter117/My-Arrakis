@@ -424,15 +424,6 @@ async function runBiddingPhase(state, decisionProvider) {
       }
     }
   }
-  // Amal: at the start of a phase, a holder may make everyone discard half their spice.
-  if (decisionProvider.chooseAmal) {
-    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
-      if (cardEffects.holdsCard(state, f, 'amal') && await decisionProvider.chooseAmal(state, f)) {
-        const r = cardEffects.playAmal(state, f);
-        await observe(decisionProvider, { type: 'amal', ...r }, state);
-      }
-    }
-  }
   // Alliance advantage: allies may pledge spice toward each other's cards and
   // shipments for this turn.
   allySupport.clearPledges(state);
@@ -1732,6 +1723,16 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
   const phase = phaseEngine.currentPhase(state);
   const turn = state.meta.turn; // stamped before anything can advance it
   let result = null;
+
+  // Amal: at the start of any phase, a holder may make everyone discard half their spice.
+  if (!['setup', 'victoryCheck', 'nexus'].includes(phase) && decisionProvider.chooseAmal) {
+    for (const f of state.meta.turnOrder ?? Object.keys(state.factions)) {
+      if (cardEffects.holdsCard(state, f, 'amal') && await decisionProvider.chooseAmal(state, f, { phase })) {
+        const r = cardEffects.playAmal(state, f);
+        await observe(decisionProvider, { type: 'amal', ...r }, state);
+      }
+    }
+  }
 
   switch (phase) {
     case 'storm': result = await runStormPhase(state, decisionProvider); break;
