@@ -18,7 +18,9 @@ export function mustPlay(voice, hand, cat) {
 // May this card go in this slot, given the Voice?
 export function slotAllows(cardId, which, { voice = null, hand = [], cat }) {
   const c = cat(cardId);
-  const base = (which === 'weapon' ? WEAPONS : DEFENSES).includes(c) || c === 'worthless';
+  // Chemistry also works as a weapon (alongside another defence), and Weirding Way as a
+  // defence (alongside another weapon); the engine checks the pairing on commit.
+  const base = (which === 'weapon' ? [...WEAPONS, 'chemistry'] : [...DEFENSES, 'weirdingWay']).includes(c) || c === 'worthless';
   if (!base) return false;
   if (voice?.command === 'notPlay' && c === voice.category) return false;
   // "Must play": the commanded slot only takes the commanded kind of card.
