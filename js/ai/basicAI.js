@@ -535,7 +535,8 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
       return best ? best.territoryId : null;
     },
     // Amal: when a rival is far richer, halve everyone's spice.
-    chooseAmal(state, factionId) {
+    chooseAmal(state, factionId, { phase } = {}) {
+      if (phase && phase !== 'bidding') return false; // the AI keeps to the start of Bidding
       const richest = Math.max(...Object.entries(state.factions).filter(([f]) => f !== factionId).map(([, x]) => x.spice));
       return richest >= 12 && own(state, factionId).spice * 2 < richest;
     },
