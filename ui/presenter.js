@@ -266,6 +266,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     },
     async bid(e) {
       auctionLine(`${chip(e.factionId)} bids <strong>${e.amount}</strong>`);
+      if (speed()) sfx?.playRandom('bid');
       await wait(650);
     },
     async pass(e) {
