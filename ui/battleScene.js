@@ -34,7 +34,7 @@ const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '
 const fmt = n => (Number.isInteger(n) ? String(n) : n.toFixed(1));
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
-export function createBattleScene({ layer, cardLookup, leadersData, names, factionColors, scaled = ms => ms }) {
+export function createBattleScene({ layer, cardLookup, leadersData, names, factionColors, scaled = ms => ms, sfx = null }) {
   const leader = {};
   for (const list of Object.values(leadersData)) if (Array.isArray(list)) for (const l of list) leader[l.id] = l;
   const cat = id => cardLookup[id]?.category;
@@ -248,7 +248,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
           const voiceBlocks = () => false;
           const free = hand.filter(id => id !== pl.weapon && id !== pl.defense && id !== pl.lead?.id);
           const p = popover(slotEl, `<div class="bs__row">${free.map(id => `<button class="bs__pick" data-card="${esc(id)}" ${ok(id) && !voiceBlocks(id) ? '' : 'disabled'}>${faceCard(id)}</button>`).join('') || '<small>No cards in hand</small>'}</div><small>${which === 'weapon' ? 'Weapon' : 'Defence'}: tap a card</small>`);
-          p.onclick = ev => { const b = ev.target.closest('[data-card]'); if (!b || b.disabled) return; ev.stopPropagation(); pl[which] = b.dataset.card; closePop(); render(); };
+          p.onclick = ev => { const b = ev.target.closest('[data-card]'); if (!b || b.disabled) return; ev.stopPropagation(); pl[which] = b.dataset.card; sfx?.play('cardSlide'); closePop(); render(); };
           return;
         }
         if (t.closest('[data-hand]')) { popover(t.closest('[data-hand]'), `<div class="bs__row">${hand.map(id => faceCard(id)).join('') || '<small>No cards</small>'}</div><small>Your hand</small>`); }
@@ -304,10 +304,12 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
       setSlot(el, 'defense', P[f]?.defense ? backCard() : null);
     }
     setCaption(root, `Battle in <strong>${esc(names.territory(e.territoryId))}</strong> · plans are down`);
+    if (sides.some(f => P[f]?.weapon || P[f]?.defense)) sfx?.play('cardSlide'); // card backs slide into the slots
     root.classList.add('bs--down');
     if (speed) await wait(scaled(900));
     // 2. Reveal, all at once.
     root.classList.remove('bs--down'); root.classList.add('bs--reveal');
+    if (sides.some(f => P[f]?.weapon || P[f]?.defense)) setTimeout(() => sfx?.play('cardSlap'), scaled(350)); // the cards turn face up
     for (const f of sides) {
       const el = st(f), p = P[f] ?? {};
       setDial(el, p.forces ?? 0, true);
@@ -326,6 +328,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
     }
     if (e.traitor && e.loserFactionId) {
       st(e.loserFactionId).querySelector('[data-leader]').insertAdjacentHTML('beforeend', `<img class="bs__traitor" src="${ART.traitor}" alt="Traitor">`);
+      sfx?.play('cardSlap'); // the Traitor card is revealed
     }
     const tot = f => (strengthOf ? fmt(strengthOf(f)) : '');
     const decided = e.traitor || e.mutualTraitors || e.explosion;
