@@ -197,6 +197,23 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       const mid = r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
       for (const [t, f] of Object.entries(e.owners)) if (f) await flyTech(t, mid, f, `${esc(TECH_NAMES[t])}<br><small>${esc(names.faction(f))}</small>`);
     },
+    // Spice Collection: the camera visits each harvest and the spice floats up to its collectors.
+    async harvest(e) {
+      if (!speed()) return;
+      if (e.none) { await showCard('spice', card('Spice Collection', 'No spice gathered', 'Nobody had forces on a spice blow.'), 1400); return; }
+      await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(550), minW: 420 });
+      const at = board.screenPointOf?.(board.labelPoint(e.territoryId));
+      if (at) e.collections.forEach((c, i) => {
+        const tag = document.createElement('div');
+        tag.className = 'harvest-float';
+        tag.style.left = `${at.x}px`; tag.style.top = `${at.y - 10 - i * 30}px`;
+        tag.style.setProperty('--fc', factionColors[c.factionId] ?? '#c9a24a');
+        tag.innerHTML = `<img src="${new URL(`../assets/counters/${c.factionId}.png`, import.meta.url).href}" alt=""><b>+${c.collected}</b> <span>${esc(names.faction(c.factionId))}</span>`;
+        document.body.appendChild(tag);
+        setTimeout(() => tag.remove(), scaled(1700) + 200);
+      });
+      await wait(1400);
+    },
     // A token pays out: its slot flashes the amount.
     async techIncome(e) {
       const slot = techTray?.querySelector(`[data-token="${e.token}"]`);
