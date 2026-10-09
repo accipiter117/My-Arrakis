@@ -9,6 +9,8 @@
 //   worm-roar.mp3    "Beast Roar" by barrypirro, CC0, https://freesound.org/s/530573/
 //   ship-arrival.mp3 "Spaceship flight" by BloodPixelHero, CC BY 4.0, https://freesound.org/s/572623/
 //   ornithopter.mp3  provided by the project owner (loudness-levelled)
+//   bid-1..8.mp3     "Bag of pistachio shells drops on wood" by zabuhailo, https://freesound.org/s/871411/
+//                    (provided by the project owner; eight drops, trimmed, faded and levelled)
 //   footsteps.mp3    "Snow footsteps running" by qubodup, https://freesound.org/s/216570/ (provided by the
 //                    project owner; the loudest 3 seconds, trimmed, faded and levelled)
 //   (the first two trimmed, faded and loudness-levelled for the game)
@@ -18,6 +20,8 @@ const SOUNDS = {
   shipArrival: '../assets/sfx/ship-arrival.mp3',
   ornithopter: '../assets/sfx/ornithopter.mp3?v=2',
   footsteps: '../assets/sfx/footsteps.mp3?v=1',
+  // A bid: one of eight drops of a bag of shells, picked at random.
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8].map(i => [`bid${i}`, `../assets/sfx/bid-${i}.mp3?v=1`])),
   // Phase ambiences: seamless loops (WAV, since MP3 padding leaves a gap on every loop).
   revivalTanks: '../assets/sfx/revival-tanks.wav',
   bidding: '../assets/sfx/bidding.wav',
@@ -37,6 +41,7 @@ export function createSfx({ onPlay } = {}) {
   let ctx = null, gain = null;
   const buffers = {};
   const lastPlayed = {};
+  const lastRandom = {};
   const loops = {};
   const save = () => localStorage.setItem(KEY, JSON.stringify(settings));
 
@@ -87,6 +92,14 @@ export function createSfx({ onPlay } = {}) {
       source.start();
       onPlay?.(name, buffers[name].duration);
       return true;
+    },
+    // One sound from a numbered pool (bid1..bid8), at random, never the same twice running.
+    playRandom(prefix) {
+      const pool = Object.keys(buffers).filter(n => n.startsWith(prefix) && /\d+$/.test(n) && n !== lastRandom[prefix]);
+      if (!pool.length) return false;
+      const pick = pool[Math.floor(Math.random() * pool.length)];
+      lastRandom[prefix] = pick;
+      return this.play(pick);
     },
     // A phase ambience: loops from the start of its phase, fading in, until
     // stopLoop fades it out. Starting one that is already playing does nothing.
