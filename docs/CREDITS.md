@@ -38,3 +38,4 @@ project; the map, interface and artwork are original.
 
 - footsteps.mp3: "Snow footsteps running" by qubodup, https://freesound.org/s/216570/ (provided by the project owner; the loudest 3 seconds, trimmed, faded and levelled)
 - bid-1..8.mp3: "Bag of pistachio shells drops on wood" by zabuhailo, https://freesound.org/s/871411/ (provided by the project owner; eight drops, trimmed, faded and levelled)
+- spice-1..3.mp3: provided by the project owner (spice blow landing; levelled and faded)
