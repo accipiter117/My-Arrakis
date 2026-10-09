@@ -40,3 +40,5 @@ project; the map, interface and artwork are original.
 - bid-1..8.mp3: "Bag of pistachio shells drops on wood" by zabuhailo, https://freesound.org/s/871411/ (provided by the project owner; eight drops, trimmed, faded and levelled)
 - spice-1..3.mp3: provided by the project owner (spice blow landing; levelled and faded)
 - battle.wav: provided by the project owner (Battle phase loop; made seamless and levelled)
+- card-slide.mp3: "slidecard04" by silverdubloons, https://freesound.org/s/817579/ (provided by the project owner)
+- card-slap.mp3: "slap cards" by themfish, https://freesound.org/s/45821/ (provided by the project owner; one slap trimmed)
