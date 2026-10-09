@@ -212,7 +212,7 @@ function buildProvider(data) {
 // loops for as long as its phases last, carrying straight on when the next
 // phase uses the same ambience, and fades out when the phase moves on to
 // something else.
-const PHASE_AMBIENCE = { bidding: 'bidding', revival: 'revivalTanks', shipment: 'shipping', movement: 'shipping' };
+const PHASE_AMBIENCE = { bidding: 'bidding', revival: 'revivalTanks', shipment: 'shipping', movement: 'shipping', battle: 'battle' };
 async function withPhaseAmbience(runPhase) {
   const loop = PHASE_AMBIENCE[phaseEngine.currentPhase(gameState)];
   if (loop) sfx.startLoop(loop); // does nothing if it is already playing
