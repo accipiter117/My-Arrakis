@@ -11,6 +11,8 @@
 //   ornithopter.mp3  provided by the project owner (loudness-levelled)
 //   bid-1..8.mp3     "Bag of pistachio shells drops on wood" by zabuhailo, https://freesound.org/s/871411/
 //                    (provided by the project owner; eight drops, trimmed, faded and levelled)
+//   card-slide.mp3   "slidecard04" by silverdubloons, https://freesound.org/s/817579/ (provided by the project owner)
+//   card-slap.mp3    "slap cards" by themfish, https://freesound.org/s/45821/ (provided by the project owner; one slap)
 //   battle.wav       provided by the project owner (Battle phase loop; made seamless, levelled)
 //   spice-1..3.mp3   provided by the project owner (spice blow landing; levelled, faded)
 //   footsteps.mp3    "Snow footsteps running" by qubodup, https://freesound.org/s/216570/ (provided by the
@@ -31,6 +33,8 @@ const SOUNDS = {
   bidding: '../assets/sfx/bidding.wav',
   shipping: '../assets/sfx/shipping.wav',
   battle: '../assets/sfx/battle.wav?v=1',
+  cardSlide: '../assets/sfx/card-slide.mp3?v=1',   // a card selected or put out for auction
+  cardSlap: '../assets/sfx/card-slap.mp3?v=1',     // a card revealing itself
   wormDelivery: '../assets/sfx/worm-delivery.mp3',
   // Turn announcements, played as a faction's turn banner appears.
   'turn-atreides': '../assets/sfx/turn-atreides.mp3',
