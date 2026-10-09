@@ -1120,3 +1120,9 @@ body:has(.event-layer:not([hidden]) .auction-card) .toasts { top: 8.5rem; }
 .harvest-float img { width: 22px; height: 22px; border-radius: 50%; }
 .harvest-float b { color: #f6b26b; font-size: 15px; }
 @keyframes harvest-up { 0% { opacity: 0; margin-top: 8px; } 15% { opacity: 1; margin-top: 0; } 75% { opacity: 1; } 100% { opacity: 0; margin-top: -26px; } }
+
+/* Spice Collection: the marker on the map is gathered (floats up and fades), or shrinks to what is left */
+.token--gathered { animation: spice-gathered 1.1s ease-in forwards; pointer-events: none; }
+@keyframes spice-gathered { 0% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 -34px; } }
+.token--gathered-some { animation: spice-some 0.7s ease-out; }
+@keyframes spice-some { 0% { opacity: 0.4; translate: 0 -10px; } 100% { opacity: 1; translate: 0 0; } }
