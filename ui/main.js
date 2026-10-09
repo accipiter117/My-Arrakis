@@ -812,7 +812,7 @@ function ensureBoard(data) {
     onZoom: (zoomed, manual) => { $('zoom-reset').hidden = !zoomed; cameraFocused = zoomed && !manual; updateConsoleMute(); }
   });
   board.setCamera(localStorage.getItem('my-arrakis-camera') !== 'off');
-  battleScene = createBattleScene({ layer: $('event-layer'), cardLookup, leadersData: data.leaders, factionColors: FACTION_COLORS,
+  battleScene = createBattleScene({ layer: $('event-layer'), cardLookup, leadersData: data.leaders, factionColors: FACTION_COLORS, sfx,
     names: { faction: nameOf, territory: territoryNameOf, leader: leaderNameOf, card: cardNameOf,
       category: c => ({ poisonWeapon: 'a poison weapon', projectileWeapon: 'a projectile weapon', specialWeapon: 'a Lasgun', poisonDefense: 'a poison defence',
         projectileDefense: 'a projectile defence', worthless: 'a worthless card', poisonBlade: 'a Poison Blade', weirdingWay: 'Weirding Way', chemistry: 'Chemistry' }[c] ?? c) },
