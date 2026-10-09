@@ -11,6 +11,7 @@
 //   ornithopter.mp3  provided by the project owner (loudness-levelled)
 //   bid-1..8.mp3     "Bag of pistachio shells drops on wood" by zabuhailo, https://freesound.org/s/871411/
 //                    (provided by the project owner; eight drops, trimmed, faded and levelled)
+//   spice-1..3.mp3   provided by the project owner (spice blow landing; levelled, faded)
 //   footsteps.mp3    "Snow footsteps running" by qubodup, https://freesound.org/s/216570/ (provided by the
 //                    project owner; the loudest 3 seconds, trimmed, faded and levelled)
 //   (the first two trimmed, faded and loudness-levelled for the game)
@@ -22,6 +23,8 @@ const SOUNDS = {
   footsteps: '../assets/sfx/footsteps.mp3?v=1',
   // A bid: one of eight drops of a bag of shells, picked at random.
   ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8].map(i => [`bid${i}`, `../assets/sfx/bid-${i}.mp3?v=1`])),
+  // A spice blow landing: one of three, at random.
+  ...Object.fromEntries([1, 2, 3].map(i => [`spice${i}`, `../assets/sfx/spice-${i}.mp3?v=1`])),
   // Phase ambiences: seamless loops (WAV, since MP3 padding leaves a gap on every loop).
   revivalTanks: '../assets/sfx/revival-tanks.wav',
   bidding: '../assets/sfx/bidding.wav',
