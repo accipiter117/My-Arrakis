@@ -9,12 +9,15 @@
 //   worm-roar.mp3    "Beast Roar" by barrypirro, CC0, https://freesound.org/s/530573/
 //   ship-arrival.mp3 "Spaceship flight" by BloodPixelHero, CC BY 4.0, https://freesound.org/s/572623/
 //   ornithopter.mp3  provided by the project owner (loudness-levelled)
+//   footsteps.mp3    "Snow footsteps running" by qubodup, https://freesound.org/s/216570/ (provided by the
+//                    project owner; the loudest 3 seconds, trimmed, faded and levelled)
 //   (the first two trimmed, faded and loudness-levelled for the game)
 
 const SOUNDS = {
   wormRoar: '../assets/sfx/worm-roar.mp3',
   shipArrival: '../assets/sfx/ship-arrival.mp3',
   ornithopter: '../assets/sfx/ornithopter.mp3?v=2',
+  footsteps: '../assets/sfx/footsteps.mp3?v=1',
   // Phase ambiences: seamless loops (WAV, since MP3 padding leaves a gap on every loop).
   revivalTanks: '../assets/sfx/revival-tanks.wav',
   bidding: '../assets/sfx/bidding.wav',
@@ -60,7 +63,9 @@ export function createSfx({ onPlay } = {}) {
       gain.connect(ctx.destination);
       loadAll();
     },
-    play(name) {
+    // seconds: play only that long (fading out over the last quarter second),
+    // e.g. footsteps lasting exactly as long as a march across the map.
+    play(name, { seconds = null } = {}) {
       if (!settings.enabled || !ctx || !buffers[name]) return false;
       const now = performance.now();
       if (now - (lastPlayed[name] ?? -Infinity) < MIN_GAP_MS) return false;
@@ -68,6 +73,16 @@ export function createSfx({ onPlay } = {}) {
       if (ctx.state === 'suspended') ctx.resume();
       const source = ctx.createBufferSource();
       source.buffer = buffers[name];
+      if (seconds) {
+        const g = ctx.createGain(), t = ctx.currentTime, len = Math.min(seconds, buffers[name].duration);
+        g.gain.setValueAtTime(1, t);
+        g.gain.setValueAtTime(1, t + Math.max(0, len - 0.25));
+        g.gain.linearRampToValueAtTime(0, t + len);
+        source.connect(g); g.connect(gain);
+        source.start(); source.stop(t + len + 0.05);
+        onPlay?.(name, len);
+        return true;
+      }
       source.connect(gain);
       source.start();
       onPlay?.(name, buffers[name].duration);
