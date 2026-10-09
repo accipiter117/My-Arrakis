@@ -1112,3 +1112,11 @@ body:has(.event-layer:not([hidden]) .auction-card) .toasts { top: 8.5rem; }
 /* Leader arc: every other name above its portrait, so neighbours never overlap */
 .bs__arc .bs__fan-item--up { flex-direction: column-reverse; }
 .bs__arc .bs__fan-item--up b { top: 4px; }
+
+/* Spice Collection: the harvest floats up from the territory */
+.harvest-float { position: fixed; z-index: 40; transform: translate(-50%, -100%); display: flex; align-items: center; gap: 0.35rem; pointer-events: none;
+  padding: 0.2rem 0.55rem 0.2rem 0.25rem; background: rgba(20, 13, 8, 0.88); border: 1px solid var(--fc); border-radius: 999px; box-shadow: 0 0 12px rgba(240, 141, 62, 0.6);
+  color: var(--sand, #f1dfbf); font-size: 13px; white-space: nowrap; animation: harvest-up 1.7s ease-out forwards; }
+.harvest-float img { width: 22px; height: 22px; border-radius: 50%; }
+.harvest-float b { color: #f6b26b; font-size: 15px; }
+@keyframes harvest-up { 0% { opacity: 0; margin-top: 8px; } 15% { opacity: 1; margin-top: 0; } 75% { opacity: 1; } 100% { opacity: 0; margin-top: -26px; } }
