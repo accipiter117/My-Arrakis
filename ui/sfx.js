@@ -11,6 +11,7 @@
 //   ornithopter.mp3  provided by the project owner (loudness-levelled)
 //   bid-1..8.mp3     "Bag of pistachio shells drops on wood" by zabuhailo, https://freesound.org/s/871411/
 //                    (provided by the project owner; eight drops, trimmed, faded and levelled)
+//   battle.wav       provided by the project owner (Battle phase loop; made seamless, levelled)
 //   spice-1..3.mp3   provided by the project owner (spice blow landing; levelled, faded)
 //   footsteps.mp3    "Snow footsteps running" by qubodup, https://freesound.org/s/216570/ (provided by the
 //                    project owner; the loudest 3 seconds, trimmed, faded and levelled)
@@ -29,6 +30,7 @@ const SOUNDS = {
   revivalTanks: '../assets/sfx/revival-tanks.wav',
   bidding: '../assets/sfx/bidding.wav',
   shipping: '../assets/sfx/shipping.wav',
+  battle: '../assets/sfx/battle.wav?v=1',
   wormDelivery: '../assets/sfx/worm-delivery.mp3',
   // Turn announcements, played as a faction's turn banner appears.
   'turn-atreides': '../assets/sfx/turn-atreides.mp3',
