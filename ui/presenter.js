@@ -376,6 +376,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       } else {
         // On foot: marching territory by territory.
         const route = board.pathBetween(e.from, e.to).map(board.labelPoint);
+        sfx?.play('footsteps', { seconds: Math.max(0.8, scaled(420) * Math.max(1, route.length - 1) / 1000 + 0.2) });
         await board.animateToken({ color: factionColors[e.factionId], count: e.amount, points: route, msPerHop: scaled(420) });
       }
       renderReal();
