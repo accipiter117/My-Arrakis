@@ -169,6 +169,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       renderDisplay(displayBeforeSwap(battleState, fd));
       board.pulse(e.territoryId, 'battle', scaled(800));
       await hold(scaled(1000));
+      sfx?.play('cardSlap');
       await showCard('traitor', `<img class="event-card__art" src="${new URL('../assets/cards/faceDancer.webp?v=1', import.meta.url).href}" alt=""><div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(fd.leaderId))}</div>
         <div class="event-card__detail">was a Tleilaxu Face Dancer. ${esc(names.faction(fd.winnerId))} keep the win, but lose the leader, and ${fd.returned} troops go home; ${fd.placed} Tleilaxu take ${esc(names.territory(fd.territoryId))}.</div>`, 3200);
       renderReal();
@@ -260,6 +261,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
           </div>
         </div></div>`;
       layer.hidden = false;
+      sfx?.play('cardSlide'); // the card is put out for auction
       layer.onclick = null; // stays up for the whole auction
       auction = { list: layer.querySelector('.auction-bids'), card: layer.querySelector('[data-auction-card]'), title: layer.querySelector('[data-auction-title]') };
       await wait(600);
@@ -641,6 +643,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     for (let i = 0; i < cards.length; i++) {
       if (!auction) return;
       auction.card.innerHTML = auctionFlip(cards[i]);
+      setTimeout(() => sfx?.play('cardSlap'), scaled(350)); // as it turns face up
       auction.title.textContent = `${label(i)}: ${names.card(cards[i])}`;
       auction.title.classList.add('auction-won');
       // Held long enough to read even at Fast speed.
