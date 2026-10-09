@@ -1754,7 +1754,17 @@ async function runOnePhaseLogic(state, decisionProvider, territoriesData, cardLo
       result = phase === 'shipment' ? await runShipmentMovementPhase(state, decisionProvider) : null;
       break;
     case 'battle': result = await runBattlePhase(state, decisionProvider, cardLookup); break;
-    case 'spiceCollection': result = runSpiceCollectionPhase(state); break;
+    case 'spiceCollection': {
+      result = runSpiceCollectionPhase(state);
+      // Report each harvest so it can be shown territory by territory.
+      const harvests = [
+        ...result.blowCollections.filter(b => b.collections.some(c => c.collected > 0)).map(b => ({ territoryId: b.territoryId, collections: b.collections.filter(c => c.collected > 0), remaining: b.remaining })),
+        ...result.strongholdCollections.filter(c => c.collected > 0).map(c => ({ territoryId: c.strongholdId, collections: [{ factionId: c.factionId, collected: c.collected }], remaining: 0, stronghold: true }))
+      ];
+      for (const h of harvests) await observe(decisionProvider, { type: 'harvest', ...h }, state);
+      if (!harvests.length) await observe(decisionProvider, { type: 'harvest', none: true }, state);
+      break;
+    }
     case 'mentatPause': {
       // Bribe spice in front of the shields joins each faction's normal spice.
       const collected = negotiation.collectHeldSpice(state);
