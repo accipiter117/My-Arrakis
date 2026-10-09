@@ -42,3 +42,4 @@ project; the map, interface and artwork are original.
 - battle.wav: provided by the project owner (Battle phase loop; made seamless and levelled)
 - card-slide.mp3: "slidecard04" by silverdubloons, https://freesound.org/s/817579/ (provided by the project owner)
 - card-slap.mp3: "slap cards" by themfish, https://freesound.org/s/45821/ (provided by the project owner; one slap trimmed)
+- harvest.wav: provided by the project owner (grain scooping loop for Spice Collection; made seamless and raised)
