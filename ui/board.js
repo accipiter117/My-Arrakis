@@ -357,7 +357,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       const step = 50;
       let x = lx - ((items.length - 1) * step) / 2;
       for (const item of items) {
-        const g = el('g', { class: `token token--${item.kind}`, transform: `translate(${x},${ly + 14})` }, tokenLayer);
+        const g = el('g', { class: `token token--${item.kind}`, transform: `translate(${x},${ly + 14})`, 'data-territory': id }, tokenLayer);
         if (item.kind === 'force' && item.f === 'richese' && state.factions.richese?.noField?.onPlanet?.territoryId === id) {
           // The No-Field token stands in for one force: others see '?', Richese (and spectators) its number.
           const nf = state.factions.richese.noField.onPlanet;
