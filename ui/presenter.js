@@ -212,6 +212,15 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
         document.body.appendChild(tag);
         setTimeout(() => tag.remove(), scaled(1700) + 200);
       });
+      // The spice on the map is gathered as the tag rises: all of it floats up and fades,
+      // or the marker drops to what is left.
+      const marker = document.querySelector(`#board .token--spice[data-territory="${e.territoryId}"]`);
+      if (marker) {
+        if (e.remaining > 0) {
+          const n = marker.querySelector('.token__count'); if (n) n.textContent = e.remaining;
+          marker.classList.remove('token--gathered-some'); void marker.getBoundingClientRect(); marker.classList.add('token--gathered-some');
+        } else marker.classList.add('token--gathered');
+      }
       await wait(1400);
     },
     // A token pays out: its slot flashes the amount.
