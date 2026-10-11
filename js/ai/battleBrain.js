@@ -211,23 +211,37 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
         const hand = sampleHand(state, opp, pool, me);
         futures.push([0, 1, 2].map(() => samplePlan(state, opp, territoryId, hand, intel, voiceWeIssued)));
       }
+      let softWins = 0; // wins against any of their plans, not just their best one
       const against = (plan, theirPlans) => {
         let worst = Infinity, win = false;
-        for (const t of theirPlans) { const u = utility(state, me, opp, territoryId, plan, t, isAggressor); if (u < worst) { worst = u; win = lastWin; } }
+        for (const t of theirPlans) { const u = utility(state, me, opp, territoryId, plan, t, isAggressor); if (lastWin) softWins++; if (u < worst) { worst = u; win = lastWin; } }
         lastWin = win;
         return worst;
       };
       let best = null;
+      const scored = [];
       for (const plan of candidates(state, me, territoryId, opp)) {
         const risk = traitorRisk(state, me, opp, plan.leaderId);
         const myForces = state.factions[me].forces.onBoard[territoryId] ?? 0;
         const betrayed = -tokenStakes(state, me, opp).loss - myForces - (plan.leaderId ? (leaderValue[plan.leaderId] ?? 0) + 1.5 : 0);
         let total = 0, wins = 0;
+        softWins = 0;
         for (const theirs of futures) { total += against(plan, theirs); if (lastWin) wins++; }
         const expected = (1 - risk) * (total / futures.length) + risk * betrayed;
-        if (!best || expected > best.expected) best = { plan, expected, wins, risk };
+        const chance = (1 - risk) * softWins / (futures.length * 3);
+        scored.push({ plan, expected, wins, risk, chance });
+        if (!best || expected > best.expected) best = { plan, expected, wins, risk, chance };
       }
       if (!best) return null;
+      // Don't throw a battle that can be won. Planning against their best reply makes
+      // many battles look lost whatever we do, and then the cheapest plan (dial nothing)
+      // scores best. Throw only when it is genuinely hopeless (under 1 in 6 even against
+      // their ordinary plans); otherwise fight with the plan that wins most often,
+      // choosing the best value among those close to it.
+      const top = Math.max(...scored.map(x => x.chance));
+      if (top >= 1 / 6 && best.chance < top - 0.1) {
+        best = scored.filter(x => x.chance >= top - 0.05).reduce((a, b) => (b.expected > a.expected ? b : a));
+      }
       const { starredUnitValue, ...plan } = best.plan;
       // Stone Burner is decided by forces left undialled: dial none.
       if (plan.weaponCardId === 'stoneBurner') Object.assign(plan, { forcesCommitted: 0, starredForcesCommitted: 0, spiceCommitted: 0, supportedStarredCount: 0, supportedOrdinaryCount: 0 });
