@@ -1478,3 +1478,17 @@ loadAllData().then(data => { ensureBoard(data); render(); }).catch(err => addLog
 render();
 renderMenu();
 openSheet('menu');
+
+// Service worker (sw.js): keeps the game's files on the device after the first visit.
+// Its cache is named after this version (the build-version line in index.html), so a
+// new version starts a fresh cache. Once it runs, it is handed the files this page
+// loaded before it took over, so those are stored too.
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  navigator.serviceWorker.register(`./sw.js?v=${encodeURIComponent(appVersion() ?? 'dev')}`)
+    .then(() => navigator.serviceWorker.ready)
+    .then(reg => {
+      const urls = [location.href.split('#')[0], ...performance.getEntriesByType('resource').map(e => e.name)];
+      (navigator.serviceWorker.controller ?? reg.active)?.postMessage({ type: 'store', urls });
+    })
+    .catch(err => console.warn('Service worker not available', err));
+}
