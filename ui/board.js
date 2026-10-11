@@ -30,7 +30,7 @@ const STORM_ART = new URL('../assets/tokens/storm.webp?v=1', import.meta.url).hr
 const ADVISOR_ART = new URL('../assets/counters/gesserit-advisor.webp?v=1', import.meta.url).href;
 const SPICE_ART = new URL('../assets/tokens/spice-marker.webp?v=1', import.meta.url).href;
 // Storm danger marker art (null: a drawn stand-in until the painted token arrives).
-const DANGER_ART = new URL('../assets/tokens/storm-danger.png?v=1', import.meta.url).href;
+const DANGER_ART = new URL('../assets/tokens/storm-danger.webp?v=1', import.meta.url).href;
 // The painted map of Arrakis, cropped to its circle: drawn under the territory
 // borders, which then only outline (see .board--painted in styles.css).
 const MAP_ART = new URL('../assets/map/arrakis.webp?v=1', import.meta.url).href;
@@ -258,7 +258,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
     const nums = swGeo.path.match(/-?\d+\.?\d*/g).map(Number);
     const xs = nums.filter((_, i) => i % 2 === 0), ys = nums.filter((_, i) => i % 2 === 1);
     const bx = Math.min(...xs), by = Math.min(...ys), bw = Math.max(...xs) - bx, bh = Math.max(...ys) - by;
-    atomicsArt = el('image', { href: new URL('../assets/tokens/shield-wall-destroyed.jpg?v=1', import.meta.url).href, x: bx, y: by, width: bw, height: bh,
+    atomicsArt = el('image', { href: new URL('../assets/tokens/shield-wall-destroyed.webp?v=1', import.meta.url).href, x: bx, y: by, width: bw, height: bh,
       preserveAspectRatio: 'none', 'clip-path': 'url(#clip-shield-wall)', class: 'board__atomics', 'pointer-events': 'none', visibility: 'hidden' }, territoryLayer);
   }
   // Storm danger markers for the territories the Shield Wall no longer protects.
@@ -338,7 +338,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
       const g = el('g', { class: 'hms', transform: `translate(${hx},${hy})` }, tokenLayer);
       const pts = Array.from({ length: 6 }, (_, i) => { const a = Math.PI / 6 + i * Math.PI / 3; return `${Math.cos(a) * 34},${Math.sin(a) * 34}`; }).join(' ');
       el('polygon', { points: pts, class: 'hms__hull' }, g); // shows until the art loads
-      el('image', { href: new URL('../assets/tokens/hms.png', import.meta.url).href, x: -48, y: -56, width: 96, height: 96, class: 'hms__art' }, g);
+      el('image', { href: new URL('../assets/tokens/hms.webp', import.meta.url).href, x: -48, y: -56, width: 96, height: 96, class: 'hms__art' }, g);
       const tag = el('text', { class: 'hms__label', y: -54 }, g); tag.textContent = 'HMS';
       const inside = Object.entries(state.factions).filter(([, f]) => (f.forces.onBoard.hms ?? 0) > 0);
       inside.forEach(([f, x], i) => {
@@ -364,7 +364,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
           const seeIt = viewer === 'richese' || viewer === null;
           if (item.n > 1) { drawCounter(g, 'richese', item.n - 1); x += step; }
           const t = item.n > 1 ? el('g', { class: 'token token--nofield', transform: `translate(${x},${ly + 14})` }, tokenLayer) : g;
-          el('image', { href: new URL('../assets/tokens/nofield.png', import.meta.url).href, x: -24, y: -24, width: 48, height: 48 }, t);
+          el('image', { href: new URL('../assets/tokens/nofield.webp', import.meta.url).href, x: -24, y: -24, width: 48, height: 48 }, t);
           const label = el('text', { class: 'token__count token__count--counter', y: 6 }, t);
           label.textContent = seeIt ? nf.value : '?';
         } else if (item.kind === 'force') {
@@ -393,11 +393,11 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   }
 
   // --- Faction counters ----------------------------------------------------------
-  // Illustrated counters (assets/counters/<faction>.png) with the number in the
+  // Illustrated counters (assets/counters/<faction>.webp) with the number in the
   // clear centre. A plain disc in the faction colour sits underneath, so a
   // counter shows instantly even before its image has loaded.
   const COUNTER_R = 24;
-  const counterUrl = f => new URL(`../assets/counters/${f}.png`, import.meta.url).href;
+  const counterUrl = f => new URL(`../assets/counters/${f}.webp`, import.meta.url).href;
   const factionByColor = Object.fromEntries(Object.entries(factionColors).map(([f, c]) => [c, f]));
   function drawCounter(g, faction, count, color) {
     el('circle', { r: COUNTER_R - 1, fill: color ?? factionColors[faction] ?? '#333', class: 'token__disc' }, g);
@@ -464,12 +464,12 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   }
 
   // --- Arrivals from off-world ------------------------------------------------------
-  // Each faction's ship (assets/ships/<faction>.png, drawn in 2.5D facing right)
+  // Each faction's ship (assets/ships/<faction>.webp, drawn in 2.5D facing right)
   // flies in carrying its counter; the Fremen instead arrive by sandworm.
   const SHIP = 170;          // ship sprite size (board units)
   const CRUISE = 80;         // flying height above the ground shadow
-  const shipUrl = f => new URL(`../assets/ships/${f}.png`, import.meta.url).href;
-  const thopterUrl = f => new URL(`../assets/thopters/${f}.png`, import.meta.url).href;
+  const shipUrl = f => new URL(`../assets/ships/${f}.webp`, import.meta.url).href;
+  const thopterUrl = f => new URL(`../assets/thopters/${f}.webp`, import.meta.url).href;
   for (const f of Object.keys(factionColors)) { for (const u of [shipUrl(f), thopterUrl(f)]) { const img = new Image(); img.src = u; } } // preload
 
   // Flies a craft carrying a counter. With takeoffMs, it first lifts off from

@@ -29,7 +29,7 @@ Tracks progress against docs/EXPANSION_PLAN.md (Ixians & Tleilaxu, CHOAM & Riche
   player decisions, Factions sheet, victory watch, log, tests (tests/techTokens.sim.js; every third AI batch game plays with tokens).
   Owner decisions: on in every game by default; in two-player games the leftover token is dealt round again.
 - Art: counters, ships and ornithopters for Ixians, Tleilaxu, CHOAM and Richese installed; HMS token and the three Tech Token faces
-  installed (assets/tokens), plus the Richese No-Field token (assets/tokens/nofield.png, used from M6).
+  installed (assets/tokens), plus the Richese No-Field token (assets/tokens/nofield.webp, used from M6).
   Turn announcement audio for the new factions still to come.
 - Alliance perks: all eight factions verified (tests/alliancePerks.sim.js).
 - M5 CHOAM: DONE (core). js/choam.js; Charity and Inflation, duplicate and worthless discards, all six worthless effects,

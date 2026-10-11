@@ -13,8 +13,10 @@
 //                    (provided by the project owner; eight drops, trimmed, faded and levelled)
 //   card-slide.mp3   "slidecard04" by silverdubloons, https://freesound.org/s/817579/ (provided by the project owner)
 //   card-slap.mp3    "slap cards" by themfish, https://freesound.org/s/45821/ (provided by the project owner; one slap)
-//   harvest.wav      provided by the project owner (grain scooping loop, Spice Collection; made seamless, raised)
-//   battle.wav       provided by the project owner (Battle phase loop; made seamless, levelled)
+//   harvest.flac     provided by the project owner (grain scooping loop, Spice Collection; made seamless, raised)
+//   battle.flac      provided by the project owner (Battle phase loop; made seamless, levelled, 22.05 kHz)
+//   (the phase loops are FLAC, lossless and gap-free; the .wav beside each is a fallback for
+//   browsers that cannot decode FLAC)
 //   spice-1..3.mp3   provided by the project owner (spice blow landing; levelled, faded)
 //   footsteps.mp3    "Snow footsteps running" by qubodup, https://freesound.org/s/216570/ (provided by the
 //                    project owner; the loudest 3 seconds, trimmed, faded and levelled)
@@ -29,12 +31,13 @@ const SOUNDS = {
   ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8].map(i => [`bid${i}`, `../assets/sfx/bid-${i}.mp3?v=1`])),
   // A spice blow landing: one of three, at random.
   ...Object.fromEntries([1, 2, 3].map(i => [`spice${i}`, `../assets/sfx/spice-${i}.mp3?v=1`])),
-  // Phase ambiences: seamless loops (WAV, since MP3 padding leaves a gap on every loop).
-  revivalTanks: '../assets/sfx/revival-tanks.wav',
-  bidding: '../assets/sfx/bidding.wav',
-  shipping: '../assets/sfx/shipping.wav',
-  battle: '../assets/sfx/battle.wav?v=1',
-  harvest: '../assets/sfx/harvest.wav?v=1',
+  // Phase ambiences: seamless loops. FLAC is lossless with no padding (MP3 and AAC add
+  // silence at the start, a gap on every loop); WAV is the fallback if FLAC won't decode.
+  revivalTanks: ['../assets/sfx/revival-tanks.flac', '../assets/sfx/revival-tanks.wav'],
+  bidding: ['../assets/sfx/bidding.flac', '../assets/sfx/bidding.wav'],
+  shipping: ['../assets/sfx/shipping.flac', '../assets/sfx/shipping.wav'],
+  battle: ['../assets/sfx/battle.flac?v=2', '../assets/sfx/battle.wav?v=2'],
+  harvest: ['../assets/sfx/harvest.flac', '../assets/sfx/harvest.wav?v=1'],
   cardSlide: '../assets/sfx/card-slide.mp3?v=1',   // a card selected or put out for auction
   cardSlap: '../assets/sfx/card-slap.mp3?v=1',     // a card revealing itself
   wormDelivery: '../assets/sfx/worm-delivery.mp3',
@@ -56,29 +59,58 @@ export function createSfx({ onPlay } = {}) {
   const loops = {};
   const save = () => localStorage.setItem(KEY, JSON.stringify(settings));
 
-  async function loadAll() {
-    await Promise.all(Object.entries(SOUNDS).map(async ([name, path]) => {
-      try {
-        const data = await (await fetch(new URL(path, import.meta.url))).arrayBuffer();
-        buffers[name] = await ctx.decodeAudioData(data);
-      } catch (err) {
-        console.warn(`Could not load sound ${name}`, err);
+  // Fetches and decodes every sound, trying each file of a sound in turn (FLAC, then WAV).
+  // A sound that fails is skipped: the game plays on without it. Listeners hear about each
+  // sound once it is settled, loaded or not (see preload), so a loading screen can count
+  // them. Runs once.
+  let loading = null;
+  const settled = new Set(), listeners = new Set(); // sounds finished (loaded or failed), progress listeners
+  function ensureContext() {
+    if (ctx) return true;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return false;
+    ctx = new Ctx(); // starts suspended until a tap; decoding works meanwhile
+    gain = ctx.createGain();
+    gain.gain.value = settings.volume;
+    gain.connect(ctx.destination);
+    return true;
+  }
+  function loadAll() {
+    if (loading) return loading;
+    loading = Promise.all(Object.entries(SOUNDS).map(async ([name, paths]) => {
+      for (const path of [].concat(paths)) {
+        try {
+          const res = await fetch(new URL(path, import.meta.url));
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.arrayBuffer();
+          buffers[name] = await new Promise((ok, fail) => ctx.decodeAudioData(data, ok, fail)); // callback form: older Safari
+          break;
+        } catch (err) {
+          console.warn(`Could not load sound ${name} from ${path}`, err);
+        }
       }
+      settled.add(name);
+      listeners.forEach(fn => fn(name));
     }));
+    return loading;
   }
 
   return {
     // Call from a user tap.
     unlock() {
-      if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return; }
-      const Ctx = window.AudioContext || window.webkitAudioContext;
-      if (!Ctx) return;
-      ctx = new Ctx();
-      gain = ctx.createGain();
-      gain.gain.value = settings.volume;
-      gain.connect(ctx.destination);
+      if (!ensureContext()) return;
+      if (ctx.state === 'suspended') ctx.resume();
       loadAll();
     },
+    // Loading screen: fetch and decode every sound now. Resolves when all are done
+    // (failures skipped); onEach(name) after each one.
+    preload(onEach = () => {}) {
+      if (!ensureContext()) { Object.keys(SOUNDS).forEach(n => onEach(n)); return Promise.resolve(); }
+      settled.forEach(n => onEach(n)); // already done before the screen asked
+      listeners.add(onEach);
+      return loadAll().finally(() => listeners.delete(onEach));
+    },
+    get count() { return Object.keys(SOUNDS).length; },
     // seconds: play only that long (fading out over the last quarter second),
     // e.g. footsteps lasting exactly as long as a march across the map.
     play(name, { seconds = null } = {}) {

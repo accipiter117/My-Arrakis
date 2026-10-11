@@ -50,7 +50,7 @@ let lineup = (() => {
 function renderLineup() {
   const human = $('select-faction').value;
   $('lineup-grid').innerHTML = ALL_FACTIONS.map(f => `<button type="button" class="lineup__faction${lineup.includes(f) ? ' is-on' : ''}" data-lineup="${f}" aria-pressed="${lineup.includes(f)}">
-      <img src="assets/counters/${f}.png" alt=""><span>${FACTION_NAMES[f]}${f === human ? ' (you)' : ''}</span></button>`).join('')
+      <img src="assets/counters/${f}.webp" alt=""><span>${FACTION_NAMES[f]}${f === human ? ' (you)' : ''}</span></button>`).join('')
     + EXPANSION_FACTIONS.map(([id, name]) => `<button type="button" class="lineup__faction is-soon" disabled><span class="lineup__soon-dot"></span><span>${name}<small>coming soon</small></span></button>`).join('');
   const n = lineup.length;
   $('lineup-note').textContent = n < 2 ? 'Choose at least 2 factions.' : `${n} faction${n === 1 ? '' : 's'} will play.`;
@@ -588,7 +588,7 @@ function showVictoryScreen() {
   const line = f => {
     const b = stats?.battles?.[f];
     const h = held(f);
-    return `<li><img src="assets/counters/${f}.png" alt=""><div><strong>${FACTION_NAMES[f]}${f === humanFactionId ? ' (you)' : ''}</strong>
+    return `<li><img src="assets/counters/${f}.webp" alt=""><div><strong>${FACTION_NAMES[f]}${f === humanFactionId ? ' (you)' : ''}</strong>
       <span>${h.length ? `Holding ${h.join(', ')}` : 'No strongholds held'}${b ? ` · ${b.won} of ${b.fought} battles won` : ''}</span></div></li>`;
   };
   const others = humanFactionId && !winners.includes(humanFactionId) ? [humanFactionId] : [];
@@ -598,7 +598,7 @@ function showVictoryScreen() {
   el.innerHTML = `<div class="victory__top">
       <p class="victory__eyebrow">${draw ? 'The sands are undecided' : youWon ? 'You have won' : humanFactionId ? 'The spice flows to another' : 'Game over'}</p>
       <h2 class="victory__title">${draw ? 'Stalemate' : humanFactionId && !youWon ? 'Defeat' : 'Victory'}</h2>
-      ${draw ? '' : `<div class="victory__emblems">${winners.map(f => `<img src="assets/counters/${f}.png" alt="${FACTION_NAMES[f]}">`).join('')}</div>
+      ${draw ? '' : `<div class="victory__emblems">${winners.map(f => `<img src="assets/counters/${f}.webp" alt="${FACTION_NAMES[f]}">`).join('')}</div>
       <p class="victory__who">${winners.map(f => FACTION_NAMES[f]).join(' & ')}</p>`}
       <p class="victory__how">${METHOD_TEXT[v.method] ?? v.method}</p>
     </div>
@@ -793,7 +793,7 @@ function showTechInfo(t, slot) {
   const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'Nobody yet';
   const box = document.createElement('div');
   box.className = 'tech-info';
-  box.innerHTML = `<div class="tech-info__head"><img src="assets/tokens/tech-${t}.png?v=2" alt=""><div><strong>${TOKEN_NAMES[t]}</strong><small>${info.what}</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
+  box.innerHTML = `<div class="tech-info__head"><img src="assets/tokens/tech-${t}.webp?v=3" alt=""><div><strong>${TOKEN_NAMES[t]}</strong><small>${info.what}</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
     <p><b>Held by:</b> ${who}${f && n > 1 ? ` (holding ${n} of the 3)` : ''}</p>
     <p><b>Income:</b> in ${info.when}, its holder collects spice from the Bank: 1 for each Tech Token they hold${f ? `, so ${n} now` : ''}. It doesn't pay if ${info.not} are the only ones doing it.</p>
     <p><b>Changing hands:</b> beat its holder in a battle and you take one of their tokens (your choice).</p>
@@ -1037,7 +1037,7 @@ function renderTechTray() {
     const cls = !f ? ' tech-slot--empty' : counts[f] === 3 ? ' tech-slot--set' : counts[f] === 2 ? ' tech-slot--two' : '';
     const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'nobody';
     return `<button class="tech-slot${cls}" data-token="${t}" style="--slot-colour:${f ? FACTION_COLORS[f] : '#555'}" title="${TOKEN_NAMES[t]}: ${who}" aria-label="${TOKEN_NAMES[t]}, held by ${who}">
-      <img src="assets/tokens/tech-${t}.png?v=2" alt="">${f ? `<img class="tech-slot__owner" src="assets/counters/${f}.png" alt="">` : ''}</button>`;
+      <img src="assets/tokens/tech-${t}.webp?v=3" alt="">${f ? `<img class="tech-slot__owner" src="assets/counters/${f}.webp" alt="">` : ''}</button>`;
   }).join('') + infSlot;
 }
 
@@ -1080,7 +1080,7 @@ function renderStatus() {
   if (me) { spicePill.innerHTML = `<img class="spice-pill__icon" src="assets/tokens/spice-marker.webp?v=1" alt=""> ${me.spice}`; spicePill.title = `${me.spice} spice`; }
   const ally = humanFactionId && gameState.alliances?.find(a => a.factions.includes(humanFactionId))?.factions.find(f => f !== humanFactionId);
   $('status-ally').hidden = !ally;
-  if (ally) { $('status-ally').innerHTML = `<img src="assets/counters/${ally}.png" alt="">`; $('status-ally').setAttribute('aria-label', `Ally: ${FACTION_NAMES[ally]}. Tap for what they give you.`); }
+  if (ally) { $('status-ally').innerHTML = `<img src="assets/counters/${ally}.webp" alt="">`; $('status-ally').setAttribute('aria-label', `Ally: ${FACTION_NAMES[ally]}. Tap for what they give you.`); }
 }
 
 function renderPhaseTrack() {
@@ -1165,14 +1165,14 @@ function renderFactions() {
     const hidden = humanFactionId && f !== humanFactionId;
     const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
     return `<tr${f === humanFactionId ? ' class="is-you"' : ''}>
-      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${tokensOwnedBy(gameState, f).length ? `<br><span class="tech-tokens">${tokensOwnedBy(gameState, f).map(t => `<img src="assets/tokens/tech-${t}.png?v=2" alt="${TOKEN_NAMES[t]}" title="${TOKEN_NAMES[t]}">`).join('')}</span>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
+      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${tokensOwnedBy(gameState, f).length ? `<br><span class="tech-tokens">${tokensOwnedBy(gameState, f).map(t => `<img src="assets/tokens/tech-${t}.webp?v=3" alt="${TOKEN_NAMES[t]}" title="${TOKEN_NAMES[t]}">`).join('')}</span>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
       <td>${hidden ? '?' : faction.spice}</td><td>${faction.treacheryHand.length}</td><td>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</td>
       <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
   }).join('');
   const anyKnown = Object.keys(gameState.meta.knownCards ?? {}).length;
   const inf = gameState.factions.choam?.specialFactionState?.inflation?.status;
   const infNote = inf && inf !== 'unused' ? `<p class="sheet__note">CHOAM Inflation: ${inf === 'removed' ? 'used and gone' : `${inf === 'double' ? 'Double' : 'Cancel'} for next turn's Charity`}.</p>` : '';
-  const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.png?v=2" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
+  const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.webp?v=3" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
   grid.innerHTML = techNote + negotiationNotes() + (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 

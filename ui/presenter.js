@@ -103,7 +103,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
   // --- Turn banner: whose turn it is, at the top centre of the map -------------
   const PHASE_LABELS = { shipment: 'Shipment & movement', revival: 'Revival' };
-  const counterUrl = f => new URL(`../assets/counters/${f}.png`, import.meta.url).href;
+  const counterUrl = f => new URL(`../assets/counters/${f}.webp`, import.meta.url).href;
   function showBanner(factionId, phase, mine) {
     if (!banner) return;
     banner.style.setProperty('--banner-colour', factionColors[factionId]);
@@ -126,7 +126,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
   // --- Tech Tokens: fly a token across the map into its holder's tray slot -----------
   const TECH_NAMES = { axlotl: 'Axlotl Tanks', heighliner: 'Heighliners', spiceProd: 'Spice Production' };
-  const techUrl = t => new URL(`../assets/tokens/tech-${t}.png?v=2`, import.meta.url).href;
+  const techUrl = t => new URL(`../assets/tokens/tech-${t}.webp?v=3`, import.meta.url).href;
   let pendingTech = [];
   async function flyTech(token, fromScreen, ownerId, caption) {
     const slot = techTray?.querySelector(`[data-token="${token}"]`);
@@ -208,7 +208,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
         tag.className = 'harvest-float';
         tag.style.left = `${at.x}px`; tag.style.top = `${at.y - 10 - i * 30}px`;
         tag.style.setProperty('--fc', factionColors[c.factionId] ?? '#c9a24a');
-        tag.innerHTML = `<img src="${new URL(`../assets/counters/${c.factionId}.png`, import.meta.url).href}" alt=""><b>+${c.collected}</b> <span>${esc(names.faction(c.factionId))}</span>`;
+        tag.innerHTML = `<img src="${new URL(`../assets/counters/${c.factionId}.webp`, import.meta.url).href}" alt=""><b>+${c.collected}</b> <span>${esc(names.faction(c.factionId))}</span>`;
         document.body.appendChild(tag);
         setTimeout(() => tag.remove(), scaled(1700) + 200);
       });

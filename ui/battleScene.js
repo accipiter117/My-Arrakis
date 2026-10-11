@@ -25,7 +25,7 @@ const ART = {
   cardBack: new URL('../assets/cards/back.webp?v=2', import.meta.url).href, cardFace: url('cards/face.webp'), traitor: url('cards/traitor.webp'), faceDancer: url('cards/faceDancer.webp'),
   wheelBack: url('battle/wheel-back.webp'), wheelFront: url('battle/wheel-front.webp'), kh: url('tokens/kwisatzHaderach.webp'),
   spice: n => url(`tokens/spice-${n >= 6 ? 8 : n >= 3 ? 3 : 1}.webp`),
-  counter: f => new URL(`../assets/counters/${f}.png`, import.meta.url).href
+  counter: f => new URL(`../assets/counters/${f}.webp`, import.meta.url).href
 };
 // The card back now matches the face exactly (263 x 360), so cards flip at the reveal.
 const CARD_FLIP = true;

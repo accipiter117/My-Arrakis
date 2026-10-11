@@ -188,7 +188,7 @@ body.layout-desktop[data-sheet="menu"] .scrim {
   background:
     radial-gradient(ellipse 42% 60% at 50% 50%, rgba(8, 5, 3, 0.55), transparent 75%),
     linear-gradient(180deg, rgba(8, 5, 3, 0.15), rgba(8, 5, 3, 0.45)),
-    url(../assets/title-wide.jpg) center / cover no-repeat, #0b0705;
+    url(../assets/title-wide.webp) center / cover no-repeat, #0b0705;
 }
 body.layout-desktop #sheet-menu { z-index: 42 !important; width: min(520px, calc(100vw - 4rem)); background: rgba(22, 15, 10, 0.94); }
 body.layout-desktop #sheet-menu .title-block { padding-top: 1.4rem; background: none; border-bottom-color: rgba(212, 169, 79, 0.35); }
@@ -266,7 +266,7 @@ body.layout-desktop .victory {
   background:
     radial-gradient(ellipse 38% 46% at 20% 26%, rgba(10, 6, 4, 0.55), transparent 72%),
     linear-gradient(90deg, transparent 60%, rgba(10, 6, 4, 0.5) 100%),
-    url(../assets/victory-wide.jpg) center / cover no-repeat, #0b0705;
+    url(../assets/victory-wide.webp) center / cover no-repeat, #0b0705;
 }
 body.layout-desktop .victory__top { width: min(440px, 34vw); padding-top: 2vh; }
 body.layout-desktop .victory__title { font-size: clamp(48px, 5.4vw, 76px); }
