@@ -282,3 +282,8 @@ body.layout-desktop .victory__bottom {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(3px);
 }
+
+/* The loading screen over the landscape title art. */
+body.layout-desktop .loading { align-items: center; padding: 0; background:
+    radial-gradient(ellipse 30% 30% at 50% 50%, rgba(8, 5, 3, 0.6), transparent 75%),
+    url(../assets/title-wide.webp) center / cover no-repeat, #0b0705; }

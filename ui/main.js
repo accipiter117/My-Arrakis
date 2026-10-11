@@ -33,6 +33,8 @@ import { dealMessage } from './dealMessages.js';
 import { createMusic } from './music.js';
 import { createSfx } from './sfx.js';
 import { createRails } from './rails.js';
+import { ART, allArt } from './art.js'; // every picture's address (ui/art.js)
+import { preloadAll } from './preload.js';
 import { createDesktopExtras, SHORTCUTS } from './desktopExtras.js';
 import { getRandomState, setRandomState } from '../js/random.js';
 
@@ -50,7 +52,7 @@ let lineup = (() => {
 function renderLineup() {
   const human = $('select-faction').value;
   $('lineup-grid').innerHTML = ALL_FACTIONS.map(f => `<button type="button" class="lineup__faction${lineup.includes(f) ? ' is-on' : ''}" data-lineup="${f}" aria-pressed="${lineup.includes(f)}">
-      <img src="assets/counters/${f}.webp" alt=""><span>${FACTION_NAMES[f]}${f === human ? ' (you)' : ''}</span></button>`).join('')
+      <img src="${ART.counter(f)}" alt=""><span>${FACTION_NAMES[f]}${f === human ? ' (you)' : ''}</span></button>`).join('')
     + EXPANSION_FACTIONS.map(([id, name]) => `<button type="button" class="lineup__faction is-soon" disabled><span class="lineup__soon-dot"></span><span>${name}<small>coming soon</small></span></button>`).join('');
   const n = lineup.length;
   $('lineup-note').textContent = n < 2 ? 'Choose at least 2 factions.' : `${n} faction${n === 1 ? '' : 's'} will play.`;
@@ -149,6 +151,40 @@ async function loadAllData() {
   return { territories, spiceDeck, treacheryDeck, leaders, rulesConfig, geometry };
 }
 
+// --- Preparing Arrakis: load every picture and sound effect before play ------------
+// Shown once per visit, when a game starts or continues, so no animation ever plays
+// before its picture or sound has arrived (ui/preload.js). Music streams on its own.
+let prepared = null;
+function prepareArrakis(data) {
+  if (prepared) return prepared;
+  const leaderIds = Object.values(data.leaders).filter(Array.isArray).flat().map(l => l.id);
+  const screen = document.createElement('section');
+  screen.className = 'loading';
+  screen.setAttribute('role', 'status');
+  screen.setAttribute('aria-live', 'polite');
+  screen.innerHTML = `<div class="loading__inner">
+      <p class="loading__name">ARRAKIS</p>
+      <div class="loading__rule"></div>
+      <p class="loading__label">Preparing Arrakis</p>
+      <div class="loading__bar" role="progressbar" aria-label="Loading the game's art and sound" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
+      <p class="loading__count">&nbsp;</p>
+    </div>`;
+  document.body.appendChild(screen);
+  const bar = screen.querySelector('.loading__bar'), fill = bar.querySelector('span'), count = screen.querySelector('.loading__count');
+  prepared = preloadAll({
+    images: allArt({ factions: ALL_FACTIONS, leaderIds }),
+    sfx,
+    onProgress: (done, total) => {
+      const pct = total ? Math.round((done / total) * 100) : 100;
+      fill.style.width = `${pct}%`;
+      bar.setAttribute('aria-valuenow', String(pct));
+      count.textContent = `${pct}%`;
+    }
+  }).catch(err => console.warn('Preparing Arrakis failed; playing on', err))
+    .finally(() => { screen.classList.add('loading--done'); setTimeout(() => screen.remove(), 350); });
+  return prepared;
+}
+
 // --- Game control ------------------------------------------------------
 
 async function startNewGame() {
@@ -156,6 +192,7 @@ async function startNewGame() {
   setBusy(true);
   try {
     const data = await loadAllData();
+    await prepareArrakis(data);
     territoriesData = data.territories;
     ensureBoard(data);
     humanFactionId = $('select-faction').value || null;
@@ -436,6 +473,7 @@ async function resumeGame(save) {
   setBusy(true);
   try {
     const data = await loadAllData();
+    await prepareArrakis(data);
     territoriesData = data.territories;
     ensureBoard(data);
     gameState = save.state;
@@ -588,7 +626,7 @@ function showVictoryScreen() {
   const line = f => {
     const b = stats?.battles?.[f];
     const h = held(f);
-    return `<li><img src="assets/counters/${f}.webp" alt=""><div><strong>${FACTION_NAMES[f]}${f === humanFactionId ? ' (you)' : ''}</strong>
+    return `<li><img src="${ART.counter(f)}" alt=""><div><strong>${FACTION_NAMES[f]}${f === humanFactionId ? ' (you)' : ''}</strong>
       <span>${h.length ? `Holding ${h.join(', ')}` : 'No strongholds held'}${b ? ` · ${b.won} of ${b.fought} battles won` : ''}</span></div></li>`;
   };
   const others = humanFactionId && !winners.includes(humanFactionId) ? [humanFactionId] : [];
@@ -598,7 +636,7 @@ function showVictoryScreen() {
   el.innerHTML = `<div class="victory__top">
       <p class="victory__eyebrow">${draw ? 'The sands are undecided' : youWon ? 'You have won' : humanFactionId ? 'The spice flows to another' : 'Game over'}</p>
       <h2 class="victory__title">${draw ? 'Stalemate' : humanFactionId && !youWon ? 'Defeat' : 'Victory'}</h2>
-      ${draw ? '' : `<div class="victory__emblems">${winners.map(f => `<img src="assets/counters/${f}.webp" alt="${FACTION_NAMES[f]}">`).join('')}</div>
+      ${draw ? '' : `<div class="victory__emblems">${winners.map(f => `<img src="${ART.counter(f)}" alt="${FACTION_NAMES[f]}">`).join('')}</div>
       <p class="victory__who">${winners.map(f => FACTION_NAMES[f]).join(' & ')}</p>`}
       <p class="victory__how">${METHOD_TEXT[v.method] ?? v.method}</p>
     </div>
@@ -777,7 +815,7 @@ function showInflationInfo(side) {
   document.querySelector('.tech-info')?.remove();
   const box = document.createElement('div');
   box.className = 'tech-info';
-  box.innerHTML = `<div class="tech-info__head"><img src="assets/tokens/inflation-${side}.webp?v=1" alt=""><div><strong>CHOAM Inflation: ${side === 'double' ? 'Double' : 'Cancel'}</strong><small>placed by CHOAM at the Mentat Pause</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
+  box.innerHTML = `<div class="tech-info__head"><img src="${ART.inflation(side)}" alt=""><div><strong>CHOAM Inflation: ${side === 'double' ? 'Double' : 'Cancel'}</strong><small>placed by CHOAM at the Mentat Pause</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
     ${side === 'double'
       ? '<p><b>Next Charity:</b> doubled. CHOAM collects 4 spice per faction from the Bank and pays everyone\'s charity at double rate.</p><p><b>Also:</b> while Double is showing, no deals or bribes can be made.</p>'
       : '<p><b>Next Charity:</b> cancelled. No one collects charity, CHOAM included.</p>'}
@@ -793,7 +831,7 @@ function showTechInfo(t, slot) {
   const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'Nobody yet';
   const box = document.createElement('div');
   box.className = 'tech-info';
-  box.innerHTML = `<div class="tech-info__head"><img src="assets/tokens/tech-${t}.webp?v=3" alt=""><div><strong>${TOKEN_NAMES[t]}</strong><small>${info.what}</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
+  box.innerHTML = `<div class="tech-info__head"><img src="${ART.tech(t)}" alt=""><div><strong>${TOKEN_NAMES[t]}</strong><small>${info.what}</small></div><button class="tech-info__x" aria-label="Close">×</button></div>
     <p><b>Held by:</b> ${who}${f && n > 1 ? ` (holding ${n} of the 3)` : ''}</p>
     <p><b>Income:</b> in ${info.when}, its holder collects spice from the Bank: 1 for each Tech Token they hold${f ? `, so ${n} now` : ''}. It doesn't pay if ${info.not} are the only ones doing it.</p>
     <p><b>Changing hands:</b> beat its holder in a battle and you take one of their tokens (your choice).</p>
@@ -1028,7 +1066,7 @@ function renderTechTray() {
   const inf = gameState?.factions.choam ? gameState.factions.choam.specialFactionState?.inflation?.status : null;
   const showInf = inf === 'double' || inf === 'cancel';
   tray.hidden = !tt && !showInf;
-  const infSlot = showInf ? `<button class="tech-slot tech-slot--inflation" data-inflation="${inf}" style="--slot-colour:${inf === 'double' ? '#3f8f5a' : '#a33a2a'}" aria-label="CHOAM Inflation: ${inf}"><img src="assets/tokens/inflation-${inf}.webp?v=1" alt=""></button>` : '';
+  const infSlot = showInf ? `<button class="tech-slot tech-slot--inflation" data-inflation="${inf}" style="--slot-colour:${inf === 'double' ? '#3f8f5a' : '#a33a2a'}" aria-label="CHOAM Inflation: ${inf}"><img src="${ART.inflation(inf)}" alt=""></button>` : '';
   if (!tt) { tray.innerHTML = infSlot; return; }
   const counts = {};
   for (const t of TECH_TOKENS) if (tt[t].owner) counts[tt[t].owner] = (counts[tt[t].owner] ?? 0) + 1;
@@ -1037,7 +1075,7 @@ function renderTechTray() {
     const cls = !f ? ' tech-slot--empty' : counts[f] === 3 ? ' tech-slot--set' : counts[f] === 2 ? ' tech-slot--two' : '';
     const who = f ? (f === humanFactionId ? 'You' : FACTION_NAMES[f]) : 'nobody';
     return `<button class="tech-slot${cls}" data-token="${t}" style="--slot-colour:${f ? FACTION_COLORS[f] : '#555'}" title="${TOKEN_NAMES[t]}: ${who}" aria-label="${TOKEN_NAMES[t]}, held by ${who}">
-      <img src="assets/tokens/tech-${t}.webp?v=3" alt="">${f ? `<img class="tech-slot__owner" src="assets/counters/${f}.webp" alt="">` : ''}</button>`;
+      <img src="${ART.tech(t)}" alt="">${f ? `<img class="tech-slot__owner" src="${ART.counter(f)}" alt="">` : ''}</button>`;
   }).join('') + infSlot;
 }
 
@@ -1077,10 +1115,10 @@ function renderStatus() {
   $('status-storm').textContent = `Storm ${gameState.board.stormPosition ?? '—'}`;
   const me = humanFactionId && gameState.factions[humanFactionId];
   spicePill.hidden = !me;
-  if (me) { spicePill.innerHTML = `<img class="spice-pill__icon" src="assets/tokens/spice-marker.webp?v=1" alt=""> ${me.spice}`; spicePill.title = `${me.spice} spice`; }
+  if (me) { spicePill.innerHTML = `<img class="spice-pill__icon" src="${ART.spiceMarker}" alt=""> ${me.spice}`; spicePill.title = `${me.spice} spice`; }
   const ally = humanFactionId && gameState.alliances?.find(a => a.factions.includes(humanFactionId))?.factions.find(f => f !== humanFactionId);
   $('status-ally').hidden = !ally;
-  if (ally) { $('status-ally').innerHTML = `<img src="assets/counters/${ally}.webp" alt="">`; $('status-ally').setAttribute('aria-label', `Ally: ${FACTION_NAMES[ally]}. Tap for what they give you.`); }
+  if (ally) { $('status-ally').innerHTML = `<img src="${ART.counter(ally)}" alt="">`; $('status-ally').setAttribute('aria-label', `Ally: ${FACTION_NAMES[ally]}. Tap for what they give you.`); }
 }
 
 function renderPhaseTrack() {
@@ -1099,9 +1137,9 @@ function renderPhaseTrack() {
     step.title = PHASE_LABELS[phase] ?? phase;
     // Painted phase icon (shown when a phase icon style is chosen in the menu).
     const icon = phase === 'movement' ? 'shipment' : phase;
-    // (absolute addresses: a url() inside a CSS variable resolves against the stylesheet)
-    step.style.setProperty('--icon-brass', `url("${new URL(`assets/phases/brass-${icon}.webp?v=1`, location.href).href}")`);
-    step.style.setProperty('--icon-stone', `url("${new URL(`assets/phases/stone-${icon}.webp?v=1`, location.href).href}")`);
+    // (absolute addresses from ui/art.js: a url() inside a CSS variable resolves against the stylesheet)
+    step.style.setProperty('--icon-brass', `url("${ART.phase('brass', icon)}")`);
+    step.style.setProperty('--icon-stone', `url("${ART.phase('stone', icon)}")`);
     track.appendChild(step);
   }
   // Keep the current phase in view on a narrow screen.
@@ -1165,14 +1203,14 @@ function renderFactions() {
     const hidden = humanFactionId && f !== humanFactionId;
     const onBoard = Object.values(faction.forces.onBoard).reduce((a, b) => a + b, 0);
     return `<tr${f === humanFactionId ? ' class="is-you"' : ''}>
-      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${tokensOwnedBy(gameState, f).length ? `<br><span class="tech-tokens">${tokensOwnedBy(gameState, f).map(t => `<img src="assets/tokens/tech-${t}.webp?v=3" alt="${TOKEN_NAMES[t]}" title="${TOKEN_NAMES[t]}">`).join('')}</span>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
+      <td><span class="faction-chip" style="background:var(${FACTION_DISPLAY[f].colorVar})"></span>${FACTION_DISPLAY[f].name}${f === humanFactionId ? ' (you)' : ''}${allyName(f) ? `<br><small>allied: ${allyName(f)}</small>` : ''}${tokensOwnedBy(gameState, f).length ? `<br><span class="tech-tokens">${tokensOwnedBy(gameState, f).map(t => `<img src="${ART.tech(t)}" alt="${TOKEN_NAMES[t]}" title="${TOKEN_NAMES[t]}">`).join('')}</span>` : ''}${knownCardsOf(f) && f !== humanFactionId ? `<br><small class="known">known: ${knownCardsOf(f)}</small>` : ''}</td>
       <td>${hidden ? '?' : faction.spice}</td><td>${faction.treacheryHand.length}</td><td>${hidden ? '?' : (faction.traitorHand?.length ?? 0)}</td>
       <td>${faction.forces.reserve}</td><td>${onBoard}</td><td>${faction.leaders.available.length}</td></tr>`;
   }).join('');
   const anyKnown = Object.keys(gameState.meta.knownCards ?? {}).length;
   const inf = gameState.factions.choam?.specialFactionState?.inflation?.status;
   const infNote = inf && inf !== 'unused' ? `<p class="sheet__note">CHOAM Inflation: ${inf === 'removed' ? 'used and gone' : `${inf === 'double' ? 'Double' : 'Cancel'} for next turn's Charity`}.</p>` : '';
-  const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="assets/tokens/tech-${t}.webp?v=3" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
+  const techNote = infNote + (gameState.techTokens ? `<p class="sheet__note"><span class="tech-tokens tech-tokens--key">${TECH_TOKENS.map(t => `<span><img src="${ART.tech(t)}" alt=""> ${TOKEN_NAMES[t]}</span>`).join('')}</span><br>Tech Tokens are public. Each pays its holder 1 spice per token they hold when its phase is used; beating a holder in battle takes one; all three in one hand count as a stronghold.${TECH_TOKENS.some(t => !gameState.techTokens[t].owner) ? ` Not held: ${TECH_TOKENS.filter(t => !gameState.techTokens[t].owner).map(t => TOKEN_NAMES[t]).join(', ')}.` : ''}</p>` : '');
   grid.innerHTML = techNote + negotiationNotes() + (anyKnown ? '<p class="sheet__note">"Known" cards were revealed in a battle and kept by the winner, so everyone at the table has seen them.</p>' : '') + `<table class="ftable"><thead><tr><th>Faction</th><th>Spice</th><th>Cards</th><th>Trait.</th><th>Resv</th><th>Board</th><th>Ldrs</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 

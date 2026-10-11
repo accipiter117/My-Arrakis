@@ -10,9 +10,10 @@
 
 import * as battleEngine from '../js/battleEngine.js';
 import { cardsGained } from './dealMessages.js';
+import { ART } from './art.js'; // every picture's address (ui/art.js)
 
 // Treachery card art (back and face are the same size, so a card flips without changing shape).
-const CARD_ART = { back: new URL('../assets/cards/back.webp?v=2', import.meta.url).href, face: new URL('../assets/cards/face.webp?v=1', import.meta.url).href };
+const CARD_ART = { back: ART.cardBack, face: ART.cardFace };
 
 const CATEGORY_TEXT = { poisonWeapon: 'a poison weapon', projectileWeapon: 'a projectile weapon', specialWeapon: 'a Lasgun', poisonDefense: 'a poison defence', projectileDefense: 'a projectile defence', specialLeaderSubstitute: 'a Cheap Hero', worthless: 'a worthless card' };
 
@@ -103,7 +104,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
   // --- Turn banner: whose turn it is, at the top centre of the map -------------
   const PHASE_LABELS = { shipment: 'Shipment & movement', revival: 'Revival' };
-  const counterUrl = f => new URL(`../assets/counters/${f}.webp`, import.meta.url).href;
+  const counterUrl = ART.counter;
   function showBanner(factionId, phase, mine) {
     if (!banner) return;
     banner.style.setProperty('--banner-colour', factionColors[factionId]);
@@ -126,7 +127,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
 
   // --- Tech Tokens: fly a token across the map into its holder's tray slot -----------
   const TECH_NAMES = { axlotl: 'Axlotl Tanks', heighliner: 'Heighliners', spiceProd: 'Spice Production' };
-  const techUrl = t => new URL(`../assets/tokens/tech-${t}.webp?v=3`, import.meta.url).href;
+  const techUrl = ART.tech;
   let pendingTech = [];
   async function flyTech(token, fromScreen, ownerId, caption) {
     const slot = techTray?.querySelector(`[data-token="${token}"]`);
@@ -170,7 +171,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       board.pulse(e.territoryId, 'battle', scaled(800));
       await hold(scaled(1000));
       sfx?.play('cardSlap');
-      await showCard('traitor', `<img class="event-card__art" src="${new URL('../assets/cards/faceDancer.webp?v=1', import.meta.url).href}" alt=""><div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(fd.leaderId))}</div>
+      await showCard('traitor', `<img class="event-card__art" src="${ART.faceDancer}" alt=""><div class="event-card__eyebrow">Face Dancer!</div><div class="event-card__title">${esc(names.leader(fd.leaderId))}</div>
         <div class="event-card__detail">was a Tleilaxu Face Dancer. ${esc(names.faction(fd.winnerId))} keep the win, but lose the leader, and ${fd.returned} troops go home; ${fd.placed} Tleilaxu take ${esc(names.territory(fd.territoryId))}.</div>`, 3200);
       renderReal();
       board.pulse(e.territoryId, 'battle', scaled(800));
@@ -208,7 +209,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
         tag.className = 'harvest-float';
         tag.style.left = `${at.x}px`; tag.style.top = `${at.y - 10 - i * 30}px`;
         tag.style.setProperty('--fc', factionColors[c.factionId] ?? '#c9a24a');
-        tag.innerHTML = `<img src="${new URL(`../assets/counters/${c.factionId}.webp`, import.meta.url).href}" alt=""><b>+${c.collected}</b> <span>${esc(names.faction(c.factionId))}</span>`;
+        tag.innerHTML = `<img src="${ART.counter(c.factionId)}" alt=""><b>+${c.collected}</b> <span>${esc(names.faction(c.factionId))}</span>`;
         document.body.appendChild(tag);
         setTimeout(() => tag.remove(), scaled(1700) + 200);
       });

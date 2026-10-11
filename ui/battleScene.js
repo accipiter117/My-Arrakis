@@ -18,15 +18,7 @@ import { battleSpice } from '../js/allySupport.js';
 import { forcesAfterReveal } from '../js/noField.js';
 import { slotAllows, voiceProblem, voiceSlot, planFromChoices } from './battlePlan.js';
 
-const V = '?v=1';
-const url = p => new URL(`../assets/${p}${V}`, import.meta.url).href;
-const ART = {
-  leader: id => url(`leaders/${id}.webp`), cheapHero: url('leaders/cheapHero.webp'),
-  cardBack: new URL('../assets/cards/back.webp?v=2', import.meta.url).href, cardFace: url('cards/face.webp'), traitor: url('cards/traitor.webp'), faceDancer: url('cards/faceDancer.webp'),
-  wheelBack: url('battle/wheel-back.webp'), wheelFront: url('battle/wheel-front.webp'), kh: url('tokens/kwisatzHaderach.webp'),
-  spice: n => url(`tokens/spice-${n >= 6 ? 8 : n >= 3 ? 3 : 1}.webp`),
-  counter: f => new URL(`../assets/counters/${f}.webp`, import.meta.url).href
-};
+import { ART } from './art.js'; // every picture's address (ui/art.js)
 // The card back now matches the face exactly (263 x 360), so cards flip at the reveal.
 const CARD_FLIP = true;
 
@@ -68,7 +60,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
         </div>
         <div class="bs__leader" data-leader><img src="${ART.counter(f)}" alt=""><b data-leader-val hidden></b></div>
         <div class="bs__spice" data-spice><span class="bs__q">?</span><b data-spice-val hidden></b></div>
-        <div class="bs__kh" data-kh hidden><img src="${ART.kh}" alt="Kwisatz Haderach"></div>
+        <div class="bs__kh" data-kh hidden><img src="${ART.kwisatzHaderach}" alt="Kwisatz Haderach"></div>
         <div class="bs__cards">
           <div class="bs__slot" data-slot="weapon"><span class="bs__slot-q">?</span><em>Weapon</em></div>
           <div class="bs__slot" data-slot="defense"><span class="bs__slot-q">?</span><em>Defence</em></div>

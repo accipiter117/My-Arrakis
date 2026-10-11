@@ -6,6 +6,8 @@
 // live log beneath. Only drawn while body.layout-desktop is set; phones never
 // see it. Reads the game state, never changes it.
 
+import { ART } from './art.js'; // every picture's address (ui/art.js)
+
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const sum = o => Object.values(o ?? {}).reduce((a, b) => a + b, 0);
 const isDesktop = () => document.body.classList.contains('layout-desktop');
@@ -33,9 +35,9 @@ export function createRails({ factionsEl, logEl, getState, getHuman, order, disp
       const ally = allyOf(state, f);
       const tokens = tokensOwnedBy(state, f);
       return `<li><button class="frow${f === human ? ' frow--you' : ''}" data-faction="${f}" style="--fc:var(${display[f].colorVar})" aria-describedby="faction-hover">
-        <img class="frow__counter" src="assets/counters/${f}.webp" alt="">
+        <img class="frow__counter" src="${ART.counter(f)}" alt="">
         <span class="frow__name">${esc(display[f].name)}
-          <small>${f === human ? '<em>You</em>' : ''}${ally ? `${f === human ? ' · ' : ''}Ally: ${esc(display[ally].name)}` : ''}${tokens.length ? `${ally || f === human ? '&nbsp;' : ''}${tokens.map(t => `<img src="assets/tokens/tech-${t}.webp?v=3" alt="${esc(tokenNames[t])}">`).join('')}` : ''}</small></span>
+          <small>${f === human ? '<em>You</em>' : ''}${ally ? `${f === human ? ' · ' : ''}Ally: ${esc(display[ally].name)}` : ''}${tokens.length ? `${ally || f === human ? '&nbsp;' : ''}${tokens.map(t => `<img src="${ART.tech(t)}" alt="${esc(tokenNames[t])}">`).join('')}` : ''}</small></span>
         <span class="frow__stat">${secret(f) ? '?' : fs.spice}</span>
         <span class="frow__stat">${held(state, f).length}</span>
         <span class="frow__stat">${sum(fs.forces.onBoard)}</span>
@@ -54,7 +56,7 @@ export function createRails({ factionsEl, logEl, getState, getHuman, order, disp
     const tokens = tokensOwnedBy(state, f);
     const known = Object.entries(state.meta.knownCards ?? {}).filter(([, x]) => x === f).map(([id]) => cardName(id));
     const row = (k, v) => `<dt>${k}</dt><dd>${v}</dd>`;
-    return `<div class="faction-hover__head" style="--fc:var(${display[f].colorVar})"><img src="assets/counters/${f}.webp" alt=""><div><strong>${esc(display[f].name)}${f === human ? ' (you)' : ''}</strong><small>${ally ? `Allied with ${esc(display[ally].name)}` : 'No alliance'}</small></div></div>
+    return `<div class="faction-hover__head" style="--fc:var(${display[f].colorVar})"><img src="${ART.counter(f)}" alt=""><div><strong>${esc(display[f].name)}${f === human ? ' (you)' : ''}</strong><small>${ally ? `Allied with ${esc(display[ally].name)}` : 'No alliance'}</small></div></div>
       <dl>
         ${row('Spice', secret(f) ? 'Hidden' : fs.spice)}
         ${row('On the board', `${sum(fs.forces.onBoard)}${territories.length ? ` in ${territories.length} territor${territories.length === 1 ? 'y' : 'ies'}` : ''}`)}

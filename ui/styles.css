@@ -1126,3 +1126,17 @@ body:has(.event-layer:not([hidden]) .auction-card) .toasts { top: 8.5rem; }
 @keyframes spice-gathered { 0% { opacity: 1; translate: 0 0; } 100% { opacity: 0; translate: 0 -34px; } }
 .token--gathered-some { animation: spice-some 0.7s ease-out; }
 @keyframes spice-some { 0% { opacity: 0.4; translate: 0 -10px; } 100% { opacity: 1; translate: 0 0; } }
+
+/* --- Preparing Arrakis: the loading screen (main.js prepareArrakis) --------------------- */
+.loading { position: fixed; inset: 0; z-index: 70; display: flex; align-items: flex-end; justify-content: center;
+  padding: 0 1.5rem calc(env(safe-area-inset-bottom, 0px) + 18vh); color: var(--sand);
+  background: linear-gradient(180deg, rgba(10, 6, 4, 0.15) 0%, rgba(10, 6, 4, 0.1) 40%, rgba(10, 6, 4, 0.92) 80%), url(../assets/title.jpg) center 30% / cover no-repeat, #0b0705;
+  transition: opacity 0.3s ease-out; }
+.loading--done { opacity: 0; pointer-events: none; }
+.loading__inner { width: min(100%, 320px); text-align: center; }
+.loading__name { margin: 0; font: 700 30px var(--font-display); letter-spacing: 0.28em; text-shadow: 0 0 22px rgba(227, 123, 44, 0.35), 0 2px 8px #000; }
+.loading__rule { width: 60%; height: 1px; margin: 0.45rem auto 0.9rem; background: linear-gradient(90deg, transparent, var(--gold), transparent); }
+.loading__label { margin: 0 0 0.7rem; font: 600 11px var(--font-data); letter-spacing: 0.24em; text-transform: uppercase; color: var(--sand-soft); text-shadow: 0 1px 4px #000; }
+.loading__bar { height: 6px; background: rgba(0, 0, 0, 0.55); border: 1px solid var(--bronze); overflow: hidden; }
+.loading__bar span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #b95a1c, #f08d3e); box-shadow: 0 0 10px var(--spice-glow); transition: width 0.2s ease-out; }
+.loading__count { margin: 0.45rem 0 0; font: 600 11px var(--font-data); color: var(--sand-dim); }
