@@ -19,6 +19,7 @@ import { forcesAfterReveal } from '../js/noField.js';
 import { slotAllows, voiceProblem, voiceSlot, planFromChoices } from './battlePlan.js';
 
 import { ART } from './art.js'; // every picture's address (ui/art.js)
+import { artReady } from './preload.js';
 // The card back now matches the face exactly (263 x 360), so cards flip at the reveal.
 const CARD_FLIP = true;
 
@@ -103,7 +104,7 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
   }
 
   // --- Planning mode --------------------------------------------------------------
-  function plan({ state, factionId, territoryId, opponentId, intel, voice }) {
+  async function plan({ state, factionId, territoryId, opponentId, intel, voice }) {
     const me = state.factions[factionId];
     const present = forcesAfterReveal(state, factionId, territoryId);
     const starredPresent = me.forces.starredOnBoard?.[territoryId] ?? 0;
@@ -117,6 +118,9 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
     const pl = { forces: Math.ceil(present / 2), starred: 0, spice: 0, lead: leaders[0] ? { kind: 'leader', id: leaders[0] } : heroes[0] ? { kind: 'hero', id: heroes[0] } : null,
       weapon: null, defense: null, kh: false };
 
+    // Safety net: the pictures planning shows are ready first (at most a second).
+    await artReady([ART.cardBack, ART.cardFace, ART.wheelBack, ART.wheelFront, ART.kwisatzHaderach, ART.cheapHero, ART.counter(factionId), ART.counter(opponentId),
+      ...leaders.map(ART.leader), ...[1, 3, 8].map(ART.spice)]);
     const root = mount({ territoryId, top: opponentId, bottom: factionId, caption: `Battle in ${esc(names.territory(territoryId))}` });
     const mine = side(root, factionId), theirs = side(root, opponentId);
     setHand(theirs, state.factions[opponentId].treacheryHand.length);
@@ -278,6 +282,9 @@ export function createBattleScene({ layer, cardLookup, leadersData, names, facti
     const bottom = viewer && sides.includes(viewer) ? viewer : e.defenderId;
     const top = sides.find(f => f !== bottom);
     const P = e.plans ?? {};
+    // Safety net: every picture this battle shows is ready before it plays (at most a second).
+    await artReady([ART.cardBack, ART.cardFace, ART.wheelBack, ART.wheelFront, ART.traitor, ART.kwisatzHaderach,
+      ...sides.flatMap(f => [ART.counter(f), P[f]?.leaderId && ART.leader(P[f].leaderId), P[f]?.cheapHero && ART.cheapHero, P[f]?.spice && ART.spice(P[f].spice)])]);
     let root = open && open.territoryId === e.territoryId && layer.querySelector('.bs') ? layer.querySelector('.bs') : null;
     if (!root) root = mount({ territoryId: e.territoryId, top, bottom, caption: `Battle in ${esc(names.territory(e.territoryId))}` });
     root.querySelector('.bs__dock').innerHTML = '';

@@ -6,6 +6,7 @@
 // so it simply re-draws after every change.
 
 import { ART } from './art.js'; // every picture's address (ui/art.js)
+import { artReady } from './preload.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -472,12 +473,13 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   const CRUISE = 80;         // flying height above the ground shadow
   const shipUrl = ART.ship;
   const thopterUrl = ART.thopter;
-  for (const f of Object.keys(factionColors)) { for (const u of [shipUrl(f), thopterUrl(f)]) { const img = new Image(); img.src = u; } } // preload
 
   // Flies a craft carrying a counter. With takeoffMs, it first lifts off from
   // the origin (a move across the planet); without, it arrives already at
   // cruising height (from off-world).
   async function flyShip({ faction, count, from, to, ms = 1200, landMs = 450, takeoffMs = 0, sprite = null, size = SHIP }) {
+    // Safety net: the craft and its counter are ready before take-off (at most a second).
+    await artReady([sprite ?? shipUrl(faction), counterUrl(faction)]);
     const [x1, y1] = from, [x2, y2] = to;
     const SIZE = size;
     const facing = x2 < x1 ? -1 : 1; // sprites face right; mirror when flying left
@@ -517,6 +519,7 @@ export function createBoard({ container, geometry, territoriesData, factionColor
   // (when count is given), and sinks. Also used when a worm appears in the
   // Spice Blow (no count).
   async function wormDelivers({ count = null, at, ms = 1800 }) {
+    await artReady([shipUrl('fremen'), counterUrl('fremen')]); // safety net: the worm sprite and counter
     const [x, y] = at;
     const g = el('g', { class: 'fx-worm-rise', transform: `translate(${x},${y + 16})` }, fxLayer);
     const body = el('g', {}, g);

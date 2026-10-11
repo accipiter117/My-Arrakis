@@ -59,3 +59,16 @@ export function imageReady(url, maxMs = 1000) {
   if (!url) return Promise.resolve(true);
   return Promise.race([decodeImage(url), timeout(maxMs)]);
 }
+
+// Several pictures at once (each capped at maxMs, all waited on together, so at most maxMs).
+export function artReady(urls, maxMs = 1000) {
+  return Promise.all([...new Set(urls.filter(Boolean))].map(u => imageReady(u, maxMs)));
+}
+
+// Every picture inside an element (<img> and SVG <image>), before it is shown or animated.
+export function imagesReadyIn(el, maxMs = 1000) {
+  if (!el) return Promise.resolve([]);
+  const urls = [...el.querySelectorAll('img')].map(i => i.currentSrc || i.src)
+    .concat([...el.querySelectorAll('image')].map(i => i.getAttribute('href')));
+  return artReady(urls, maxMs);
+}

@@ -11,6 +11,7 @@
 import * as battleEngine from '../js/battleEngine.js';
 import { cardsGained } from './dealMessages.js';
 import { ART } from './art.js'; // every picture's address (ui/art.js)
+import { artReady, imageReady, imagesReadyIn } from './preload.js';
 
 // Treachery card art (back and face are the same size, so a card flips without changing shape).
 const CARD_ART = { back: ART.cardBack, face: ART.cardFace };
@@ -25,10 +26,13 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
   const scaled = ms => ms * speed();
   const wait = ms => new Promise(resolve => setTimeout(resolve, scaled(ms)));
 
-  // Show a card over the map until its time is up or it's tapped.
+  // Show a card over the map until its time is up or it's tapped. Its pictures (a Face
+  // Dancer, a leader) are ready before it appears (the safety net: at most a second).
   function showCard(kind, html, ms = 1600) {
     if (!speed()) return Promise.resolve();
-    return new Promise(resolve => {
+    const probe = document.createElement('div');
+    probe.innerHTML = html;
+    return imagesReadyIn(probe).then(() => new Promise(resolve => {
       layer.classList.remove('event-layer--top');
       layer.innerHTML = `<div class="event-card event-card--${kind}" role="status">${html}<div class="event-card__hint">tap to continue</div></div>`;
       layer.hidden = false;
@@ -42,7 +46,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       };
       layer.onclick = finish;
       setTimeout(finish, scaled(ms));
-    });
+    }));
   }
 
   // The engine reports an event after applying it; show the destination
@@ -137,6 +141,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     img.className = 'tech-flyer';
     img.style.setProperty('--flyer-colour', factionColors[ownerId] ?? '#c9a24a');
     img.innerHTML = `<img src="${techUrl(token)}" alt=""><span class="tech-flyer__caption">${caption}</span>`;
+    await imageReady(techUrl(token)); // safety net: never fly an empty token
     document.body.appendChild(img);
     const size = 64, x0 = fromScreen.x - size / 2, y0 = fromScreen.y - size / 2;
     const x1 = to.left + to.width / 2 - size / 2, y1 = to.top + to.height / 2 - size / 2;
@@ -204,6 +209,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       if (e.none) { await showCard('spice', card('Spice Collection', 'No spice gathered', 'Nobody had forces on a spice blow.'), 1400); return; }
       await board.focusOn([board.labelPoint(e.territoryId)], { ms: scaled(550), minW: 420 });
       const at = board.screenPointOf?.(board.labelPoint(e.territoryId));
+      await artReady(e.collections.map(c => ART.counter(c.factionId))); // safety net: the floats' emblems
       if (at) e.collections.forEach((c, i) => {
         const tag = document.createElement('div');
         tag.className = 'harvest-float';
@@ -238,6 +244,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
     async turnStart(e) {
       if (!speed()) return;
       const mine = getViewer() === e.factionId;
+      await imageReady(counterUrl(e.factionId)); // safety net: the banner's emblem
       showBanner(e.factionId, e.phase, mine);
       sfx?.play(`turn-${e.factionId}`); // per-faction announcement audio, once supplied
       if (!mine) await wait(900);
@@ -277,6 +284,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       // Atreides and Ixians may see the card before bidding; everyone else sees its back.
       const known = ['atreides', 'ixians'].includes(viewer);
       const seen = known ? esc(names.card(e.cardId)) : 'Face down';
+      await artReady([CARD_ART.back, CARD_ART.face]); // safety net: the card's art is ready before it is put up
       layer.classList.add('event-layer--top'); // stays visible above your bid panel
       layer.innerHTML = `<div class="event-card event-card--auction" role="status">
         <div class="event-card__eyebrow">Auction · card ${e.index + 1} of ${e.total}</div>
@@ -667,6 +675,7 @@ export function createPresenter({ board, layer, banner = null, factionColors, na
       cards.forEach((c, i) => notify?.(`${label(i)}: ${names.card(c)}`, 'won'));
       return;
     }
+    await artReady([CARD_ART.back, CARD_ART.face]); // safety net: both sides ready before the flip
     for (let i = 0; i < cards.length; i++) {
       if (!auction) return;
       auction.card.innerHTML = auctionFlip(cards[i]);
