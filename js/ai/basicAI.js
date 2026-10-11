@@ -38,6 +38,39 @@ import { createDiplomacy } from './diplomacy.js';
 const WEAPON_CATEGORIES = battleEngine.WEAPONS;
 const DEFENSE_CATEGORIES = battleEngine.DEFENSES;
 
+// Prospecting: a faction with no steady income lands one or two troops on a rock
+// territory where spice blows (Red Chasm, Rock Outcroppings, South Mesa). Troops on
+// rock survive the storm; one troop costs 2 spice to ship and collects 2 a turn, so it
+// pays for itself with a single harvest, and a lone troop is all the worm can take.
+// It is also a foothold for reaching fresh spice nearby. Used only when the faction
+// has no better shipment that turn.
+const PROSPECT_SPOTS = ['redChasm', 'rockOutcroppings', 'southMesa'];
+const STEADY_INCOME = ['guild', 'choam', 'emperor', 'tleilaxu']; // shipping fees, charity, card sales, revivals
+function prospect(state, factionId, reserve, rng) {
+  const me = state.factions[factionId];
+  if (reserve < 1) return null;
+  const others = Object.entries(state.factions).filter(([f]) => f !== factionId);
+  const occupied = t => others.some(([, x]) => (x.forces.onBoard?.[t] ?? 0) + (x.forces.starredOnBoard?.[t] ?? 0) > 0);
+  const mine = t => (me.forces.onBoard?.[t] ?? 0) + (me.forces.starredOnBoard?.[t] ?? 0);
+  const strongholds = Object.keys(me.forces.onBoard ?? {}).filter(t => state.board.territories[t]?.type === 'stronghold' && mine(t) > 0 && !occupied(t)).length;
+  // Factions with income only prospect with plenty to spare; the rest when they hold
+  // no stronghold or are running short.
+  if (STEADY_INCOME.includes(factionId) ? me.spice < 25 : !(strongholds === 0 || me.spice < 12)) return null;
+  if (PROSPECT_SPOTS.filter(t => mine(t) > 0).length >= 2) return null; // two claims are enough
+  const spiceAt = t => state.board.spiceBlowMarkers.filter(m => m.territoryId === t).reduce((a, m) => a + m.amount, 0);
+  const options = [];
+  for (const t of PROSPECT_SPOTS) {
+    if (mine(t) > 0 || occupied(t)) continue;
+    const amount = Math.min(reserve, me.spice >= 10 && reserve >= 4 ? 2 : 1);
+    if (movementEngine.shipmentCostPerForce(state, factionId, t) * amount > me.spice) continue;
+    if (!movementEngine.canShip(state, factionId, t, amount).ok) continue;
+    options.push({ territoryId: t, amount, score: spiceAt(t) * 2 + rng() });
+  }
+  if (!options.length) return null;
+  const pick = options.reduce((a, b) => (b.score > a.score ? b : a));
+  return { territoryId: pick.territoryId, amount: pick.amount };
+}
+
 export function createBasicAI({ leadersData, cardLookup, rng = random }) {
   // Leader fighting values are printed on the discs, so they are public.
   const leaderValue = {};
@@ -725,6 +758,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
           if (!best || score > best.score) best = { territoryId, amount, score };
         }
         if (best) shipment = { territoryId: best.territoryId, amount: best.amount };
+        if (!shipment) shipment = prospect(state, factionId, reserve, rng);
       }
 
       // Movement: shift forces towards something better within range,
