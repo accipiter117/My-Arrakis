@@ -238,8 +238,14 @@ export function createBattleBrain({ cardLookup, leaderValue, rng = random, sampl
       // scores best. Throw only when it is genuinely hopeless (under 1 in 6 even against
       // their ordinary plans); otherwise fight with the plan that wins most often,
       // choosing the best value among those close to it.
+      // Only step in when the chosen plan is a near-throw (dialling under 40% of the
+      // forces there). A plan that already means to fight is left alone: the winner loses
+      // what it dialled, so pushing it to go all in turns wins into heavy losses.
       const top = Math.max(...scored.map(x => x.chance));
-      if (top >= 1 / 6 && best.chance < top - 0.1) {
+      const present = (state.factions[me].forces.onBoard[territoryId] ?? 0) + (state.factions[me].forces.starredOnBoard?.[territoryId] ?? 0);
+      const dialled = p => (p.forcesCommitted ?? 0) + (p.starredForcesCommitted ?? 0);
+      const nearThrow = dialled(best.plan) < Math.ceil(present * 0.4);
+      if (nearThrow && top >= 1 / 6 && best.chance < top - 0.1) {
         best = scored.filter(x => x.chance >= top - 0.05).reduce((a, b) => (b.expected > a.expected ? b : a));
       }
       const { starredUnitValue, ...plan } = best.plan;

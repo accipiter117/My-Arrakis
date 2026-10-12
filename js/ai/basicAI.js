@@ -46,13 +46,30 @@ const DEFENSE_CATEGORIES = battleEngine.DEFENSES;
 // has no better shipment that turn.
 const PROSPECT_SPOTS = ['redChasm', 'rockOutcroppings', 'southMesa'];
 const STEADY_INCOME = ['guild', 'choam', 'emperor', 'tleilaxu']; // shipping fees, charity, card sales, revivals
+const enemyForcesIn = (state, factionId, t) => Object.entries(state.factions).filter(([f]) => f !== factionId)
+  .reduce((n, [, x]) => n + (x.forces.onBoard?.[t] ?? 0) + (x.forces.starredOnBoard?.[t] ?? 0), 0);
+const strongholdsHeld = (state, factionId) => {
+  const me = state.factions[factionId];
+  return Object.keys(me.forces.onBoard ?? {}).filter(t => state.board.territories[t]?.type === 'stronghold'
+    && (me.forces.onBoard[t] ?? 0) + (me.forces.starredOnBoard?.[t] ?? 0) > 0 && enemyForcesIn(state, factionId, t) === 0).length;
+};
+// Early on (turns 1 to 3), a faction with no income and no stronghold prospects instead
+// of a long-shot attack: landing in a stronghold someone already holds without a clear
+// edge in numbers mostly feeds the tanks.
+function preferProspect(state, factionId, shipment, reserve, rng) {
+  if (!shipment || state.meta.turn > 3 || STEADY_INCOME.includes(factionId) || strongholdsHeld(state, factionId) > 0) return shipment;
+  if (state.board.territories[shipment.territoryId]?.type !== 'stronghold') return shipment;
+  const enemy = enemyForcesIn(state, factionId, shipment.territoryId);
+  if (enemy === 0 || shipment.amount >= enemy * 1.5) return shipment; // empty, or a clear edge
+  return prospect(state, factionId, reserve, rng) ?? shipment;
+}
 function prospect(state, factionId, reserve, rng) {
   const me = state.factions[factionId];
   if (reserve < 1) return null;
   const others = Object.entries(state.factions).filter(([f]) => f !== factionId);
   const occupied = t => others.some(([, x]) => (x.forces.onBoard?.[t] ?? 0) + (x.forces.starredOnBoard?.[t] ?? 0) > 0);
   const mine = t => (me.forces.onBoard?.[t] ?? 0) + (me.forces.starredOnBoard?.[t] ?? 0);
-  const strongholds = Object.keys(me.forces.onBoard ?? {}).filter(t => state.board.territories[t]?.type === 'stronghold' && mine(t) > 0 && !occupied(t)).length;
+  const strongholds = strongholdsHeld(state, factionId);
   // Factions with income only prospect with plenty to spare; the rest when they hold
   // no stronghold or are running short.
   if (STEADY_INCOME.includes(factionId) ? me.spice < 25 : !(strongholds === 0 || me.spice < 12)) return null;
@@ -759,6 +776,7 @@ export function createBasicAI({ leadersData, cardLookup, rng = random }) {
         }
         if (best) shipment = { territoryId: best.territoryId, amount: best.amount };
         if (!shipment) shipment = prospect(state, factionId, reserve, rng);
+        else shipment = preferProspect(state, factionId, shipment, reserve, rng);
       }
 
       // Movement: shift forces towards something better within range,
