@@ -128,7 +128,9 @@ async function main() {
     await page.goto(`${BASE}?debug=1`, { timeout: 180000 });
     await page.waitForSelector('#sheet-menu:not([hidden])', { timeout: 180000 });
     const first = await page.evaluate(() => window.__newCode ?? null);
+    // The new worker deletes the old store as it takes over; its own store starts with the next file it serves.
     await page.evaluate(() => navigator.serviceWorker.ready); await sleep(1500);
+    await page.reload({ timeout: 180000 }); await page.waitForSelector('#sheet-menu:not([hidden])', { timeout: 180000 });
     const caches = await page.evaluate(() => caches.keys());
     check(first === `${version}-test`, `a new version string brings in the new code on the first load (${first ?? 'old code'})`);
     check(caches.length === 1 && caches[0].endsWith(`${version}-test`), `the old store is replaced by the new version's (${caches.join(', ')})`);
