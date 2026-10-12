@@ -79,9 +79,9 @@ async function main() {
   await waitFor(page, () => !document.getElementById('decision-panel').hidden, 60000);
   await page.click('#decision-panel [data-default-action]'); // keep the offered traitor
   await waitFor(page, () => !document.getElementById('btn-run-turn').disabled, 60000);
-  // Win the first auction card (bid high) so its card flips face up.
+  // Win the first auction card (bid high, keeping 3 spice to ship into Carthag) so its card flips face up.
   await play(page, s => s.panelTitle?.startsWith('Treachery card'), 2);
-  await page.evaluate(() => { const p = document.getElementById('decision-panel'); const sel = p.querySelector('[name="bid"]'); if (sel) { sel.value = sel.options[sel.options.length - 1].value; sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); } p.querySelector('[data-action="bid"]')?.click(); });
+  await page.evaluate(() => { const p = document.getElementById('decision-panel'); const sel = p.querySelector('[name="bid"]'); if (sel) { sel.value = sel.options[Math.max(0, sel.options.length - 4)].value; sel.dispatchEvent(new Event('input', { bubbles: true })); sel.dispatchEvent(new Event('change', { bubbles: true })); } p.querySelector('[data-action="bid"]')?.click(); });
   const flipped = await page.waitForSelector('.auction-flip', { timeout: 60000 }).then(() => true, () => false);
   check(flipped, 'the first auction card flipped face up (won)');
   // Play on to a battle of your own, with ship flights on the way (Normal speed), then its reveal.

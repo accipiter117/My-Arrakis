@@ -144,6 +144,7 @@ export async function playScenario(page, shot) {
 // With `attackAt`, every shipment goes to that territory.
 export async function play(page, stop, maxTurns = 3, attackAt = null) {
   const start = await page.evaluate(() => window.__arrakis.state.meta.turn);
+  let lastTitle = null, repeats = 0; // a shipment the game refuses (no spice left) falls back to none
   for (let i = 0; i < 20000; i++) {
     const s = await page.evaluate(() => {
       const panel = document.getElementById('decision-panel');
@@ -164,14 +165,16 @@ export async function play(page, stop, maxTurns = 3, attackAt = null) {
     } else if (s.choices) {
       await page.evaluate(() => document.querySelector('.bs__choices button:last-child').click());
     } else if (s.panelTitle !== null) {
-      await page.evaluate(attackAt => {
+      repeats = s.panelTitle === lastTitle ? repeats + 1 : 0; lastTitle = s.panelTitle;
+      await page.evaluate(({ attackAt, refused }) => {
         const p = document.getElementById('decision-panel');
-        // Ship into an enemy stronghold, so a battle of your own follows.
+        // Ship into an enemy stronghold, so a battle of your own follows (unless the game refused it).
         const shipTo = p.querySelector('[name="shipTo"]');
-        if (attackAt && shipTo?.querySelector(`option[value="${attackAt}"]`)) { shipTo.value = attackAt; shipTo.dispatchEvent(new Event('change', { bubbles: true })); }
+        if (refused && shipTo) { shipTo.value = ''; shipTo.dispatchEvent(new Event('change', { bubbles: true })); }
+        else if (attackAt && shipTo?.querySelector(`option[value="${attackAt}"]`)) { shipTo.value = attackAt; shipTo.dispatchEvent(new Event('change', { bubbles: true })); }
         const b = p.querySelector('[data-default-action]') ?? p.querySelector('.decision__actions .btn--primary') ?? p.querySelector('.decision__body button');
         b?.click();
-      }, attackAt);
+      }, { attackAt, refused: repeats > 3 });
     } else if (s.canRun) {
       await page.click('#btn-run-turn');
     }
