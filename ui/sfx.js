@@ -46,7 +46,45 @@ const SOUNDS = {
   'turn-harkonnen': '../assets/sfx/turn-harkonnen.mp3',
   'turn-gesserit': '../assets/sfx/turn-gesserit.mp3'
 };
+const LOOPED = new Set(['revivalTanks', 'bidding', 'shipping', 'battle', 'harvest']);
 const KEY = 'my-arrakis-sfx';
+
+// A file's own sample rate, from its header (FLAC or WAV), or null.
+function sampleRateOf(bytes) {
+  const b = new Uint8Array(bytes, 0, Math.min(64, bytes.byteLength));
+  const tag = String.fromCharCode(...b.slice(0, 4));
+  if (tag === 'fLaC') return (b[18] << 12) | (b[19] << 4) | (b[20] >> 4); // STREAMINFO
+  if (tag === 'RIFF') return b[24] | (b[25] << 8) | (b[26] << 16) | (b[27] << 24);
+  return null;
+}
+
+// A loop for the device's sample rate, without a click at the join. Browsers convert every
+// sound to the device's rate as they decode it, treating the file's two ends as hard edges,
+// which leaves a kink where the loop joins. So: decode at the file's own rate, play it three
+// times round in a silent offline render at the device's rate, and keep the middle round,
+// whose ends come from continuous sound. Falls back to an ordinary decode.
+export async function decodeLoop(ctx, data) {
+  const native = sampleRateOf(data);
+  const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  if (!native || native === ctx.sampleRate || !Offline) return decode(ctx, data);
+  const spare = data.slice(0); // decoding uses up the data
+  try {
+    const raw = await decode(new Offline(1, 1, native), data);
+    const len = Math.round(raw.duration * ctx.sampleRate);
+    const r = new Offline(raw.numberOfChannels, len * 3, ctx.sampleRate);
+    const src = r.createBufferSource();
+    src.buffer = raw; src.loop = true; src.connect(r.destination); src.start();
+    const done = new Promise(ok => { r.oncomplete = e => ok(e.renderedBuffer); }); // older Safari: no promise from startRendering
+    const three = await (r.startRendering() ?? done);
+    const out = ctx.createBuffer(raw.numberOfChannels, len, ctx.sampleRate);
+    for (let c = 0; c < raw.numberOfChannels; c++) out.getChannelData(c).set(three.getChannelData(c).subarray(len, len * 2));
+    return out;
+  } catch (err) {
+    console.warn('Loop: seamless decode failed, using the plain one', err);
+    return decode(ctx, spare);
+  }
+}
+const decode = (ctx, data) => new Promise((ok, fail) => ctx.decodeAudioData(data, ok, fail)); // callback form: older Safari
 const MIN_GAP_MS = 700;
 
 export function createSfx({ onPlay } = {}) {
@@ -83,7 +121,7 @@ export function createSfx({ onPlay } = {}) {
           const res = await fetch(new URL(path, import.meta.url));
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.arrayBuffer();
-          buffers[name] = await new Promise((ok, fail) => ctx.decodeAudioData(data, ok, fail)); // callback form: older Safari
+          buffers[name] = LOOPED.has(name) ? await decodeLoop(ctx, data) : await decode(ctx, data);
           break;
         } catch (err) {
           console.warn(`Could not load sound ${name} from ${path}`, err);

@@ -9,8 +9,9 @@
 //     changed, so a new version is never hidden behind old code. The stored copy is only
 //     used when the network fails (offline).
 //   Art and sound (assets/): stored copy first; fetched and stored the first time.
-//   Music: stored as it plays (whole files fetched in the background), then served from
-//     the store, in the pieces the audio player asks for.
+//   Music: stored as it plays (the first play downloads the whole track once, and that
+//     same download is both played and stored), then served from the store, in the
+//     pieces the audio player asks for.
 
 const VERSION = new URL(self.location.href).searchParams.get('v') || 'dev';
 const CACHE = `my-arrakis-${VERSION}`;
@@ -33,7 +34,8 @@ self.addEventListener('message', event => {
     for (const url of event.data.urls) {
       if (!sameOrigin(url) || isMusic(url)) continue;
       if (await cache.match(url)) continue;
-      try { const res = await fetch(url, { cache: 'no-cache' }); if (res.ok && res.status === 200) await cache.put(url, res); } catch {}
+      // Just loaded by the page, so the browser's own copy is current: no need to ask again.
+      try { const res = await fetch(url); if (res.ok && res.status === 200) await cache.put(url, res); } catch {}
     }
   })());
 });
@@ -74,19 +76,31 @@ async function cacheFirst(req) {
 }
 
 // Music: the audio player asks for byte ranges. Once a track is stored whole, answer
-// ranges from the store; until then, pass the request on and fetch the whole file once
-// in the background to store it.
-const fetchingMusic = new Set();
+// ranges from the store. The first time a track starts from the beginning, download it
+// whole just once: one copy streams to the player while the other is stored. Any other
+// request (a jump part-way in before it is stored) goes straight to the network.
+const storingMusic = new Set();
 async function music(req) {
   const cache = await caches.open(CACHE);
   const key = req.url;
   const hit = await cache.match(key);
   if (hit) return rangeOf(hit, req.headers.get('range'));
-  if (!fetchingMusic.has(key)) {
-    fetchingMusic.add(key);
-    fetch(key).then(res => (res.ok && res.status === 200 ? cache.put(key, res) : null)).catch(() => {}).finally(() => fetchingMusic.delete(key));
+  const range = req.headers.get('range');
+  if (storingMusic.has(key) || (range && !/^bytes=0-$/.test(range))) return fetch(req);
+  storingMusic.add(key);
+  try {
+    const res = await fetch(key);
+    if (!res.ok || res.status !== 200 || !res.body) { storingMusic.delete(key); return res; }
+    const [toPlay, toStore] = res.body.tee();
+    const headers = { 'Content-Type': res.headers.get('Content-Type') || 'audio/mp4' };
+    cache.put(key, new Response(toStore, { status: 200, headers })).catch(() => {}).finally(() => storingMusic.delete(key));
+    const size = res.headers.get('Content-Length');
+    if (!range || !size) return new Response(toPlay, { status: 200, headers });
+    return new Response(toPlay, { status: 206, headers: { ...headers, 'Content-Range': `bytes 0-${size - 1}/${size}`, 'Content-Length': size, 'Accept-Ranges': 'bytes' } });
+  } catch (err) {
+    storingMusic.delete(key);
+    return fetch(req);
   }
-  return fetch(req);
 }
 
 async function rangeOf(response, range) {
