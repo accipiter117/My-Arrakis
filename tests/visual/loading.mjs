@@ -85,7 +85,16 @@ async function main() {
   const flipped = await page.waitForSelector('.auction-flip', { timeout: 60000 }).then(() => true, () => false);
   check(flipped, 'the first auction card flipped face up (won)');
   // Play on to a battle of your own, with ship flights on the way (Normal speed), then its reveal.
+  // Reports where it is every 30 s, so a long wait can be told from a stuck one.
+  const watchdog = setInterval(async () => {
+    const at = await page.evaluate(() => ({ turn: window.__arrakis.state.meta.turn, phase: document.getElementById('status-phase').textContent,
+      panel: document.getElementById('decision-panel').hidden ? null : document.querySelector('#decision-panel .decision__title')?.textContent,
+      layer: document.getElementById('event-layer').hidden ? null : document.getElementById('event-layer').innerText.slice(0, 80).replace(/\s+/g, ' '),
+      ships: window.__ships })).catch(() => null);
+    console.log('  ...', JSON.stringify(at));
+  }, 30000);
   const planning = await play(page, s => s.planning, 3, 'carthag');
+  clearInterval(watchdog);
   if (planning) {
     await page.click('.bs__commit');
     check(await page.waitForSelector('.bs--reveal', { timeout: 60000 }).then(() => true, () => false), 'a battle reveal played');
